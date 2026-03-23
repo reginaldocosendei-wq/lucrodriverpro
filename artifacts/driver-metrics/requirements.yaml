@@ -1,0 +1,13 @@
+packages:
+  "framer-motion": "For smooth, energetic entry animations and interactive card feels"
+  "clsx": "For conditional class merging in reusable components"
+  "tailwind-merge": "For merging tailwind classes without conflicts"
+
+images:
+  - path: "artifacts/driver-metrics/public/images/dashboard-bg.png"
+    description: "Abstract dark background with subtle neon green light streaks, evoking a sense of night driving and speed, completely blurred and atmospheric"
+    aspect_ratio: "16:9"
+
+notes:
+  - Completely client-side application. No backend hooks needed.
+  - State is managed locally in the Home page component.
