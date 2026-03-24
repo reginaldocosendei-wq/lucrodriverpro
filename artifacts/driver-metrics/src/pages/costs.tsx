@@ -75,7 +75,7 @@ export default function Costs() {
   });
 
   const handleDelete = (id: number) => {
-    if (confirm("Excluir este custo?")) {
+    if (confirm("Tem certeza que deseja remover este gasto? Essa ação não pode ser desfeita.")) {
       deleteMutation.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/api/costs"] });
@@ -115,12 +115,12 @@ export default function Costs() {
       <Card className="p-6 bg-gradient-to-br from-destructive/10 to-card border-destructive/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-32 h-32 bg-destructive/10 rounded-full blur-3xl" />
         <div className="text-center relative z-10">
-          <p className="text-sm font-bold text-destructive uppercase tracking-widest mb-2">Custo do Mês</p>
+          <p className="text-sm font-bold text-destructive uppercase tracking-widest mb-2">Seus gastos do mês</p>
           <h3 className="text-5xl font-display font-extrabold text-white tabular-nums mb-2">
             {formatBRL(data?.totalMonth || 0)}
           </h3>
           <p className="text-sm text-muted-foreground font-medium">
-            = <span className="text-destructive font-bold">{costPercentage.toFixed(1)}%</span> do seu faturamento mensal
+            = <span className="text-destructive font-bold">{costPercentage.toFixed(1)}%</span> do seu faturamento deste mês
           </p>
         </div>
       </Card>
@@ -128,7 +128,7 @@ export default function Costs() {
       {/* Breakdown Bar */}
       {!isFree && totalCostsValue > 0 && (
         <Card className="p-5">
-          <h4 className="text-sm font-bold text-muted-foreground mb-4">Divisão de Custos</h4>
+          <h4 className="text-sm font-bold text-muted-foreground mb-4">Como seu dinheiro foi gasto</h4>
           <div className="h-4 w-full bg-black rounded-full overflow-hidden flex border border-white/5 mb-4">
             {Object.entries(categoryTotals).map(([cat, amount]) => {
               const pct = (amount / totalCostsValue) * 100;
@@ -181,13 +181,13 @@ export default function Costs() {
             <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center mb-6 glow-gold shadow-2xl">
               <Lock size={40} className="text-black" />
             </div>
-            <h3 className="text-2xl font-display font-bold text-white mb-2">Desbloqueie seu Lucro Real</h3>
+            <h3 className="text-2xl font-display font-bold text-white mb-2">Você está vendo apenas seu faturamento</h3>
             <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
-              Você está vendo apenas seus ganhos. Para saber se está realmente ganhando dinheiro, registre seus custos de combustível, aluguel e manutenção com o <strong className="text-white">Lucro Driver PRO</strong>.
+              Não se trata apenas de quanto você fatura, mas de quanto realmente sobra no seu bolso. Registre seus gastos e descubra seu <strong className="text-white">lucro real</strong> com o Lucro Driver PRO.
             </p>
             <Link href="/reports">
               <Button variant="gold" size="lg" className="px-10 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-                Fazer Upgrade
+                Desbloquear lucro real
               </Button>
             </Link>
           </div>

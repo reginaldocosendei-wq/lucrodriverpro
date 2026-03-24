@@ -58,7 +58,7 @@ export default function Rides() {
   });
 
   const handleDelete = (id: number) => {
-    if (confirm("Tem certeza que deseja excluir esta corrida?")) {
+    if (confirm("Tem certeza que deseja remover esta corrida? Essa ação não pode ser desfeita.")) {
       deleteMutation.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
@@ -88,15 +88,15 @@ export default function Rides() {
       {/* Summary Strip */}
       <Card className="flex items-center justify-between p-4 bg-primary/10 border-primary/20 backdrop-blur-md">
         <div className="text-center flex-1 border-r border-white/10">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total</p>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Corridas</p>
           <p className="font-display font-bold text-lg">{totalRides}</p>
         </div>
         <div className="text-center flex-1 border-r border-white/10">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Bruto</p>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Faturado</p>
           <p className="font-display font-bold text-lg text-white tabular-nums">{formatBRL(totalGross)}</p>
         </div>
         <div className="text-center flex-1">
-          <p className="text-[10px] text-primary uppercase font-bold tracking-wider">Líquido</p>
+          <p className="text-[10px] text-primary uppercase font-bold tracking-wider">Valor líquido</p>
           <p className="font-display font-bold text-lg text-primary tabular-nums">{formatBRL(totalNet)}</p>
         </div>
       </Card>
@@ -107,10 +107,10 @@ export default function Rides() {
             <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
               <Car size={40} className="text-white/20" />
             </div>
-            <h3 className="text-xl font-display font-bold text-white mb-2">Nenhuma corrida ainda</h3>
-            <p className="text-sm max-w-[250px] mx-auto">Registre suas corridas para começar a ver métricas detalhadas do seu lucro real.</p>
+            <h3 className="text-xl font-display font-bold text-white mb-2">Nenhuma corrida registrada</h3>
+            <p className="text-sm max-w-[250px] mx-auto">Adicione suas corridas para começar a acompanhar seu faturamento e lucro real.</p>
             <Button onClick={() => setIsModalOpen(true)} className="mt-6 gap-2" variant="outline">
-              <Plus size={16} /> Registrar Primeira Corrida
+              <Plus size={16} /> Registrar minha primeira corrida
             </Button>
           </div>
         ) : (

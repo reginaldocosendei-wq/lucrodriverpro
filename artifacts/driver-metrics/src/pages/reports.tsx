@@ -47,7 +47,7 @@ export default function Reports() {
           
           <div className="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-6">
             <Users size={14} className="text-yellow-500" />
-            <span className="text-xs font-bold text-white">Mais de 5.000 motoristas ativos no PRO</span>
+            <span className="text-xs font-bold text-white">Mais de 5.000 motoristas já usam o PRO</span>
           </div>
 
           <h2 className="text-4xl md:text-5xl font-display font-extrabold text-white mb-4 tracking-tight">
@@ -55,12 +55,12 @@ export default function Reports() {
           </h2>
           
           <p className="text-lg text-muted-foreground mb-8 font-medium leading-relaxed">
-            Motoristas que usam os relatórios avançados ganham em média <strong className="text-white">23% mais</strong>. Descubra seus melhores dias, plataformas mais rentáveis e lucro real.
+            Motoristas que usam relatórios avançados ganham, em média, <strong className="text-white">23% mais</strong>. Descubra seus melhores dias, as plataformas mais rentáveis e seu lucro real.
           </p>
           
           <div className="space-y-4">
             <Button variant="gold" size="lg" className="w-full text-lg h-16 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-              Experimentar por 7 dias grátis
+              Experimentar grátis por 7 dias
             </Button>
             <Button variant="ghost" size="lg" className="w-full text-muted-foreground hover:text-white">
               Ver todos os planos
@@ -101,7 +101,7 @@ export default function Reports() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-10">
       <div>
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-full text-[10px] font-extrabold uppercase tracking-widest mb-4 shadow-[0_0_10px_rgba(255,215,0,0.1)]">
-          ✦ RECURSO PRO ATIVADO
+          ✦ RECURSO PRO ATIVO
         </div>
         <h2 className="text-3xl font-display font-bold flex items-center gap-3">
           <BarChart2 className="text-primary" /> Análise de Desempenho

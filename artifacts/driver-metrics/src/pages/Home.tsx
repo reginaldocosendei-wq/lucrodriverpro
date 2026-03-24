@@ -40,51 +40,62 @@ export default function Home() {
     show: { opacity: 1, y: 0 }
   };
 
+  const platformMeta: Record<string, { label: string; pronoun: string }> = {
+    uber: { label: "Uber", pronoun: "nele" },
+    "99": { label: "99", pronoun: "nela" },
+    indriver: { label: "InDrive", pronoun: "nele" },
+    outro: { label: "Outro", pronoun: "nele" },
+  };
+
   // Insights logic
   const insights = [];
   if (pctToday < 100 && summary.goalDailyPct > 0) {
     const dailyGoal = summary.earningsToday / (pctToday / 100);
     const remaining = dailyGoal - summary.earningsToday;
     if (remaining > 0 && isFinite(remaining)) {
+      const almostThere = pctToday >= 80;
       insights.push({
         id: 'meta',
         icon: <Zap size={20} className="text-yellow-500" />,
         color: "border-yellow-500",
         bg: "bg-yellow-500/10",
-        text: `Falta ${formatBRL(remaining)} para bater a meta diária. Acelere!`
+        text: almostThere
+          ? `Você está quase lá! Faltam apenas ${formatBRL(remaining)} para bater sua meta diária.`
+          : `Você ainda não bateu sua meta hoje — faltam ${formatBRL(remaining)}. Continue rodando!`
       });
     }
   }
-  
+
   if (summary.avgPerKm > 0 && summary.avgPerKm < 1.5) {
     insights.push({
       id: 'rentabilidade',
       icon: <AlertCircle size={20} className="text-destructive" />,
       color: "border-destructive",
       bg: "bg-destructive/10",
-      text: `Média de R$/km (${formatBRL(summary.avgPerKm)}) abaixo do ideal. Priorize corridas com multiplicador ou mais curtas.`
+      text: `Sua rentabilidade por km (${formatBRL(summary.avgPerKm)}/km) está abaixo do ideal. Priorize corridas mais longas ou com tarifa dinâmica.`
     });
   }
 
   if (summary.bestPlatform) {
+    const meta = platformMeta[summary.bestPlatform] ?? { label: summary.bestPlatform, pronoun: "nele" };
     insights.push({
       id: 'destaque',
       icon: <Award size={20} className="text-primary" />,
       color: "border-primary",
       bg: "bg-primary/10",
-      text: `A ${summary.bestPlatform} está rendendo mais ultimamente. Mantenha o foco nela.`
+      text: `O ${meta.label} está rendendo mais no momento. Mantenha o foco ${meta.pronoun}.`
     });
   }
 
-  const remainingDays = 30 - new Date().getDate(); // Simplified projection
+  const remainingDays = 30 - new Date().getDate();
   const projectedEarnings = summary.earningsMonth + (summary.earningsToday * remainingDays);
-  if (projectedEarnings > summary.earningsMonth) {
+  if (projectedEarnings > summary.earningsMonth && summary.earningsToday > 0) {
     insights.push({
       id: 'projecao',
       icon: <TrendingUp size={20} className="text-blue-500" />,
       color: "border-blue-500",
       bg: "bg-blue-500/10",
-      text: `No ritmo atual, você vai faturar ${formatBRL(projectedEarnings)} este mês.`
+      text: `No ritmo de hoje, você vai faturar ${formatBRL(projectedEarnings)} até o fim do mês.`
     });
   }
 
@@ -93,7 +104,7 @@ export default function Home() {
       
       {/* Hero Earnings Strip */}
       <motion.div variants={item} className="text-center space-y-2 py-4">
-        <p className="text-sm font-bold text-muted-foreground tracking-widest uppercase">Ganhos Hoje</p>
+        <p className="text-sm font-bold text-muted-foreground tracking-widest uppercase">Seu faturamento hoje</p>
         <h2 className="text-5xl md:text-6xl font-display font-extrabold tracking-tight tabular-nums">
           {formatBRL(summary.earningsToday)}
         </h2>
@@ -105,7 +116,7 @@ export default function Home() {
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-muted-foreground font-medium">
-            <span>{Math.round(pctToday)}% da meta</span>
+            <span>{Math.round(pctToday)}% da sua meta diária</span>
             <span>Meta: {formatBRL(summary.earningsToday / (pctToday / 100) || 0)}</span>
           </div>
         </div>
@@ -116,13 +127,13 @@ export default function Home() {
         <Card className="p-6 relative overflow-hidden bg-gradient-to-br from-card to-card/40">
           <div className="grid grid-cols-2 gap-6 relative z-10">
             <div>
-              <p className="text-sm text-muted-foreground mb-1 font-medium">Faturamento Mês</p>
+              <p className="text-sm text-muted-foreground mb-1 font-medium">Faturamento do mês</p>
               <h3 className="text-2xl font-display font-bold tabular-nums text-white">
                 {formatBRL(summary.earningsMonth)}
               </h3>
             </div>
             <div className="text-right border-l border-white/10 pl-6">
-              <p className="text-sm text-muted-foreground mb-1 font-medium flex items-center justify-end gap-1"><Target size={14} /> Lucro Real</p>
+              <p className="text-sm text-muted-foreground mb-1 font-medium flex items-center justify-end gap-1"><Target size={14} /> Seu lucro real</p>
               <h3 className={`text-2xl font-display font-bold tabular-nums ${isProfitPositive ? 'text-primary drop-shadow-[0_0_8px_rgba(0,255,136,0.3)]' : 'text-destructive'}`}>
                 {formatBRL(summary.realProfitMonth)}
               </h3>
@@ -131,8 +142,8 @@ export default function Home() {
           
           <div className="mt-6 space-y-2 relative z-10">
             <div className="flex justify-between text-xs font-bold text-muted-foreground">
-              <span>Custos {formatBRL(summary.costsMonth)}</span>
-              <span className={isProfitPositive ? "text-primary" : "text-destructive"}>{Math.max(0, Math.round(profitMargin))}% Margem</span>
+              <span>Gastos do mês: {formatBRL(summary.costsMonth)}</span>
+              <span className={isProfitPositive ? "text-primary" : "text-destructive"}>{Math.max(0, Math.round(profitMargin))}% de margem</span>
             </div>
             <div className="h-3 bg-black rounded-full overflow-hidden flex border border-white/5">
               <div 
@@ -152,33 +163,35 @@ export default function Home() {
       <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 flex flex-col justify-center bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
           <Car size={20} className="text-muted-foreground mb-2" />
-          <p className="text-xs font-medium text-muted-foreground">Corridas</p>
+          <p className="text-xs font-medium text-muted-foreground">Corridas realizadas</p>
           <p className="text-xl font-display font-bold tabular-nums">{summary.totalRides}</p>
         </Card>
         
         <Card className="p-4 flex flex-col justify-center bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
           <MapPin size={20} className="text-primary mb-2" />
-          <p className="text-xs font-medium text-muted-foreground">Média / KM</p>
+          <p className="text-xs font-medium text-muted-foreground">Ganho por km</p>
           <p className="text-xl font-display font-bold tabular-nums">{formatBRL(summary.avgPerKm)}</p>
         </Card>
 
         <Card className="p-4 flex flex-col justify-center bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
           <TrendingUp size={20} className="text-primary mb-2" />
-          <p className="text-xs font-medium text-muted-foreground">Média / Corrida</p>
+          <p className="text-xs font-medium text-muted-foreground">Média por corrida</p>
           <p className="text-xl font-display font-bold tabular-nums">{formatBRL(summary.avgPerRide)}</p>
         </Card>
 
         <Card className="p-4 flex flex-col justify-center bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
           <Award size={20} className="text-yellow-500 mb-2" />
-          <p className="text-xs font-medium text-muted-foreground">Melhor Plat.</p>
-          <p className="text-xl font-display font-bold capitalize">{summary.bestPlatform || '-'}</p>
+          <p className="text-xs font-medium text-muted-foreground">Melhor plataforma</p>
+          <p className="text-xl font-display font-bold">
+            {summary.bestPlatform ? (platformMeta[summary.bestPlatform]?.label ?? summary.bestPlatform) : '—'}
+          </p>
         </Card>
       </motion.div>
 
       {/* Smart Insights */}
       <motion.div variants={item} className="space-y-4">
         <h3 className="font-display text-xl font-bold flex items-center gap-2">
-          <Lightbulb className="text-yellow-500" size={24} /> Insights
+          <Lightbulb className="text-yellow-500" size={24} /> Alertas inteligentes
         </h3>
         
         <div className="space-y-3">
@@ -192,10 +205,10 @@ export default function Home() {
           {isFree && (
             <Link href="/reports">
               <Card className="p-4 border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-500/10 to-transparent flex items-start gap-4 cursor-pointer hover:from-yellow-500/20 transition-all mt-3">
-                <Lock size={20} className="text-yellow-500 mt-0.5" />
+                <Lock size={20} className="text-yellow-500 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-white mb-1">Desbloqueie seu Lucro Real</p>
-                  <p className="text-xs text-muted-foreground mb-3">Veja para onde seu dinheiro está indo e maximize seus ganhos com o PRO.</p>
+                  <p className="text-sm font-bold text-white mb-1">Descubra onde vai o seu dinheiro</p>
+                  <p className="text-xs text-muted-foreground mb-3">Não se trata apenas de quanto você fatura, mas de quanto realmente sobra no seu bolso. Ative o PRO e veja seu lucro real.</p>
                   <span className="text-xs font-bold text-yellow-500 hover:text-yellow-400">FAZER UPGRADE ✦</span>
                 </div>
               </Card>
@@ -207,12 +220,12 @@ export default function Home() {
       {/* Extended Goals */}
       <motion.div variants={item}>
         <Card className="p-6 space-y-6 bg-white/[0.02]">
-          <h4 className="font-display text-xl font-bold">Progresso das Metas</h4>
+          <h4 className="font-display text-xl font-bold">Suas metas de ganhos</h4>
           
           <div className="space-y-5">
             <div>
               <div className="flex justify-between text-sm mb-2 font-medium">
-                <span className="text-muted-foreground">Semana <span className="text-white ml-1">{formatBRL(summary.earningsWeek)}</span></span>
+                <span className="text-muted-foreground">Esta semana <span className="text-white ml-1">{formatBRL(summary.earningsWeek)}</span></span>
                 <span className="font-bold text-primary">{Math.round(summary.goalWeeklyPct || 0)}%</span>
               </div>
               <div className="h-2.5 bg-black rounded-full overflow-hidden border border-white/5">
@@ -222,7 +235,7 @@ export default function Home() {
 
             <div>
               <div className="flex justify-between text-sm mb-2 font-medium">
-                <span className="text-muted-foreground">Mês <span className="text-white ml-1">{formatBRL(summary.earningsMonth)}</span></span>
+                <span className="text-muted-foreground">Este mês <span className="text-white ml-1">{formatBRL(summary.earningsMonth)}</span></span>
                 <span className="font-bold text-primary">{Math.round(summary.goalMonthlyPct || 0)}%</span>
               </div>
               <div className="h-2.5 bg-black rounded-full overflow-hidden border border-white/5">

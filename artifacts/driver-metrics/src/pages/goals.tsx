@@ -53,7 +53,7 @@ export default function Goals() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
         queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-        toast({ title: "Metas atualizadas com sucesso!" });
+        toast({ title: "Suas metas foram salvas com sucesso!" });
       }
     });
   });
@@ -68,14 +68,14 @@ export default function Goals() {
         <h2 className="text-3xl font-display font-bold flex items-center gap-3">
           <Target className="text-primary" /> Minhas Metas
         </h2>
-        <p className="text-muted-foreground mt-2 font-medium">Defina seus objetivos financeiros e acompanhe seu progresso.</p>
+        <p className="text-muted-foreground mt-2 font-medium">Defina seus objetivos de ganhos e acompanhe seu progresso no painel.</p>
       </div>
 
       <Card className="p-6 bg-gradient-to-br from-card to-white/[0.02]">
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="grid md:grid-cols-3 gap-6">
             <div className="space-y-3">
-              <Label className="text-primary font-bold uppercase tracking-wider text-[10px]">Meta Diária (R$)</Label>
+              <Label className="text-primary font-bold uppercase tracking-wider text-[10px]">Sua meta diária (R$)</Label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-display font-bold">R$</span>
                 <Input type="number" step="1" className="font-display text-2xl font-bold h-16 pl-12 bg-black/40 border-white/10 focus-visible:border-primary" {...form.register("daily")} />
@@ -90,7 +90,7 @@ export default function Goals() {
               )}
             </div>
             <div className="space-y-3">
-              <Label className="uppercase tracking-wider text-[10px] font-bold text-muted-foreground">Meta Semanal (R$)</Label>
+              <Label className="uppercase tracking-wider text-[10px] font-bold text-muted-foreground">Meta semanal (R$)</Label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-display font-bold">R$</span>
                 <Input type="number" step="1" className="font-display text-xl font-bold h-16 pl-12 bg-black/40 border-white/5 focus-visible:border-white/20" {...form.register("weekly")} />
@@ -105,7 +105,7 @@ export default function Goals() {
               )}
             </div>
             <div className="space-y-3">
-              <Label className="uppercase tracking-wider text-[10px] font-bold text-muted-foreground">Meta Mensal (R$)</Label>
+              <Label className="uppercase tracking-wider text-[10px] font-bold text-muted-foreground">Meta mensal (R$)</Label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-display font-bold">R$</span>
                 <Input type="number" step="1" className="font-display text-xl font-bold h-16 pl-12 bg-black/40 border-white/5 focus-visible:border-white/20" {...form.register("monthly")} />
@@ -181,12 +181,12 @@ export default function Goals() {
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 text-primary mb-4">
                     <TrendingUp size={24} />
                   </div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2">Projeção Mensal Bruta</p>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2">Projeção de faturamento mensal</p>
                   <p className="text-5xl md:text-6xl font-display font-extrabold text-white tabular-nums drop-shadow-[0_0_15px_rgba(0,255,136,0.3)] text-gradient">
                     {formatBRL(projecaoMensal)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-4 max-w-[200px] mx-auto font-medium">
-                    Faturamento estimado. Custos e taxas não deduzidos.
+                    Estimativa bruta. Comissões das plataformas e custos não incluídos.
                   </p>
                 </div>
               </div>
@@ -211,10 +211,10 @@ export default function Goals() {
                 <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center mb-4 glow-gold shadow-2xl shadow-yellow-500/20">
                   <Lock size={40} className="text-black" />
                 </div>
-                <h4 className="text-2xl font-display font-bold text-white mb-2">Simulador Premium</h4>
-                <p className="text-muted-foreground max-w-sm mb-6 leading-relaxed">Descubra exatamente quanto você precisa rodar para alcançar seus sonhos com a projeção inteligente do PRO.</p>
+                <h4 className="text-2xl font-display font-bold text-white mb-2">Simulador de Ganhos PRO</h4>
+                <p className="text-muted-foreground max-w-sm mb-6 leading-relaxed">Descubra exatamente quanto você precisa rodar para atingir seus objetivos. Simule cenários e planeje sua semana com inteligência.</p>
                 <Button variant="gold" size="lg" className="px-8 shadow-[0_0_20px_rgba(255,215,0,0.3)]">
-                  Desbloquear Acesso
+                  Desbloquear simulador
                 </Button>
               </div>
             </Card>

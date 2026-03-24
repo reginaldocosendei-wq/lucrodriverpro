@@ -41,7 +41,7 @@ export default function AuthScreen() {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       },
       onError: (err: any) => {
-        setErrorMsg(err?.response?.data?.error || "Erro ao fazer login");
+        setErrorMsg(err?.response?.data?.error || "E-mail ou senha incorretos. Tente novamente.");
       }
     });
   });
@@ -53,7 +53,7 @@ export default function AuthScreen() {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       },
       onError: (err: any) => {
-        setErrorMsg(err?.response?.data?.error || "Erro ao criar conta");
+        setErrorMsg(err?.response?.data?.error || "Não foi possível criar sua conta. Tente novamente.");
       }
     });
   });
