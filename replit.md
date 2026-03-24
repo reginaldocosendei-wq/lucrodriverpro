@@ -16,6 +16,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 - **Auth**: Session-based auth with bcryptjs
+- **Payments**: Stripe (via Replit integration) + stripe-replit-sync for webhooks & DB sync
 
 ## Structure
 

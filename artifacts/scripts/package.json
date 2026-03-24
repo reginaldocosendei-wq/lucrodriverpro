@@ -6,8 +6,8 @@
     "seed-products": "tsx src/seed-products.ts"
   },
   "dependencies": {
-    "stripe": "workspace:*",
-    "stripe-replit-sync": "workspace:*"
+    "stripe": "catalog:",
+    "stripe-replit-sync": "catalog:"
   },
   "devDependencies": {
     "tsx": "^4.19.3"

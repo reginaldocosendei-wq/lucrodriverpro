@@ -1,31 +1,47 @@
 import Stripe from "stripe";
 
-async function fetchStripeCredentials(): Promise<{ secretKey: string }> {
-  const hostname = process.env["REPLIT_CONNECTORS_HOSTNAME"];
-  const identity = process.env["REPL_IDENTITY"];
-  const connectorConfigId = "ccfg_stripe_01K611P4YQR0SZM11XFRQJC44Y";
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
 
-  if (hostname && identity) {
-    try {
-      const res = await fetch(
-        `https://${hostname}/v1/connectorconfigs/${connectorConfigId}/credentials`,
-        { headers: { "X-Replit-Identity": identity } },
-      );
-      if (res.ok) {
-        const data = await res.json() as { secretKey?: string };
-        if (data.secretKey) return { secretKey: data.secretKey };
-      }
-    } catch {
-      // fall through
-    }
+  if (!xReplitToken) {
+    throw new Error("X-Replit-Token not found for repl/depl");
   }
 
-  const secretKey = process.env["STRIPE_SECRET_KEY"];
-  if (!secretKey) throw new Error("No Stripe credentials available.");
-  return { secretKey };
+  const connectorName = "stripe";
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  const targetEnvironment = isProduction ? "production" : "development";
+
+  const url = new URL(`https://${hostname}/api/v2/connection`);
+  url.searchParams.set("include_secrets", "true");
+  url.searchParams.set("connector_names", connectorName);
+  url.searchParams.set("environment", targetEnvironment);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "X-Replit-Token": xReplitToken,
+    },
+  });
+
+  const data = await response.json();
+  const connectionSettings = data.items?.[0];
+
+  if (!connectionSettings?.settings?.secret) {
+    throw new Error(`Stripe ${targetEnvironment} connection not found`);
+  }
+
+  return {
+    publishableKey: connectionSettings.settings.publishable as string,
+    secretKey: connectionSettings.settings.secret as string,
+  };
 }
 
 export async function getUncachableStripeClient(): Promise<Stripe> {
-  const { secretKey } = await fetchStripeCredentials();
+  const { secretKey } = await getCredentials();
   return new Stripe(secretKey, { apiVersion: "2025-01-27.acacia" });
 }

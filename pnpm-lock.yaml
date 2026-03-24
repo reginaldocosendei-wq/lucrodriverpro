@@ -54,6 +54,12 @@ catalogs:
     react-dom:
       specifier: 19.1.0
       version: 19.1.0
+    stripe:
+      specifier: ^20.0.0
+      version: 20.4.1
+    stripe-replit-sync:
+      specifier: ^1.0.0
+      version: 1.0.0
     tailwind-merge:
       specifier: 3.5.0
       version: 3.5.0
@@ -203,6 +209,12 @@ importers:
       pino-http:
         specifier: ^10
         version: 10.5.0
+      stripe:
+        specifier: 'catalog:'
+        version: 20.4.1(@types/node@25.3.5)
+      stripe-replit-sync:
+        specifier: 'catalog:'
+        version: 1.0.0(stripe@20.4.1(@types/node@25.3.5))
     devDependencies:
       '@types/bcryptjs':
         specifier: ^3.0.0
@@ -609,6 +621,19 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  artifacts/scripts:
+    dependencies:
+      stripe:
+        specifier: 'catalog:'
+        version: 20.4.1(@types/node@25.3.5)
+      stripe-replit-sync:
+        specifier: 'catalog:'
+        version: 1.0.0(stripe@20.4.1(@types/node@25.3.5))
+    devDependencies:
+      tsx:
+        specifier: ^4.19.3
+        version: 4.21.0
 
   lib/api-client-react:
     dependencies:

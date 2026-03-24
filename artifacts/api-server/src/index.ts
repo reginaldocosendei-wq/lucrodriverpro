@@ -1,4 +1,3 @@
-import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 import app from "./app";
 import { logger } from "./lib/logger";
@@ -11,10 +10,7 @@ async function initStripe() {
   }
 
   try {
-    logger.info("Initializing Stripe schema...");
-    await runMigrations({ databaseUrl, schema: "stripe" });
-    logger.info("Stripe schema ready");
-
+    logger.info("Initializing Stripe sync...");
     const stripeSync = await getStripeSync();
 
     const domains = process.env["REPLIT_DOMAINS"]?.split(",") ?? [];
@@ -32,9 +28,10 @@ async function initStripe() {
     stripeSync
       .syncBackfill()
       .then(() => logger.info("Stripe backfill complete"))
-      .catch((err) => logger.error({ err }, "Stripe backfill error"));
+      .catch((err: any) => logger.warn({ err: err.message }, "Stripe backfill warn"));
+
+    logger.info("Stripe initialized");
   } catch (err: any) {
-    // Log but don't crash — app works without Stripe configured
     logger.warn({ err: err.message }, "Stripe init skipped (not configured)");
   }
 }
@@ -47,7 +44,7 @@ if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${rawPort}"
 
 await initStripe();
 
-app.listen(port, (err) => {
+app.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
