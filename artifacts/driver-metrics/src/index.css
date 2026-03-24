@@ -24,6 +24,9 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  
+  --color-gold: hsl(var(--gold));
+  --color-gold-foreground: hsl(var(--gold-foreground));
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -32,10 +35,10 @@
 
 :root {
   /* Dark mode by default for that bold, night-driving feel */
-  --background: 0 0% 7%;      /* #111111 */
+  --background: 0 0% 4%;      /* #0a0a0a */
   --foreground: 0 0% 98%;     /* #fafafa */
   
-  --card: 0 0% 11%;           /* #1c1c1c - slightly lighter than bg */
+  --card: 0 0% 10%;           /* #1a1a1a */
   --card-foreground: 0 0% 98%;
   
   --popover: 0 0% 7%;
@@ -54,11 +57,16 @@
   --accent: 152 100% 50%;
   --accent-foreground: 0 0% 0%;
   
-  --destructive: 0 84% 60%;
+  /* Danger red */
+  --destructive: 0 100% 64%;
   --destructive-foreground: 0 0% 98%;
   
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
+  /* Premium Gold */
+  --gold: 44 100% 50%;
+  --gold-foreground: 0 0% 0%;
+  
+  --border: 0 0% 18%;
+  --input: 0 0% 15%;
   --ring: 152 100% 50%;
   
   --radius: 1rem;
@@ -71,22 +79,44 @@
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply tracking-tight font-bold;
+  }
+  
+  /* Hide scrollbar for clean mobile UI */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
   }
 }
 
 /* Custom Utilities for Neon Glow */
 @layer utilities {
   .glow-primary {
-    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.4);
   }
   .glow-primary-hover:hover {
-    box-shadow: 0 0 30px -5px hsl(var(--primary) / 0.7);
+    box-shadow: 0 0 25px -2px hsl(var(--primary) / 0.6);
+  }
+  .glow-gold {
+    box-shadow: 0 0 25px -5px hsl(var(--gold) / 0.5);
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-white/50;
   }
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-white/5;
+  }
+}
+
+/* Recharts Customization to fit dark theme */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: hsl(var(--border) / 0.5);
+}
+.recharts-tooltip-cursor {
+  fill: hsl(var(--muted) / 0.3);
 }

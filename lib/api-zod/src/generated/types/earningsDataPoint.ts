@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface EarningsDataPoint {
+  date: string;
+  earnings: number;
+  costs: number;
+  profit: number;
+  rides: number;
 }

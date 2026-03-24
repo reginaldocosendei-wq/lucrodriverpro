@@ -1,314 +1,143 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { formatCurrency } from '@/lib/utils';
-import { 
-  Car, 
-  MapPin, 
-  Banknote, 
-  Wrench, 
-  Fuel, 
-  Home as HomeIcon, 
-  Target, 
-  TrendingUp,
-  Activity,
-  ChevronRight
-} from 'lucide-react';
+import { useGetDashboardSummary } from "@workspace/api-client-react";
+import { formatBRL } from "@/lib/utils";
+import { Card } from "@/components/ui";
+import { TrendingUp, Car, MapPin, AlertCircle, TrendingDown, DollarSign, Target, Award } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Home() {
-  // State for Nova Corrida
-  const [corridaValor, setCorridaValor] = useState('');
-  const [corridaKm, setCorridaKm] = useState('');
-  const [ganhoPorKm, setGanhoPorKm] = useState<number | null>(null);
+  const { data: summary, isLoading } = useGetDashboardSummary();
 
-  // State for Despesas
-  const [combustivel, setCombustivel] = useState('');
-  const [manutencao, setManutencao] = useState('');
-  const [aluguel, setAluguel] = useState('');
-  const [totalDespesas, setTotalDespesas] = useState<number | null>(null);
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
+  }
 
-  // State for Meta
-  const [meta, setMeta] = useState('');
-  const [ganhoAtual, setGanhoAtual] = useState('');
-  const [metaResult, setMetaResult] = useState<{ falta: number, porDia: number } | null>(null);
+  if (!summary) return null;
 
-  // Calculations
-  const calcularCorrida = () => {
-    const v = parseFloat(corridaValor);
-    const k = parseFloat(corridaKm);
-    if (v && k && k > 0) {
-      setGanhoPorKm(v / k);
-    } else {
-      setGanhoPorKm(null);
-    }
-  };
+  const currentHour = new Date().getHours();
+  const isAfterNoon = currentHour >= 12;
+  const showGoalAlert = summary.goalDailyPct < 50 && isAfterNoon;
+  const showKmAlert = summary.avgPerKm > 0 && summary.avgPerKm < 1.5;
 
-  const calcularDespesas = () => {
-    const c = parseFloat(combustivel) || 0;
-    const m = parseFloat(manutencao) || 0;
-    const a = parseFloat(aluguel) || 0;
-    
-    if (c || m || a) {
-      setTotalDespesas(c + m + a);
-    } else {
-      setTotalDespesas(null);
-    }
-  };
+  const isProfitPositive = summary.realProfitMonth >= 0;
 
-  const calcularMeta = () => {
-    const m = parseFloat(meta);
-    const g = parseFloat(ganhoAtual);
-    if (m && g !== isNaN(g as any)) {
-      const falta = Math.max(0, m - g);
-      setMetaResult({
-        falta,
-        porDia: falta / 30
-      });
-    } else {
-      setMetaResult(null);
-    }
-  };
-
-  const containerVariants = {
+  const container = {
     hidden: { opacity: 0 },
-    visible: {
+    show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.15
-      }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15
-      }
-    }
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
   };
 
   return (
-    <div className="min-h-screen w-full relative pb-20">
-      {/* Background with overlay */}
-      <div 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20 mix-blend-screen"
-        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/dashboard-bg.png)` }}
-      />
-      <div className="fixed inset-0 z-0 bg-gradient-to-b from-background/80 via-background to-background" />
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      
+      {/* Alerts */}
+      {(showGoalAlert || showKmAlert) && (
+        <motion.div variants={item} className="space-y-3">
+          {showGoalAlert && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 px-4 py-3 rounded-xl flex items-center gap-3">
+              <AlertCircle size={20} />
+              <p className="text-sm font-medium">Você está abaixo da meta hoje. Acelere!</p>
+            </div>
+          )}
+          {showKmAlert && (
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl flex items-center gap-3">
+              <TrendingDown size={20} />
+              <p className="text-sm font-medium">Sua média está {formatBRL(summary.avgPerKm)}/km. Hoje não está compensando rodar.</p>
+            </div>
+          )}
+        </motion.div>
+      )}
 
-      {/* Main Content */}
-      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-12">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center mb-12 flex flex-col items-center"
-        >
-          <div className="w-16 h-16 bg-primary/20 text-primary rounded-2xl flex items-center justify-center mb-4 shadow-[0_0_30px_-5px_rgba(0,255,136,0.3)] border border-primary/30">
-            <Activity className="w-8 h-8" />
+      {/* Main Highlights */}
+      <div className="grid grid-cols-2 gap-4">
+        <motion.div variants={item}>
+          <Card className="p-5 bg-gradient-to-br from-card to-card/50">
+            <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1"><DollarSign size={14}/> Ganho Hoje</p>
+            <h3 className="text-2xl md:text-3xl font-display font-bold text-primary">{formatBRL(summary.earningsToday)}</h3>
+            <div className="mt-4 h-2 bg-black rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary glow-primary transition-all duration-1000"
+                style={{ width: `${Math.min(100, summary.goalDailyPct || 0)}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-right">{Math.round(summary.goalDailyPct || 0)}% da meta</p>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={item}>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1"><Target size={14}/> Lucro Real Mês</p>
+            <h3 className={`text-2xl md:text-3xl font-display font-bold ${isProfitPositive ? 'text-primary' : 'text-destructive'}`}>
+              {formatBRL(summary.realProfitMonth)}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-4 pt-2 border-t border-white/5">
+              Ganho {formatBRL(summary.earningsMonth)} <br/>
+              Custo <span className="text-destructive">{formatBRL(summary.costsMonth)}</span>
+            </p>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Stats Grid */}
+      <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 flex flex-col justify-center">
+          <Car size={20} className="text-muted-foreground mb-2" />
+          <p className="text-xs text-muted-foreground">Corridas</p>
+          <p className="text-xl font-bold">{summary.totalRides}</p>
+        </Card>
+        
+        <Card className="p-4 flex flex-col justify-center">
+          <MapPin size={20} className="text-primary mb-2" />
+          <p className="text-xs text-muted-foreground">Média / KM</p>
+          <p className="text-xl font-bold">{formatBRL(summary.avgPerKm)}</p>
+        </Card>
+
+        <Card className="p-4 flex flex-col justify-center">
+          <TrendingUp size={20} className="text-primary mb-2" />
+          <p className="text-xs text-muted-foreground">Média / Corrida</p>
+          <p className="text-xl font-bold">{formatBRL(summary.avgPerRide)}</p>
+        </Card>
+
+        <Card className="p-4 flex flex-col justify-center">
+          <Award size={20} className="text-yellow-500 mb-2" />
+          <p className="text-xs text-muted-foreground">Melhor Plat.</p>
+          <p className="text-xl font-bold capitalize">{summary.bestPlatform || '-'}</p>
+        </Card>
+      </motion.div>
+
+      {/* Extended Goals */}
+      <motion.div variants={item}>
+        <Card className="p-5 space-y-5">
+          <h4 className="font-display font-bold text-lg mb-2">Progresso das Metas</h4>
+          
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-muted-foreground">Semana ({formatBRL(summary.earningsWeek)})</span>
+              <span className="font-bold">{Math.round(summary.goalWeeklyPct || 0)}%</span>
+            </div>
+            <div className="h-2 bg-black rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${Math.min(100, summary.goalWeeklyPct || 0)}%` }} />
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-white font-display mb-3 tracking-tight">
-            Driver<span className="text-primary">Metrics</span>
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Seu painel inteligente para controle de ganhos, gastos e metas diárias.
-          </p>
-        </motion.div>
 
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-6"
-        >
-          {/* Card: Nova Corrida */}
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-white">
-                  <Car className="w-6 h-6 text-primary" />
-                  Nova Corrida
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Valor da corrida (R$)</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<Banknote className="w-5 h-5" />}
-                      value={corridaValor}
-                      onChange={(e) => setCorridaValor(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>KM rodado</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.0" 
-                      icon={<MapPin className="w-5 h-5" />}
-                      value={corridaKm}
-                      onChange={(e) => setCorridaKm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <Button onClick={calcularCorrida}>
-                  Calcular Ganho
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </Button>
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-muted-foreground">Mês ({formatBRL(summary.earningsMonth)})</span>
+              <span className="font-bold">{Math.round(summary.goalMonthlyPct || 0)}%</span>
+            </div>
+            <div className="h-2 bg-black rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${Math.min(100, summary.goalMonthlyPct || 0)}%` }} />
+            </div>
+          </div>
+        </Card>
+      </motion.div>
 
-                {ganhoPorKm !== null && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between"
-                  >
-                    <span className="text-muted-foreground font-medium">Ganho por KM:</span>
-                    <span className="text-2xl font-bold text-primary font-display">
-                      {formatCurrency(ganhoPorKm)}
-                    </span>
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Card: Despesas */}
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-white">
-                  <Wrench className="w-6 h-6 text-primary" />
-                  Despesas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Combustível</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<Fuel className="w-5 h-5" />}
-                      value={combustivel}
-                      onChange={(e) => setCombustivel(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Manutenção</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<Wrench className="w-5 h-5" />}
-                      value={manutencao}
-                      onChange={(e) => setManutencao(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Aluguel</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<HomeIcon className="w-5 h-5" />}
-                      value={aluguel}
-                      onChange={(e) => setAluguel(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <Button onClick={calcularDespesas} className="bg-white text-black hover:bg-gray-200 shadow-none glow-none">
-                  Somar Despesas
-                </Button>
-
-                {totalDespesas !== null && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-between"
-                  >
-                    <span className="text-muted-foreground font-medium">Total de despesas:</span>
-                    <span className="text-2xl font-bold text-destructive font-display">
-                      {formatCurrency(totalDespesas)}
-                    </span>
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Card: Meta */}
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-white">
-                  <Target className="w-6 h-6 text-primary" />
-                  Meta Mensal
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Meta mensal (R$)</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<Target className="w-5 h-5" />}
-                      value={meta}
-                      onChange={(e) => setMeta(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Ganho atual (R$)</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
-                      icon={<TrendingUp className="w-5 h-5" />}
-                      value={ganhoAtual}
-                      onChange={(e) => setGanhoAtual(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <Button onClick={calcularMeta} className="bg-accent text-accent-foreground">
-                  Analisar Meta
-                  <TrendingUp className="w-5 h-5 ml-2" />
-                </Button>
-
-                {metaResult !== null && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
-                  >
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-center">
-                      <span className="text-muted-foreground text-sm font-medium mb-1">Falta para atingir:</span>
-                      <span className="text-2xl font-bold text-white font-display">
-                        {formatCurrency(metaResult.falta)}
-                      </span>
-                    </div>
-                    <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex flex-col justify-center">
-                      <span className="text-primary/80 text-sm font-medium mb-1">Necessário por dia:</span>
-                      <span className="text-2xl font-bold text-primary font-display">
-                        {formatCurrency(metaResult.porDia)}
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-      </main>
-    </div>
+    </motion.div>
   );
 }

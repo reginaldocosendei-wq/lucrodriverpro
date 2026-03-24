@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Lucro Driver API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: rides
+    description: Ride management
+  - name: costs
+    description: Cost management
+  - name: goals
+    description: Goal management
+  - name: dashboard
+    description: Dashboard summary
+  - name: reports
+    description: Reports and analytics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,252 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides:
+    get:
+      operationId: getRides
+      tags: [rides]
+      summary: Get all rides for current user
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of rides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideListResponse"
+    post:
+      operationId: createRide
+      tags: [rides]
+      summary: Create a new ride
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRideRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ride"
+
+  /rides/{id}:
+    delete:
+      operationId: deleteRide
+      tags: [rides]
+      summary: Delete a ride
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /costs:
+    get:
+      operationId: getCosts
+      tags: [costs]
+      summary: Get all costs for current user
+      responses:
+        "200":
+          description: List of costs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostListResponse"
+    post:
+      operationId: createCost
+      tags: [costs]
+      summary: Create a new cost entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCostRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cost"
+
+  /costs/{id}:
+    delete:
+      operationId: deleteCost
+      tags: [costs]
+      summary: Delete a cost entry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /goals:
+    get:
+      operationId: getGoals
+      tags: [goals]
+      summary: Get goals for current user
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalsResponse"
+    put:
+      operationId: upsertGoals
+      tags: [goals]
+      summary: Create or update goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertGoalsRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalsResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /reports/earnings:
+    get:
+      operationId: getEarningsReport
+      tags: [reports]
+      summary: Get earnings chart data (last 30 days)
+      responses:
+        "200":
+          description: Earnings report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EarningsReport"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +287,273 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required: [name, email, password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro]
+        createdAt:
+          type: string
+      required: [id, name, email, plan, createdAt]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required: [user, message]
+
+    Ride:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        value:
+          type: number
+        distanceKm:
+          type: number
+        durationMinutes:
+          type: integer
+        platform:
+          type: string
+          enum: [uber, 99, indriver, outro]
+        passengerRating:
+          type: number
+        platformCommissionPct:
+          type: number
+        netValue:
+          type: number
+        valuePerKm:
+          type: number
+        commissionAmount:
+          type: number
+        createdAt:
+          type: string
+      required: [id, userId, value, distanceKm, durationMinutes, platform, passengerRating, platformCommissionPct, netValue, valuePerKm, commissionAmount, createdAt]
+
+    CreateRideRequest:
+      type: object
+      properties:
+        value:
+          type: number
+        distanceKm:
+          type: number
+        durationMinutes:
+          type: integer
+        platform:
+          type: string
+          enum: [uber, 99, indriver, outro]
+        passengerRating:
+          type: number
+        platformCommissionPct:
+          type: number
+      required: [value, distanceKm, durationMinutes, platform, passengerRating, platformCommissionPct]
+
+    RideListResponse:
+      type: object
+      properties:
+        rides:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ride"
+        total:
+          type: integer
+      required: [rides, total]
+
+    Cost:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        category:
+          type: string
+          enum: [combustivel, alimentacao, manutencao, aluguel, outros]
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+        createdAt:
+          type: string
+      required: [id, userId, category, amount, description, date, createdAt]
+
+    CreateCostRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [combustivel, alimentacao, manutencao, aluguel, outros]
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+      required: [category, amount, description, date]
+
+    CostListResponse:
+      type: object
+      properties:
+        costs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Cost"
+        totalMonth:
+          type: number
+        totalWeek:
+          type: number
+        totalDay:
+          type: number
+      required: [costs, totalMonth, totalWeek, totalDay]
+
+    GoalsResponse:
+      type: object
+      properties:
+        daily:
+          type: number
+        weekly:
+          type: number
+        monthly:
+          type: number
+      required: [daily, weekly, monthly]
+
+    UpsertGoalsRequest:
+      type: object
+      properties:
+        daily:
+          type: number
+        weekly:
+          type: number
+        monthly:
+          type: number
+      required: [daily, weekly, monthly]
+
+    DashboardSummary:
+      type: object
+      properties:
+        earningsToday:
+          type: number
+        earningsWeek:
+          type: number
+        earningsMonth:
+          type: number
+        totalRides:
+          type: number
+        avgPerRide:
+          type: number
+        avgPerKm:
+          type: number
+        bestRide:
+          type: number
+        bestPlatform:
+          type: string
+        costsMonth:
+          type: number
+        realProfitMonth:
+          type: number
+        goalDaily:
+          type: number
+        goalWeekly:
+          type: number
+        goalMonthly:
+          type: number
+        goalDailyPct:
+          type: number
+        goalWeeklyPct:
+          type: number
+        goalMonthlyPct:
+          type: number
+      required: [earningsToday, earningsWeek, earningsMonth, totalRides, avgPerRide, avgPerKm, bestRide, bestPlatform, costsMonth, realProfitMonth, goalDaily, goalWeekly, goalMonthly, goalDailyPct, goalWeeklyPct, goalMonthlyPct]
+
+    EarningsDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        earnings:
+          type: number
+        costs:
+          type: number
+        profit:
+          type: number
+        rides:
+          type: integer
+      required: [date, earnings, costs, profit, rides]
+
+    PlatformBreakdown:
+      type: object
+      properties:
+        platform:
+          type: string
+        earnings:
+          type: number
+        rides:
+          type: integer
+      required: [platform, earnings, rides]
+
+    EarningsReport:
+      type: object
+      properties:
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/EarningsDataPoint"
+        byPlatform:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformBreakdown"
+        byDayOfWeek:
+          type: array
+          items:
+            $ref: "#/components/schemas/EarningsDataPoint"
+      required: [daily, byPlatform, byDayOfWeek]

@@ -5,7 +5,9 @@
  * Lucro Driver API
  * OpenAPI spec version: 0.1.0
  */
+import type { Ride } from "./ride";
 
-export interface HealthStatus {
-  status: string;
+export interface RideListResponse {
+  rides: Ride[];
+  total: number;
 }
