@@ -10,6 +10,7 @@ import Costs from "@/pages/costs";
 import Goals from "@/pages/goals";
 import Reports from "@/pages/reports";
 import Upgrade from "@/pages/upgrade";
+import Import from "@/pages/Import";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CheckoutCancel from "@/pages/checkout-cancel";
 import AuthScreen from "@/pages/auth";
@@ -53,6 +54,7 @@ function Router() {
         <Route path="/goals" component={Goals} />
         <Route path="/reports" component={Reports} />
         <Route path="/upgrade" component={Upgrade} />
+        <Route path="/import" component={Import} />
         <Route path="/checkout/success" component={CheckoutSuccess} />
         <Route path="/checkout/cancel" component={CheckoutCancel} />
         <Route component={NotFound} />

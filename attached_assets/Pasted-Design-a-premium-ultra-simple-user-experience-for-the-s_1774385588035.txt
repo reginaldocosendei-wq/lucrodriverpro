@@ -1,0 +1,153 @@
+Design a premium, ultra-simple user experience for the screenshot import feature in my app "Lucro Driver".
+
+---
+
+## 🎯 GOAL
+
+Make the process so simple that the user can import their daily earnings in under 10 seconds.
+
+---
+
+## 📱 STEP 1: ENTRY POINT (MAIN DASHBOARD)
+
+Add a prominent button:
+
+"Import today's results"
+
+Style:
+- Large button
+- Green gradient
+- Icon: camera or upload
+
+---
+
+## 📸 STEP 2: INSTRUCTION SCREEN
+
+Title:
+"Import your daily results"
+
+Subtitle:
+"Take a screenshot of your earnings summary (total amount and trips)"
+
+Show visual example (mock image of Uber/99 summary screen)
+
+Tips:
+- Make sure total earnings is visible
+- Include number of trips
+
+Button:
+"Upload screenshot"
+
+---
+
+## 📤 STEP 3: UPLOAD SCREEN
+
+- Drag and drop or file upload
+- Mobile: open gallery or camera
+
+Show loading animation:
+
+"Analyzing your screenshot..."
+
+Add subtle animation (progress indicator)
+
+---
+
+## 🧠 STEP 4: PROCESSING FEEDBACK
+
+Show dynamic messages while processing:
+
+- "Reading your earnings..."
+- "Identifying total amount..."
+- "Almost done..."
+
+---
+
+## 👀 STEP 5: RESULT PREVIEW (CRITICAL)
+
+Show a clean card:
+
+Title:
+"We found your results"
+
+Display:
+
+- 💰 Earnings: R$XXX
+- 🚗 Trips: X
+
+---
+
+## ✏️ EDIT OPTION
+
+Allow user to edit values manually if needed
+
+---
+
+## ✅ STEP 6: CONFIRMATION
+
+Button:
+"Confirm and save"
+
+After click:
+
+Success message:
+
+"Done! Your day has been recorded."
+
+---
+
+## 🎉 STEP 7: REWARD FEEDBACK
+
+Show:
+
+"Now you know your real profit today."
+
+Optional:
+"You are closer to your goal"
+
+---
+
+## 🔒 PRO EXPERIENCE
+
+If feature is locked:
+
+Blur upload button
+
+Show:
+
+"Save time and import your results automatically"
+
+Button:
+"Unlock PRO"
+
+---
+
+## 🎨 UI DESIGN RULES
+
+- Dark mode
+- Green = success/profit
+- Gold = premium
+- Rounded corners (2xl)
+- Smooth transitions
+
+---
+
+## ⚡ SPEED PRINCIPLE
+
+- Max 3 taps to complete process
+- Instant feedback
+- No friction
+
+---
+
+## 🧠 PSYCHOLOGY
+
+- Make user feel smart and efficient
+- Reward immediately after action
+- Reduce effort as much as possible
+
+---
+
+## 🚀 FINAL RESULT
+
+A frictionless, addictive experience where users quickly import their daily results and feel rewarded instantly.

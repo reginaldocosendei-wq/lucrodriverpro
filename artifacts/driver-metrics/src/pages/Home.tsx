@@ -4,7 +4,7 @@ import { formatBRL } from "@/lib/utils";
 import { Card } from "@/components/ui";
 import {
   TrendingUp, Car, MapPin, AlertCircle, Target, Award,
-  Zap, Lock, Plus, ChevronRight
+  Zap, Lock, Plus, ChevronRight, Camera
 } from "lucide-react";
 import { motion, animate } from "framer-motion";
 import { Link } from "wouter";
@@ -446,6 +446,31 @@ export default function Home() {
           </Link>
         </motion.div>
       )}
+
+      {/* ─── IMPORT BUTTON ─── */}
+      <motion.div variants={item}>
+        <Link href="/import">
+          <motion.div
+            whileTap={{ scale: 0.97 }}
+            className="relative rounded-3xl overflow-hidden cursor-pointer group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/8 to-transparent" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+            <div className="relative z-10 p-5 border border-primary/20 rounded-3xl flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-primary to-emerald-500 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 shrink-0">
+                <Camera size={24} className="text-black" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-white mb-1">Importar resultados do dia</p>
+                <p className="text-xs text-white/50 leading-relaxed">
+                  Tire uma screenshot e registre seus ganhos em 10 segundos
+                </p>
+              </div>
+              <ChevronRight size={20} className="text-primary shrink-0 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.div>
+        </Link>
+      </motion.div>
 
       {/* ─── GOAL PROGRESS ─── */}
       <motion.div variants={item}>
