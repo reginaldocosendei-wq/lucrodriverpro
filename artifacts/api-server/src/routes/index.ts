@@ -6,6 +6,7 @@ import costsRouter from "./costs";
 import goalsRouter from "./goals";
 import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
+import stripeRouter from "./stripe";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use("/costs", costsRouter);
 router.use("/goals", goalsRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
+router.use("/stripe", stripeRouter);
 
 export default router;

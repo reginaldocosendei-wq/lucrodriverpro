@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,13 +63,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         
-        <button 
-          onClick={handleLogout}
-          className="p-2.5 rounded-full text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
-          title="Sair"
-        >
-          <LogOut size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {user?.plan !== "pro" && (
+            <Link href="/upgrade">
+              <button className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-400/20 to-yellow-600/10 hover:from-yellow-400/30 border border-yellow-500/30 text-yellow-400 text-[11px] font-extrabold px-3 py-1.5 rounded-full tracking-wider transition-all">
+                <Sparkles size={12} />
+                PRO
+              </button>
+            </Link>
+          )}
+          <button
+            onClick={handleLogout}
+            className="p-2.5 rounded-full text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
+            title="Sair"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
