@@ -108,7 +108,7 @@ Label.displayName = "Label";
 // --- CARD ---
 export function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-2xl border border-white/5 bg-card text-card-foreground shadow-xl shadow-black/40 overflow-hidden relative", className)} {...props}>
+    <div className={cn("rounded-2xl border border-white/[0.06] bg-card text-card-foreground shadow-2xl shadow-black/60 overflow-hidden relative", className)} {...props}>
       {children}
     </div>
   );
