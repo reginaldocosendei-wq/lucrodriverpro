@@ -501,6 +501,8 @@ components:
           type: number
         realProfitMonth:
           type: number
+        realProfitToday:
+          type: number
         goalDaily:
           type: number
         goalWeekly:
@@ -513,7 +515,13 @@ components:
           type: number
         goalMonthlyPct:
           type: number
-      required: [earningsToday, earningsWeek, earningsMonth, totalRides, avgPerRide, avgPerKm, bestRide, bestPlatform, costsMonth, realProfitMonth, goalDaily, goalWeekly, goalMonthly, goalDailyPct, goalWeeklyPct, goalMonthlyPct]
+        currentStreak:
+          type: integer
+        avgPerRideHistory:
+          type: number
+        ridesThisWeek:
+          type: integer
+      required: [earningsToday, earningsWeek, earningsMonth, totalRides, avgPerRide, avgPerKm, bestRide, bestPlatform, costsMonth, realProfitMonth, realProfitToday, goalDaily, goalWeekly, goalMonthly, goalDailyPct, goalWeeklyPct, goalMonthlyPct, currentStreak, avgPerRideHistory, ridesThisWeek]
 
     EarningsDataPoint:
       type: object
