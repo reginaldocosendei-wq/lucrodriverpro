@@ -1,0 +1,195 @@
+🚀 MASTER PROMPT – “LUCRO DRIVER” APP
+I want to build a complete, modern, and responsive web application called "Lucro Driver", designed for ride-hailing drivers (Uber, 99, and similar platforms).
+
+The main goal of the app is to show the driver's REAL PROFIT, not just gross earnings.
+
+---
+
+## 🎯 MAIN OBJECTIVE
+
+Create an intelligent system that allows drivers to:
+
+- Track rides
+- Calculate real earnings
+- Control expenses
+- Monitor goals
+- Make better financial decisions
+
+---
+
+## 📱 APP STRUCTURE
+
+### 1. 🔐 Authentication System
+- User registration (email and password)
+- Login system
+- Store user data securely
+
+---
+
+### 2. 🚗 Ride Tracking
+
+Create a form with the following fields:
+
+- Ride fare (R$)
+- Distance (km)
+- Duration (minutes)
+- Platform (Uber, 99, or other)
+- Passenger rating
+- Platform commission (%)
+
+Automatically calculate:
+
+- Earnings per km
+- Commission in currency
+- Net earnings per ride
+
+---
+
+### 3. 📊 Smart Dashboard (MAIN SCREEN)
+
+Display:
+
+- Daily earnings
+- Weekly earnings
+- Monthly earnings
+- Total rides
+- Average per ride
+- Earnings per km
+- Best ride
+- Most profitable platform
+
+---
+
+### 4. 💸 Expense Tracking (CORE FEATURE)
+
+Allow users to input:
+
+- Fuel costs
+- Food expenses
+- Maintenance
+- Car rental (if applicable)
+- Other expenses
+
+Automatically calculate:
+
+- Daily expenses
+- Weekly expenses
+- Monthly expenses
+- REAL PROFIT (earnings - expenses)
+
+---
+
+### 5. 🎯 Goals System
+
+- Daily goal
+- Weekly goal
+- Monthly goal
+
+Display:
+
+- Percentage achieved
+- Remaining amount
+- Forecast based on current performance
+
+---
+
+### 6. 📈 Reports & Analytics
+
+- Earnings evolution (charts)
+- Uber vs 99 comparison
+- Ride history
+- Best days of the week
+
+Use interactive charts.
+
+---
+
+### 7. 🧠 Smart Features (DIFFERENTIAL)
+
+Include:
+
+- Alerts:
+  "You are below your daily goal"
+
+- Suggestions:
+  "Today might not be a good day to drive"
+
+- Simulator:
+  "If you drive X hours/day, you will earn R$X/month"
+
+---
+
+### 8. 🔒 FREEMIUM MODEL
+
+Create two tiers:
+
+#### 🟢 Free Version:
+- Ride tracking
+- Basic earnings view
+- Daily goal
+
+#### 🔴 Pro Version:
+- Full reports
+- Detailed real profit analysis
+- Comparisons
+- Simulator
+- Smart alerts
+
+Lock Pro features with message:
+
+"Unlock your real profit and earn more with Lucro Driver PRO"
+
+---
+
+### 9. 🎨 UI/UX DESIGN
+
+- Dark mode interface
+- Colors:
+  Green = profit
+  Red = loss
+  Gold = premium highlights
+
+- Modern, clean, minimal UI
+- Mobile-first design
+
+---
+
+### 10. 🧱 TECH STACK
+
+- Frontend: React + TailwindCSS
+- Backend: Node.js (Express)
+- Database: SQLite or Firebase
+- Charts: Chart.js
+
+---
+
+### 11. 📲 PWA SUPPORT
+
+- Installable as a mobile app
+- App icon
+- Fast performance
+
+---
+
+### 12. 💾 DATABASE STRUCTURE
+
+Create tables:
+
+- Users
+- Rides
+- Expenses
+- Goals
+
+---
+
+### 13. 🔮 FUTURE FEATURES (PREPARED STRUCTURE)
+
+- Integration with ride-hailing APIs
+- Automatic ride import
+- AI-based performance insights
+
+---
+
+## 🧩 FINAL RESULT
+
+A functional, modern, fast, and user-friendly app that helps drivers understand their real profit and make smarter decisions.

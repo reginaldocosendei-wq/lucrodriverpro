@@ -32,3 +32,5 @@ export function formatMonthDay(dateString: string | undefined): string {
     return dateString;
   }
 }
+
+export const formatCurrency = formatBRL;
