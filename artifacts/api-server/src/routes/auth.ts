@@ -9,6 +9,30 @@ declare module "express-session" {
   }
 }
 
+const TRIAL_DAYS = 7;
+const TRIAL_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
+
+function computeEffectivePlan(user: typeof usersTable.$inferSelect): {
+  plan: "free" | "pro";
+  trialActive: boolean;
+  trialDaysLeft: number;
+} {
+  const hasPaidPlan = user.plan === "pro" && !user.trialStartDate;
+  if (hasPaidPlan) return { plan: "pro", trialActive: false, trialDaysLeft: 0 };
+
+  if (user.trialStartDate) {
+    const elapsed = Date.now() - new Date(user.trialStartDate).getTime();
+    if (elapsed < TRIAL_MS) {
+      const daysLeft = Math.ceil((TRIAL_MS - elapsed) / (24 * 60 * 60 * 1000));
+      return { plan: "pro", trialActive: true, trialDaysLeft: daysLeft };
+    }
+  }
+
+  if (user.plan === "pro") return { plan: "pro", trialActive: false, trialDaysLeft: 0 };
+
+  return { plan: "free", trialActive: false, trialDaysLeft: 0 };
+}
+
 const router = Router();
 
 router.post("/register", async (req, res) => {
@@ -28,8 +52,17 @@ router.post("/register", async (req, res) => {
     .values({ name, email, passwordHash, plan: "free" })
     .returning();
   req.session.userId = user.id;
+  const effective = computeEffectivePlan(user);
   res.status(201).json({
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, createdAt: user.createdAt },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      plan: effective.plan,
+      trialActive: effective.trialActive,
+      trialDaysLeft: effective.trialDaysLeft,
+      createdAt: user.createdAt,
+    },
     message: "Cadastro realizado com sucesso",
   });
 });
@@ -51,8 +84,17 @@ router.post("/login", async (req, res) => {
     return;
   }
   req.session.userId = user.id;
+  const effective = computeEffectivePlan(user);
   res.json({
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, createdAt: user.createdAt },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      plan: effective.plan,
+      trialActive: effective.trialActive,
+      trialDaysLeft: effective.trialDaysLeft,
+      createdAt: user.createdAt,
+    },
     message: "Login realizado com sucesso",
   });
 });
@@ -72,7 +114,53 @@ router.get("/me", async (req, res) => {
     res.status(401).json({ error: "Usuário não encontrado" });
     return;
   }
-  res.json({ id: user.id, name: user.name, email: user.email, plan: user.plan, createdAt: user.createdAt });
+  const effective = computeEffectivePlan(user);
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    plan: effective.plan,
+    trialActive: effective.trialActive,
+    trialDaysLeft: effective.trialDaysLeft,
+    createdAt: user.createdAt,
+  });
+});
+
+router.post("/trial/start", async (req, res) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Não autenticado" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+  if (!user) {
+    res.status(401).json({ error: "Usuário não encontrado" });
+    return;
+  }
+
+  if (user.plan === "pro" && !user.trialStartDate) {
+    res.status(400).json({ error: "Você já tem uma assinatura PRO ativa." });
+    return;
+  }
+
+  if (user.trialStartDate) {
+    const elapsed = Date.now() - new Date(user.trialStartDate).getTime();
+    if (elapsed < TRIAL_MS) {
+      res.status(400).json({ error: "Você já tem um período de teste ativo." });
+      return;
+    }
+    res.status(400).json({ error: "Seu período de teste gratuito já foi utilizado. Faça upgrade para continuar." });
+    return;
+  }
+
+  const now = new Date();
+  await db.update(usersTable).set({ trialStartDate: now }).where(eq(usersTable.id, user.id));
+
+  res.json({
+    message: "Seu teste gratuito de 7 dias foi ativado! Aproveite os recursos PRO.",
+    plan: "pro",
+    trialActive: true,
+    trialDaysLeft: TRIAL_DAYS,
+  });
 });
 
 export default router;

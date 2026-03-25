@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
   plan: text("plan").notNull().default("free"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  trialStartDate: timestamp("trial_start_date"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
