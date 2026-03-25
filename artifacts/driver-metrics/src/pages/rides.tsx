@@ -1,221 +1,488 @@
 import { useState } from "react";
-import { useGetRides, useCreateRide, useDeleteRide } from "@workspace/api-client-react";
-import { formatBRL, formatMonthDay } from "@/lib/utils";
-import { Button, Input, Select, Label, Card, Modal } from "@/components/ui";
-import { Car, Plus, MapPin, Clock, Star, Trash2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useGetRides } from "@workspace/api-client-react";
+import { formatBRL } from "@/lib/utils";
+import { Car, Camera, CheckCircle, ChevronDown, ChevronUp, Trash2, TrendingUp, Plus, AlertCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 
-const rideSchema = z.object({
-  value: z.coerce.number().min(0.1, "Valor inválido"),
-  distanceKm: z.coerce.number().min(0.1, "Distância inválida"),
-  durationMinutes: z.coerce.number().min(1, "Tempo inválido"),
-  platform: z.enum(["uber", "99", "indriver", "outro"] as const),
-  passengerRating: z.coerce.number().min(1).max(5),
-  platformCommissionPct: z.coerce.number().min(0).max(100),
-});
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type RideFormData = z.infer<typeof rideSchema>;
+const PLATFORMS = [
+  { value: "uber", label: "Uber", color: "#1a1a1a", text: "#fff" },
+  { value: "99", label: "99", color: "#fbbf24", text: "#000" },
+  { value: "indriver", label: "InDrive", color: "#00ff88", text: "#000" },
+  { value: "outro", label: "Outro", color: "#6b7280", text: "#fff" },
+];
 
-const platformStyles: Record<string, { bg: string, text: string, border: string }> = {
-  uber: { bg: "bg-black", text: "text-white", border: "border-black" },
-  "99": { bg: "bg-yellow-500", text: "text-black", border: "border-yellow-500" },
-  indriver: { bg: "bg-[#00ff88]", text: "text-black", border: "border-[#00ff88]" },
-  outro: { bg: "bg-white/10", text: "text-white", border: "border-white/20" },
-};
+function getPlatform(value: string) {
+  return PLATFORMS.find(p => p.value === value) || PLATFORMS[3];
+}
+
+function dateKey(ts: string | Date) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function friendlyDate(key: string) {
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (dateKey(today) === key) return "Hoje";
+  if (dateKey(yesterday) === key) return "Ontem";
+  return date.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
+}
+
+interface DayGroup {
+  key: string;
+  rides: any[];
+  totalEarnings: number;
+  totalNet: number;
+  trips: number;
+  platform: string;
+}
+
+function groupByDay(rides: any[]): DayGroup[] {
+  const map = new Map<string, DayGroup>();
+  for (const ride of rides) {
+    const key = dateKey(ride.createdAt);
+    if (!map.has(key)) {
+      map.set(key, { key, rides: [], totalEarnings: 0, totalNet: 0, trips: 0, platform: ride.platform });
+    }
+    const g = map.get(key)!;
+    g.rides.push(ride);
+    g.totalEarnings += Number(ride.value);
+    g.totalNet += Number(ride.netValue);
+    g.trips += 1;
+  }
+  return Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
+}
 
 export default function Rides() {
-  const { data, isLoading } = useGetRides();
-  const createMutation = useCreateRide();
-  const deleteMutation = useDeleteRide();
+  const { data, isLoading, refetch } = useGetRides();
   const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const form = useForm<RideFormData>({
-    resolver: zodResolver(rideSchema),
-    defaultValues: {
-      platform: "uber",
-      passengerRating: 5,
-      platformCommissionPct: 25,
-      value: undefined,
-      distanceKm: undefined,
-      durationMinutes: undefined,
-    }
-  });
+  const [earnings, setEarnings] = useState("");
+  const [trips, setTrips] = useState("");
+  const [platform, setPlatform] = useState("uber");
+  const [commission, setCommission] = useState("25");
+  const [saving, setSaving] = useState(false);
+  const [savedDay, setSavedDay] = useState<null | { earnings: number; trips: number; net: number }>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const [deletingDay, setDeletingDay] = useState<string | null>(null);
 
-  const onSubmit = form.handleSubmit((data) => {
-    createMutation.mutate({ data }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-        setIsModalOpen(false);
-        form.reset();
-      }
-    });
-  });
+  const handleSave = async () => {
+    setFormError(null);
+    const e = parseFloat(earnings.replace(",", "."));
+    const t = parseInt(trips);
+    if (!e || e <= 0) { setFormError("Informe os ganhos totais do dia"); return; }
+    if (!t || t <= 0) { setFormError("Informe o número de corridas"); return; }
 
-  const handleDelete = (id: number) => {
-    if (confirm("Tem certeza que deseja remover esta corrida? Essa ação não pode ser desfeita.")) {
-      deleteMutation.mutate({ id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-        }
+    setSaving(true);
+    try {
+      const res = await fetch(`${BASE}/api/rides/daily`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ earnings: e, trips: t, platform, commissionPct: parseFloat(commission) }),
       });
+      const data = await res.json();
+      if (!res.ok) { setFormError(data.error || "Erro ao salvar"); setSaving(false); return; }
+
+      setSavedDay({ earnings: e, trips: t, net: data.netValue });
+      setEarnings("");
+      setTrips("");
+      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      setTimeout(() => setSavedDay(null), 4000);
+    } catch {
+      setFormError("Erro de conexão. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (isLoading) return <div className="flex h-64 items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
+  const handleDeleteDay = async (key: string) => {
+    setDeletingDay(key);
+    try {
+      await fetch(`${BASE}/api/rides/day/${key}`, { method: "DELETE", credentials: "include" });
+      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+    } catch {}
+    setDeletingDay(null);
+  };
+
+  const toggleDay = (key: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
 
   const rides = data?.rides || [];
-  
-  const totalRides = rides.length;
-  const totalGross = rides.reduce((acc, r) => acc + Number(r.value), 0);
-  const totalNet = rides.reduce((acc, r) => acc + Number(r.netValue), 0);
+  const groups = groupByDay(rides);
+  const totalNet = rides.reduce((acc: number, r: any) => acc + Number(r.netValue), 0);
+  const totalEarningsAll = rides.reduce((acc: number, r: any) => acc + Number(r.value), 0);
+  const totalTripsAll = rides.length;
+
+  if (isLoading) return (
+    <div className="flex h-64 items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+    </div>
+  );
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-display font-bold">Corridas</h2>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2" size="sm">
-          <Plus size={18} /> Adicionar
-        </Button>
+    <div className="space-y-5 pb-24">
+
+      {/* ─── SUCCESS FEEDBACK ─── */}
+      <AnimatePresence>
+        {savedDay && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="rounded-2xl bg-primary/10 border border-primary/30 p-4 flex items-center gap-4"
+          >
+            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
+              <CheckCircle size={20} className="text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-white text-sm">Dia registrado com sucesso!</p>
+              <p className="text-xs text-white/50 mt-0.5">
+                {savedDay.trips} corridas · {formatBRL(savedDay.earnings)} bruto · {formatBRL(savedDay.net)} líquido
+              </p>
+            </div>
+            <button onClick={() => setSavedDay(null)} className="text-white/30 hover:text-white/60">
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── DAILY SUMMARY FORM ─── */}
+      <div className="rounded-3xl border border-white/[0.08] bg-[#111] p-5 space-y-4">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Resumo do dia</p>
+            <h2 className="text-lg font-display font-bold text-white mt-0.5">
+              {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+            </h2>
+          </div>
+          <Link href="/import">
+            <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/15 transition-colors">
+              <Camera size={14} />
+              Importar
+            </button>
+          </Link>
+        </div>
+
+        {/* Error */}
+        <AnimatePresence>
+          {formError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5"
+            >
+              <AlertCircle size={14} className="shrink-0" />
+              <span className="flex-1">{formError}</span>
+              <button onClick={() => setFormError(null)}><X size={12} /></button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Earnings + Trips */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wide block mb-1.5">
+              Ganhos (R$)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm font-bold">R$</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={earnings}
+                onChange={e => setEarnings(e.target.value)}
+                className="w-full pl-9 pr-3 py-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] focus:border-primary/50 focus:ring-0 outline-none text-white font-display font-bold text-xl placeholder:text-white/15 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wide block mb-1.5">
+              Corridas
+            </label>
+            <div className="relative">
+              <Car size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="0"
+                value={trips}
+                onChange={e => setTrips(e.target.value)}
+                className="w-full pl-8 pr-3 py-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] focus:border-primary/50 focus:ring-0 outline-none text-white font-display font-bold text-xl placeholder:text-white/15 transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Platform picker */}
+        <div>
+          <label className="text-xs font-bold text-white/40 uppercase tracking-wide block mb-2">
+            Plataforma
+          </label>
+          <div className="flex gap-2">
+            {PLATFORMS.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPlatform(p.value)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all"
+                style={{
+                  background: platform === p.value ? p.color : "rgba(255,255,255,0.03)",
+                  color: platform === p.value ? p.text : "rgba(255,255,255,0.4)",
+                  borderColor: platform === p.value ? p.color : "rgba(255,255,255,0.06)",
+                  transform: platform === p.value ? "scale(1.04)" : "scale(1)",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Commission */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-white/30">Taxa da plataforma</span>
+          <div className="flex items-center gap-2">
+            {["20", "25", "27"].map(pct => (
+              <button
+                key={pct}
+                onClick={() => setCommission(pct)}
+                className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                  commission === pct
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-white/10 text-white/30 hover:text-white/60"
+                }`}
+              >
+                {pct}%
+              </button>
+            ))}
+            <input
+              type="number"
+              value={commission}
+              onChange={e => setCommission(e.target.value)}
+              className="w-14 text-center text-xs py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/60 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Real-time preview */}
+        {earnings && parseFloat(earnings.replace(",", ".")) > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="rounded-xl bg-primary/5 border border-primary/15 p-3 grid grid-cols-3 gap-2 text-center"
+          >
+            <div>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Líquido</p>
+              <p className="text-sm font-bold text-primary">
+                {formatBRL(parseFloat(earnings.replace(",", ".")) * (1 - parseFloat(commission) / 100))}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Por corrida</p>
+              <p className="text-sm font-bold text-white">
+                {trips && parseInt(trips) > 0
+                  ? formatBRL(parseFloat(earnings.replace(",", ".")) * (1 - parseFloat(commission) / 100) / parseInt(trips))
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Taxa</p>
+              <p className="text-sm font-bold text-red-400">
+                -{formatBRL(parseFloat(earnings.replace(",", ".")) * parseFloat(commission) / 100)}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Save button */}
+        <button
+          onClick={handleSave}
+          disabled={saving || !earnings || !trips}
+          className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background: (saving || !earnings || !trips)
+              ? "rgba(255,255,255,0.04)"
+              : "linear-gradient(135deg,#00ff88,#00cc6a)",
+            color: (saving || !earnings || !trips) ? "rgba(255,255,255,0.3)" : "#0a0a0a",
+          }}
+        >
+          {saving ? (
+            <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+          ) : (
+            <>
+              <Plus size={20} strokeWidth={2.5} />
+              Salvar resumo do dia
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Summary Strip */}
-      <Card className="flex items-center justify-between p-4 bg-primary/10 border-primary/20 backdrop-blur-md">
-        <div className="text-center flex-1 border-r border-white/10">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Corridas</p>
-          <p className="font-display font-bold text-lg">{totalRides}</p>
-        </div>
-        <div className="text-center flex-1 border-r border-white/10">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Faturado</p>
-          <p className="font-display font-bold text-lg text-white tabular-nums">{formatBRL(totalGross)}</p>
-        </div>
-        <div className="text-center flex-1">
-          <p className="text-[10px] text-primary uppercase font-bold tracking-wider">Valor líquido</p>
-          <p className="font-display font-bold text-lg text-primary tabular-nums">{formatBRL(totalNet)}</p>
-        </div>
-      </Card>
-
-      <div className="space-y-4">
-        {rides.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground border-2 border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Car size={40} className="text-white/20" />
-            </div>
-            <h3 className="text-xl font-display font-bold text-white mb-2">Nenhuma corrida registrada</h3>
-            <p className="text-sm max-w-[250px] mx-auto">Adicione suas corridas para começar a acompanhar seu faturamento e lucro real.</p>
-            <Button onClick={() => setIsModalOpen(true)} className="mt-6 gap-2" variant="outline">
-              <Plus size={16} /> Registrar minha primeira corrida
-            </Button>
+      {/* ─── IMPORT SCREENSHOT CARD ─── */}
+      <Link href="/import">
+        <motion.div
+          whileTap={{ scale: 0.98 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex items-center gap-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
+        >
+          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+            <Camera size={18} className="text-primary" />
           </div>
-        ) : (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Importar do screenshot</p>
+            <p className="text-xs text-white/40 mt-0.5">Tire uma foto do seu app e preenchemos tudo automaticamente</p>
+          </div>
+          <div className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg shrink-0">IA</div>
+        </motion.div>
+      </Link>
+
+      {/* ─── STATS STRIP ─── */}
+      {groups.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Corridas", value: totalTripsAll.toString(), color: "text-white" },
+            { label: "Faturado", value: formatBRL(totalEarningsAll), color: "text-white" },
+            { label: "Lucro", value: formatBRL(totalNet), color: "text-primary" },
+          ].map(stat => (
+            <div key={stat.label} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-1">{stat.label}</p>
+              <p className={`font-display font-bold text-sm tabular-nums ${stat.color}`}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── HISTORY ─── */}
+      {groups.length === 0 ? (
+        <div className="text-center py-16 text-white/20">
+          <Car size={40} className="mx-auto mb-4 opacity-30" />
+          <p className="text-sm font-medium">Nenhum dia registrado ainda</p>
+          <p className="text-xs mt-1 opacity-60">Registre seus ganhos diários acima</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xs font-bold text-white/30 uppercase tracking-widest px-1">Histórico</p>
+
           <AnimatePresence>
-            {rides.map((ride, i) => {
-              const pStyle = platformStyles[ride.platform] || platformStyles.outro;
-              
+            {groups.map((group, i) => {
+              const plat = getPlatform(group.platform);
+              const expanded = expandedDays.has(group.key);
+              const isDeleting = deletingDay === group.key;
+              const avgPerRide = group.trips > 0 ? group.totalNet / group.trips : 0;
+
               return (
                 <motion.div
-                  key={ride.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  key={group.key}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="group"
+                  transition={{ delay: Math.min(i * 0.04, 0.2) }}
                 >
-                  <div className={`relative rounded-2xl border-l-4 ${pStyle.border} bg-card shadow-xl overflow-hidden`}>
-                    <div className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl ${pStyle.bg} flex items-center justify-center ${pStyle.text} font-black uppercase text-sm shadow-lg`}>
-                          {ride.platform === "indriver" ? "IN" : ride.platform.substring(0, 2)}
+                  <div className="rounded-2xl bg-[#111] border border-white/[0.06] overflow-hidden">
+                    {/* Day header */}
+                    <div
+                      className="p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      onClick={() => toggleDay(group.key)}
+                    >
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-black shrink-0"
+                        style={{ background: plat.color, color: plat.text }}
+                      >
+                        {plat.label === "InDrive" ? "IN" : plat.label.substring(0, 2).toUpperCase()}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-white text-sm">{friendlyDate(group.key)}</p>
+                          <span className="text-[10px] text-white/30 font-medium">
+                            {new Date(group.key + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+                          </span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-display font-bold text-xl tabular-nums tracking-tight">{formatBRL(ride.value)}</span>
-                            <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-md font-bold text-muted-foreground">{formatMonthDay(ride.createdAt)}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5 font-medium">
-                            <span className="flex items-center gap-1"><MapPin size={12} className="text-primary"/> {ride.distanceKm}km</span>
-                            <span className="flex items-center gap-1"><Clock size={12} className="text-blue-400"/> {ride.durationMinutes}m</span>
-                            <span className="flex items-center gap-1 text-yellow-500"><Star size={12} className="fill-yellow-500"/> {ride.passengerRating}</span>
-                          </div>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-xs text-white/40">{group.trips} corridas</span>
+                          <span className="text-xs text-white/20">·</span>
+                          <span className="text-xs text-white/40">{formatBRL(avgPerRide)}/corrida</span>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Rentabilidade</p>
-                          <p className="font-bold text-sm text-primary tabular-nums">{formatBRL(ride.valuePerKm)}/km</p>
-                        </div>
-                        <button 
-                          onClick={() => handleDelete(ride.id)}
-                          className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-white bg-white/5 hover:bg-destructive rounded-xl transition-all"
-                          title="Excluir"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+
+                      <div className="text-right shrink-0">
+                        <p className="font-display font-bold text-primary tabular-nums">{formatBRL(group.totalNet)}</p>
+                        <p className="text-xs text-white/30 tabular-nums">{formatBRL(group.totalEarnings)} bruto</p>
+                      </div>
+
+                      <div className="text-white/20 shrink-0 ml-1">
+                        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </div>
                     </div>
+
+                    {/* Expanded detail */}
+                    <AnimatePresence>
+                      {expanded && (
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: "auto" }}
+                          exit={{ height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-4 border-t border-white/[0.04]">
+                            <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
+                              {[
+                                { label: "Faturado", val: formatBRL(group.totalEarnings), color: "text-white" },
+                                { label: "Taxa plataforma", val: formatBRL(group.totalEarnings - group.totalNet), color: "text-red-400" },
+                                { label: "Lucro líquido", val: formatBRL(group.totalNet), color: "text-primary" },
+                              ].map(item => (
+                                <div key={item.label} className="text-center bg-white/[0.02] rounded-xl p-3">
+                                  <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-1">{item.label}</p>
+                                  <p className={`font-bold text-sm tabular-nums ${item.color}`}>{item.val}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remover todos os registros de ${friendlyDate(group.key)}?`)) {
+                                  handleDeleteDay(group.key);
+                                }
+                              }}
+                              disabled={isDeleting}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 text-red-400/70 text-sm hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 transition-all disabled:opacity-40"
+                            >
+                              {isDeleting ? (
+                                <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                              Remover registros deste dia
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               );
             })}
           </AnimatePresence>
-        )}
-      </div>
-
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nova Corrida">
-        <form onSubmit={onSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Valor Bruto (R$)</Label>
-              <Input type="number" step="0.01" placeholder="0.00" className="font-display font-bold text-lg h-14" {...form.register("value")} />
-              {form.formState.errors.value && <p className="text-destructive text-xs mt-1">{form.formState.errors.value.message}</p>}
-            </div>
-            <div>
-              <Label>Distância (KM)</Label>
-              <Input type="number" step="0.1" placeholder="0.0" className="h-14" {...form.register("distanceKm")} />
-              {form.formState.errors.distanceKm && <p className="text-destructive text-xs mt-1">{form.formState.errors.distanceKm.message}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Tempo (Minutos)</Label>
-              <Input type="number" placeholder="15" className="h-14" {...form.register("durationMinutes")} />
-            </div>
-            <div>
-              <Label>Plataforma</Label>
-              <Select className="h-14" {...form.register("platform")}>
-                <option value="uber">Uber</option>
-                <option value="99">99</option>
-                <option value="indriver">InDrive</option>
-                <option value="outro">Outro</option>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Nota Passageiro</Label>
-              <Input type="number" step="0.1" min="1" max="5" className="h-14" {...form.register("passengerRating")} />
-            </div>
-            <div>
-              <Label>Taxa Plataforma (%)</Label>
-              <Input type="number" step="1" className="h-14" {...form.register("platformCommissionPct")} />
-            </div>
-          </div>
-
-          <div className="pt-6 mt-6 border-t border-white/10 flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" size="lg" isLoading={createMutation.isPending}>Salvar Corrida</Button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }
