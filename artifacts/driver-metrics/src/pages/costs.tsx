@@ -183,7 +183,7 @@ export default function Costs() {
             </div>
             <h3 className="text-2xl font-display font-bold text-white mb-2">Você está vendo apenas seu faturamento</h3>
             <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
-              Não se trata apenas de quanto você fatura, mas de quanto realmente sobra no seu bolso. Registre seus gastos e descubra seu <strong className="text-white">lucro real</strong> com o Lucro Driver PRO.
+              Faturamento engana. Descubra quanto realmente sobra no seu bolso após todos os custos com o Lucro Driver PRO.
             </p>
             <Link href="/reports">
               <Button variant="gold" size="lg" className="px-10 shadow-[0_0_30px_rgba(255,215,0,0.3)]">

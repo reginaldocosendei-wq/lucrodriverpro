@@ -176,6 +176,16 @@ export default function Home() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-5 pb-28">
 
+      {/* ─── HERO HEADLINE ─── */}
+      <motion.div variants={item} className="text-center pt-2 pb-1">
+        <h1 className="text-3xl md:text-4xl font-display font-extrabold text-white leading-tight tracking-tight">
+          Faturamento engana.
+        </h1>
+        <p className="text-sm text-white/40 mt-2 font-medium">
+          Descubra quanto realmente sobra no seu bolso.
+        </p>
+      </motion.div>
+
       {/* ─── HERO: PROFIT CARD ─── */}
       <motion.div variants={item}>
         <div className="relative rounded-3xl overflow-hidden">
@@ -437,7 +447,7 @@ export default function Home() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-extrabold text-white mb-1">Desbloqueie seu lucro real ✦</p>
                   <p className="text-xs text-white/50 leading-relaxed">
-                    Não se trata apenas de quanto você fatura, mas de quanto sobra no seu bolso.
+                    Descubra quanto realmente sobra no seu bolso após todos os custos.
                   </p>
                 </div>
                 <ChevronRight size={20} className="text-yellow-500 shrink-0 group-hover:translate-x-1 transition-transform" />
