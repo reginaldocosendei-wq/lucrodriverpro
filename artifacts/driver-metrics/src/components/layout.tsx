@@ -1,14 +1,122 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+
+type TrialUser = {
+  trialActive?: boolean;
+  trialExpired?: boolean;
+  trialDaysLeft?: number;
+  trialEndDate?: string | null;
+  plan?: string;
+  name?: string;
+};
+
+function TrialBanner({ user, onUpgrade }: { user: TrialUser; onUpgrade: () => void }) {
+  const [dismissed, setDismissed] = useState(false);
+  const days = user.trialDaysLeft ?? 0;
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [days]);
+
+  if (dismissed) return null;
+
+  const isLastDay = days <= 1;
+  const isUrgent = days <= 3;
+
+  const config = isLastDay
+    ? {
+        bg: "bg-gradient-to-r from-red-950/80 to-red-900/60",
+        border: "border-red-500/40",
+        icon: <Flame size={16} className="text-red-400 shrink-0" />,
+        badge: "bg-red-500/20 text-red-300 border-red-500/30",
+        badgeText: "🚨 Último dia!",
+        message: "Última chance! Mantenha seus recursos PRO ativos.",
+        cta: "Fazer upgrade agora",
+        ctaClass: "bg-red-500 hover:bg-red-400 text-white",
+      }
+    : isUrgent
+    ? {
+        bg: "bg-gradient-to-r from-orange-950/80 to-amber-900/60",
+        border: "border-orange-500/40",
+        icon: <AlertTriangle size={16} className="text-orange-400 shrink-0" />,
+        badge: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+        badgeText: `⚠️ ${days} dias restantes`,
+        message: "Seu teste está terminando. Não perca acesso ao seu lucro real.",
+        cta: "Manter PRO",
+        ctaClass: "bg-orange-500 hover:bg-orange-400 text-white",
+      }
+    : {
+        bg: "bg-gradient-to-r from-yellow-950/60 to-amber-950/40",
+        border: "border-yellow-500/20",
+        icon: <Clock size={16} className="text-yellow-400 shrink-0" />,
+        badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+        badgeText: `Teste PRO — ${days} dias restantes`,
+        message: null,
+        cta: "Fazer upgrade",
+        ctaClass: "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/30",
+      };
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`${config.bg} border-b ${config.border} overflow-hidden`}
+    >
+      <div className="px-4 py-2.5 flex items-center gap-3 max-w-4xl mx-auto">
+        {config.icon}
+        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className={`text-[10px] font-extrabold border rounded-full px-2.5 py-0.5 tracking-wide whitespace-nowrap ${config.badge}`}>
+            {config.badgeText}
+          </span>
+          {config.message && (
+            <span className="text-xs text-white/60 leading-tight hidden sm:block">{config.message}</span>
+          )}
+        </div>
+        <button
+          onClick={onUpgrade}
+          className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 transition-colors ${config.ctaClass}`}
+        >
+          {config.cta}
+        </button>
+        {!isLastDay && !isUrgent && (
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-white/30 hover:text-white/60 transition-colors shrink-0"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { data: user } = useGetMe();
   const logout = useLogout();
   const queryClient = useQueryClient();
+
+  const u = user as TrialUser | undefined;
+  const trialActive = u?.trialActive === true;
+  const trialExpired = u?.trialExpired === true;
+
+  useEffect(() => {
+    if (
+      trialExpired &&
+      !location.startsWith("/upgrade") &&
+      !location.startsWith("/checkout")
+    ) {
+      navigate("/upgrade?expired=1");
+    }
+  }, [trialExpired, location]);
 
   const handleLogout = () => {
     logout.mutate(undefined, {
@@ -33,53 +141,63 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const currentPage = navItems.find(i => i.path === location);
   const pageTitle = currentPage?.label || "Lucro Driver";
 
-  const getGreetingName = () => {
-    return user?.name?.split(' ')[0] || "";
-  };
+  const getGreetingName = () => u?.name?.split(' ')[0] || "";
 
   const activeIndex = navItems.findIndex(i => i.path === location);
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0 md:pl-24">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-primary/20 px-4 py-4 flex items-center justify-between shadow-[0_4px_30px_rgba(0,255,136,0.05)]">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="font-display font-bold text-2xl leading-none text-white tracking-tight">
-              {pageTitle}
-            </h1>
-            {user && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {greeting}, <span className="text-foreground">{getGreetingName()}</span>
-                </span>
-                {user.plan === "pro" && (
-                  <span className="text-[10px] font-extrabold bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-0.5 rounded-sm shadow-[0_0_10px_rgba(255,215,0,0.3)] tracking-wider">
-                    ✦ PRO
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-primary/20 shadow-[0_4px_30px_rgba(0,255,136,0.05)]">
+        <div className="px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="font-display font-bold text-2xl leading-none text-white tracking-tight">
+                {pageTitle}
+              </h1>
+              {user && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {greeting}, <span className="text-foreground">{getGreetingName()}</span>
                   </span>
-                )}
-              </div>
+                  {u?.plan === "pro" && (
+                    <span className="text-[10px] font-extrabold bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-0.5 rounded-sm shadow-[0_0_10px_rgba(255,215,0,0.3)] tracking-wider">
+                      {trialActive ? "⏳ TESTE" : "✦ PRO"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {u?.plan !== "pro" && !trialExpired && (
+              <Link href="/upgrade">
+                <button className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-400/20 to-yellow-600/10 hover:from-yellow-400/30 border border-yellow-500/30 text-yellow-400 text-[11px] font-extrabold px-3 py-1.5 rounded-full tracking-wider transition-all">
+                  <Sparkles size={12} />
+                  PRO
+                </button>
+              </Link>
             )}
+            <button
+              onClick={handleLogout}
+              className="p-2.5 rounded-full text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
+              title="Sair"
+            >
+              <LogOut size={20} />
+            </button>
           </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {user?.plan !== "pro" && (
-            <Link href="/upgrade">
-              <button className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-400/20 to-yellow-600/10 hover:from-yellow-400/30 border border-yellow-500/30 text-yellow-400 text-[11px] font-extrabold px-3 py-1.5 rounded-full tracking-wider transition-all">
-                <Sparkles size={12} />
-                PRO
-              </button>
-            </Link>
+
+        {/* Trial countdown banner */}
+        <AnimatePresence>
+          {trialActive && u && (
+            <TrialBanner
+              user={u}
+              onUpgrade={() => navigate("/upgrade")}
+            />
           )}
-          <button
-            onClick={handleLogout}
-            className="p-2.5 rounded-full text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
-            title="Sair"
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
+        </AnimatePresence>
       </header>
 
       {/* Main Content */}
@@ -90,10 +208,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Bottom Navigation (Mobile) / Side Navigation (Desktop) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 glass-panel border-t border-white/10 md:border-t-0 md:border-r md:top-0 md:w-24 md:flex-col md:justify-center md:pb-0 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         <div className="flex md:flex-col items-center justify-between md:justify-center md:gap-10 h-20 md:h-full px-4 relative max-w-md mx-auto md:max-w-none">
-          {navItems.map((item, index) => {
+          {navItems.map((item) => {
             const isActive = location === item.path;
             const Icon = item.icon;
-            
+
             return (
               <Link key={item.path} href={item.path} className="relative flex-1 md:w-full h-full md:h-16 flex items-center justify-center z-10 group">
                 <div className={cn(
@@ -102,7 +220,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 )}>
                   <div className="relative">
                     <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(0,255,136,0.5)]" : ""} />
-                    {item.isPro && user?.plan !== "pro" && (
+                    {item.isPro && u?.plan !== "pro" && (
                       <div className="absolute -top-1.5 -right-2 h-3.5 w-3.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full border-2 border-background shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
                     )}
                   </div>
@@ -113,32 +231,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          
-          {/* Animated Pill Background for Mobile */}
+
           {activeIndex !== -1 && (
-            <div 
-              className="absolute md:hidden top-1/2 -translate-y-1/2 h-14 bg-white/5 rounded-2xl transition-all duration-500 ease-out z-0 pointer-events-none"
-              style={{ 
-                width: `calc(100% / ${navItems.length} - 8px)`,
-                left: `calc(${(activeIndex * 100) / navItems.length}% + 4px + 16px * ${activeIndex / navItems.length})`, 
-                // Adding a bit of logic for px padding, simplified:
-                transform: `translateX(calc(${activeIndex * 100}% + ${16 * activeIndex}px))` // Adjust for padding if needed, but a simpler flex-based approach using styled width is easier
-              }}
-            />
-          )}
-          {/* A simpler sliding pill implementation based on percentage */}
-          {activeIndex !== -1 && (
-             <div className="absolute md:hidden top-2 bottom-2 left-4 right-4 z-0 pointer-events-none">
-               <div className="relative w-full h-full">
-                 <div 
-                   className="absolute h-full bg-white/5 rounded-2xl transition-all duration-300 ease-out border border-white/5"
-                   style={{
-                     width: `${100 / navItems.length}%`,
-                     transform: `translateX(${activeIndex * 100}%)`
-                   }}
-                 />
-               </div>
-             </div>
+            <div className="absolute md:hidden top-2 bottom-2 left-4 right-4 z-0 pointer-events-none">
+              <div className="relative w-full h-full">
+                <div
+                  className="absolute h-full bg-white/5 rounded-2xl transition-all duration-300 ease-out border border-white/5"
+                  style={{
+                    width: `${100 / navItems.length}%`,
+                    transform: `translateX(${activeIndex * 100}%)`
+                  }}
+                />
+              </div>
+            </div>
           )}
         </div>
       </nav>

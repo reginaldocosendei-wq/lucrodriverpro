@@ -1,0 +1,137 @@
+Implement a professional 7-day free trial system in my app "Lucro Driver" with countdown, smart notifications, and preparation for paid subscription.
+
+---
+
+## 🎯 GOAL
+
+Create a real SaaS trial experience that increases conversion to PRO users.
+
+---
+
+## 🔐 USER MODEL (DATABASE)
+
+Add fields to user:
+
+- isPro: boolean
+- trialActive: boolean
+- trialStartDate: date
+- trialEndDate: date
+
+---
+
+## ▶️ START TRIAL
+
+When user clicks "Try free for 7 days":
+
+- Set:
+  trialActive = true
+  isPro = true
+  trialStartDate = current date
+  trialEndDate = current date + 7 days
+
+---
+
+## ⏳ COUNTDOWN LOGIC
+
+On every app load:
+
+- Calculate remaining days:
+  remainingDays = trialEndDate - today
+
+---
+
+## 📱 UI DISPLAY (VERY IMPORTANT)
+
+If trialActive:
+
+Show banner on top:
+
+"Your free trial ends in X days"
+
+Examples:
+- "6 days left"
+- "3 days left"
+- "Last day!"
+
+---
+
+## 🔥 URGENCY MESSAGES
+
+- 3 days left:
+"Your trial is ending soon. Don't lose access to your real profit."
+
+- 1 day left:
+"Last chance! Keep your PRO features active."
+
+---
+
+## 🚨 TRIAL EXPIRATION
+
+If today > trialEndDate:
+
+- trialActive = false
+- isPro = false
+
+Lock PRO features again
+
+Show message:
+
+"Your free trial has ended. Upgrade to continue using PRO features."
+
+---
+
+## 💰 PAYWALL AFTER TRIAL
+
+Show:
+
+Headline:
+"Don't lose access to your real profit"
+
+Subtext:
+"You've already seen how powerful Lucro Driver PRO is"
+
+Button:
+"Upgrade now"
+
+---
+
+## 💳 PREPARE FOR PAYMENT
+
+Add placeholder:
+
+- Stripe integration ready
+- Subscription plans:
+  Monthly and yearly
+
+---
+
+## 🔄 AUTO-REDIRECT
+
+If trial expired:
+
+- Redirect user to upgrade screen
+
+---
+
+## 🧠 PSYCHOLOGY
+
+- Show countdown daily
+- Create urgency
+- Remind value before losing access
+
+---
+
+## 🎉 SUCCESS FEEDBACK
+
+When trial starts:
+
+"Your 7-day PRO trial has started. Enjoy full access!"
+
+---
+
+## 🚀 FINAL RESULT
+
+A professional SaaS trial system with:
+- Real countdown
+- Urgency
+- High conversion potential
