@@ -38,7 +38,6 @@ router.post("/", requireAuth, async (req, res) => {
     durationMinutes = 0,
     platform,
     passengerRating,
-    platformCommissionPct = 25,
   } = req.body;
 
   if (!value || !platform) {
@@ -46,9 +45,7 @@ router.post("/", requireAuth, async (req, res) => {
     return;
   }
 
-  const commissionAmount = value * (platformCommissionPct / 100);
-  const netValue = value - commissionAmount;
-  const valuePerKm = distanceKm > 0 ? netValue / distanceKm : 0;
+  const valuePerKm = distanceKm > 0 ? value / distanceKm : 0;
 
   const [ride] = await db
     .insert(ridesTable)
@@ -59,10 +56,7 @@ router.post("/", requireAuth, async (req, res) => {
       durationMinutes,
       platform,
       passengerRating: passengerRating ?? 5,
-      platformCommissionPct,
-      netValue,
       valuePerKm,
-      commissionAmount,
     })
     .returning();
 
@@ -75,7 +69,6 @@ router.post("/daily", requireAuth, async (req, res) => {
     earnings,
     trips,
     platform = "uber",
-    commissionPct = 25,
   } = req.body;
 
   if (!earnings || !trips) {
@@ -95,22 +88,16 @@ router.post("/daily", requireAuth, async (req, res) => {
     return;
   }
 
-  const perRide = totalEarnings / totalTrips;
-  const commissionAmount = totalEarnings * (commissionPct / 100);
-  const netValue = totalEarnings - commissionAmount;
-  const netPerRide = netValue / totalTrips;
+  const perRide = parseFloat((totalEarnings / totalTrips).toFixed(2));
 
   const ridesData = Array.from({ length: totalTrips }, () => ({
     userId,
-    value: parseFloat(perRide.toFixed(2)),
+    value: perRide,
     distanceKm: 0,
     durationMinutes: 0,
     platform,
     passengerRating: 5,
-    platformCommissionPct: commissionPct,
-    netValue: parseFloat(netPerRide.toFixed(2)),
     valuePerKm: 0,
-    commissionAmount: parseFloat(((commissionAmount) / totalTrips).toFixed(2)),
   }));
 
   const inserted = await db.insert(ridesTable).values(ridesData).returning();
@@ -119,7 +106,6 @@ router.post("/daily", requireAuth, async (req, res) => {
     message: "Resumo do dia registrado com sucesso",
     ridesCreated: inserted.length,
     totalEarnings,
-    netValue,
     platform,
   });
 });

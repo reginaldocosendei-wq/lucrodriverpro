@@ -41,34 +41,32 @@ router.get("/summary", requireAuth, async (req, res) => {
   const weekStart = startOfWeek();
   const monthStart = startOfMonth();
 
-  const ridesNetValue = (r: typeof rides[0]) => r.netValue;
-
   const earningsToday = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= today)
-    .reduce((s, r) => s + ridesNetValue(r), 0);
+    .reduce((s, r) => s + r.value, 0);
 
   const earningsWeek = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= weekStart)
-    .reduce((s, r) => s + ridesNetValue(r), 0);
+    .reduce((s, r) => s + r.value, 0);
 
   const earningsMonth = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= monthStart)
-    .reduce((s, r) => s + ridesNetValue(r), 0);
+    .reduce((s, r) => s + r.value, 0);
 
   const costsMonth = costs
     .filter((c) => c.date >= monthStart)
     .reduce((s, c) => s + c.amount, 0);
 
   const totalRides = rides.length;
-  const avgPerRide = totalRides > 0 ? rides.reduce((s, r) => s + ridesNetValue(r), 0) / totalRides : 0;
+  const avgPerRide = totalRides > 0 ? rides.reduce((s, r) => s + r.value, 0) / totalRides : 0;
   const avgPerKm = rides.length > 0
     ? rides.reduce((s, r) => s + r.valuePerKm, 0) / rides.length
     : 0;
-  const bestRide = rides.length > 0 ? Math.max(...rides.map(ridesNetValue)) : 0;
+  const bestRide = rides.length > 0 ? Math.max(...rides.map(r => r.value)) : 0;
 
   const platformEarnings: Record<string, number> = {};
   for (const r of rides) {
-    platformEarnings[r.platform] = (platformEarnings[r.platform] ?? 0) + ridesNetValue(r);
+    platformEarnings[r.platform] = (platformEarnings[r.platform] ?? 0) + r.value;
   }
   const bestPlatform =
     Object.entries(platformEarnings).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";

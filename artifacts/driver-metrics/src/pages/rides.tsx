@@ -40,7 +40,6 @@ interface DayGroup {
   key: string;
   rides: any[];
   totalEarnings: number;
-  totalNet: number;
   trips: number;
   platform: string;
 }
@@ -50,12 +49,11 @@ function groupByDay(rides: any[]): DayGroup[] {
   for (const ride of rides) {
     const key = dateKey(ride.createdAt);
     if (!map.has(key)) {
-      map.set(key, { key, rides: [], totalEarnings: 0, totalNet: 0, trips: 0, platform: ride.platform });
+      map.set(key, { key, rides: [], totalEarnings: 0, trips: 0, platform: ride.platform });
     }
     const g = map.get(key)!;
     g.rides.push(ride);
     g.totalEarnings += Number(ride.value);
-    g.totalNet += Number(ride.netValue);
     g.trips += 1;
   }
   return Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
@@ -68,9 +66,8 @@ export default function Rides() {
   const [earnings, setEarnings] = useState("");
   const [trips, setTrips] = useState("");
   const [platform, setPlatform] = useState("uber");
-  const [commission, setCommission] = useState("25");
   const [saving, setSaving] = useState(false);
-  const [savedDay, setSavedDay] = useState<null | { earnings: number; trips: number; net: number }>(null);
+  const [savedDay, setSavedDay] = useState<null | { earnings: number; trips: number }>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [deletingDay, setDeletingDay] = useState<string | null>(null);
@@ -88,12 +85,12 @@ export default function Rides() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ earnings: e, trips: t, platform, commissionPct: parseFloat(commission) }),
+        body: JSON.stringify({ earnings: e, trips: t, platform }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || "Erro ao salvar"); setSaving(false); return; }
 
-      setSavedDay({ earnings: e, trips: t, net: data.netValue });
+      setSavedDay({ earnings: e, trips: t });
       setEarnings("");
       setTrips("");
       await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
@@ -126,7 +123,6 @@ export default function Rides() {
 
   const rides = data?.rides || [];
   const groups = groupByDay(rides);
-  const totalNet = rides.reduce((acc: number, r: any) => acc + Number(r.netValue), 0);
   const totalEarningsAll = rides.reduce((acc: number, r: any) => acc + Number(r.value), 0);
   const totalTripsAll = rides.length;
 
@@ -154,7 +150,7 @@ export default function Rides() {
             <div className="flex-1 min-w-0">
               <p className="font-bold text-white text-sm">Dia registrado com sucesso!</p>
               <p className="text-xs text-white/50 mt-0.5">
-                {savedDay.trips} corridas · {formatBRL(savedDay.earnings)} bruto · {formatBRL(savedDay.net)} líquido
+                {savedDay.trips} corridas · {formatBRL(savedDay.earnings)} recebidos hoje
               </p>
             </div>
             <button onClick={() => setSavedDay(null)} className="text-white/30 hover:text-white/60">
@@ -201,7 +197,7 @@ export default function Rides() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-bold text-white/40 uppercase tracking-wide block mb-1.5">
-              Ganhos (R$)
+              Total recebido (R$)
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm font-bold">R$</span>
@@ -258,57 +254,25 @@ export default function Rides() {
           </div>
         </div>
 
-        {/* Commission */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-white/30">Taxa da plataforma</span>
-          <div className="flex items-center gap-2">
-            {["20", "25", "27"].map(pct => (
-              <button
-                key={pct}
-                onClick={() => setCommission(pct)}
-                className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition-all ${
-                  commission === pct
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-white/10 text-white/30 hover:text-white/60"
-                }`}
-              >
-                {pct}%
-              </button>
-            ))}
-            <input
-              type="number"
-              value={commission}
-              onChange={e => setCommission(e.target.value)}
-              className="w-14 text-center text-xs py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/60 outline-none"
-            />
-          </div>
-        </div>
-
         {/* Real-time preview */}
         {earnings && parseFloat(earnings.replace(",", ".")) > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="rounded-xl bg-primary/5 border border-primary/15 p-3 grid grid-cols-3 gap-2 text-center"
+            className="rounded-xl bg-primary/5 border border-primary/15 p-3 grid grid-cols-2 gap-2 text-center"
           >
             <div>
-              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Líquido</p>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Total recebido</p>
               <p className="text-sm font-bold text-primary">
-                {formatBRL(parseFloat(earnings.replace(",", ".")) * (1 - parseFloat(commission) / 100))}
+                {formatBRL(parseFloat(earnings.replace(",", ".")))}
               </p>
             </div>
             <div>
               <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Por corrida</p>
               <p className="text-sm font-bold text-white">
                 {trips && parseInt(trips) > 0
-                  ? formatBRL(parseFloat(earnings.replace(",", ".")) * (1 - parseFloat(commission) / 100) / parseInt(trips))
+                  ? formatBRL(parseFloat(earnings.replace(",", ".")) / parseInt(trips))
                   : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-0.5">Taxa</p>
-              <p className="text-sm font-bold text-red-400">
-                -{formatBRL(parseFloat(earnings.replace(",", ".")) * parseFloat(commission) / 100)}
               </p>
             </div>
           </motion.div>
@@ -356,11 +320,10 @@ export default function Rides() {
 
       {/* ─── STATS STRIP ─── */}
       {groups.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Corridas", value: totalTripsAll.toString(), color: "text-white" },
-            { label: "Faturado", value: formatBRL(totalEarningsAll), color: "text-white" },
-            { label: "Lucro", value: formatBRL(totalNet), color: "text-primary" },
+            { label: "Total recebido", value: formatBRL(totalEarningsAll), color: "text-primary" },
           ].map(stat => (
             <div key={stat.label} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
               <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-1">{stat.label}</p>
@@ -386,7 +349,7 @@ export default function Rides() {
               const plat = getPlatform(group.platform);
               const expanded = expandedDays.has(group.key);
               const isDeleting = deletingDay === group.key;
-              const avgPerRide = group.trips > 0 ? group.totalNet / group.trips : 0;
+              const avgPerRide = group.trips > 0 ? group.totalEarnings / group.trips : 0;
 
               return (
                 <motion.div
@@ -424,8 +387,8 @@ export default function Rides() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <p className="font-display font-bold text-primary tabular-nums">{formatBRL(group.totalNet)}</p>
-                        <p className="text-xs text-white/30 tabular-nums">{formatBRL(group.totalEarnings)} bruto</p>
+                        <p className="font-display font-bold text-primary tabular-nums">{formatBRL(group.totalEarnings)}</p>
+                        <p className="text-xs text-white/30 tabular-nums">total recebido</p>
                       </div>
 
                       <div className="text-white/20 shrink-0 ml-1">
@@ -443,11 +406,10 @@ export default function Rides() {
                           className="overflow-hidden"
                         >
                           <div className="px-4 pb-4 border-t border-white/[0.04]">
-                            <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
+                            <div className="grid grid-cols-2 gap-3 mt-4 mb-4">
                               {[
-                                { label: "Faturado", val: formatBRL(group.totalEarnings), color: "text-white" },
-                                { label: "Taxa plataforma", val: formatBRL(group.totalEarnings - group.totalNet), color: "text-red-400" },
-                                { label: "Lucro líquido", val: formatBRL(group.totalNet), color: "text-primary" },
+                                { label: "Total recebido", val: formatBRL(group.totalEarnings), color: "text-primary" },
+                                { label: "Por corrida", val: formatBRL(avgPerRide), color: "text-white" },
                               ].map(item => (
                                 <div key={item.label} className="text-center bg-white/[0.02] rounded-xl p-3">
                                   <p className="text-[10px] text-white/30 font-bold uppercase tracking-wide mb-1">{item.label}</p>

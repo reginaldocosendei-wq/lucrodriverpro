@@ -11,10 +11,7 @@ export const ridesTable = pgTable("rides", {
   durationMinutes: integer("duration_minutes").notNull(),
   platform: text("platform").notNull(),
   passengerRating: real("passenger_rating").notNull(),
-  platformCommissionPct: real("platform_commission_pct").notNull(),
-  netValue: real("net_value").notNull(),
   valuePerKm: real("value_per_km").notNull(),
-  commissionAmount: real("commission_amount").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

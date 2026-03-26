@@ -32,7 +32,7 @@ router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, re
           role: "system",
           content: `Você é um assistente especializado em extrair dados de screenshots de aplicativos de motoristas de aplicativo (Uber, 99, InDrive, etc.).
 Analise a imagem e extraia:
-1. O valor total de ganhos (em reais)
+1. O valor total de ganhos recebidos pelo motorista (em reais) — este é o valor final já descontado pela plataforma
 2. O número total de corridas/viagens
 3. A plataforma (Uber, 99, InDrive, ou "outro")
 
@@ -91,23 +91,16 @@ router.post("/confirm", requireAuth, async (req, res) => {
 
   const totalEarnings = parseFloat(earnings);
   const totalTrips = parseInt(trips);
-  const platformCommissionPct = 25;
-  const perRide = totalEarnings / totalTrips;
-  const commissionAmount = totalEarnings * (platformCommissionPct / 100);
-  const netValue = totalEarnings - commissionAmount;
-  const netPerRide = netValue / totalTrips;
+  const perRide = parseFloat((totalEarnings / totalTrips).toFixed(2));
 
   const ridesData = Array.from({ length: totalTrips }, () => ({
     userId,
-    value: parseFloat(perRide.toFixed(2)),
+    value: perRide,
     distanceKm: 0,
     durationMinutes: 0,
     platform: platform || "Outro",
     passengerRating: 5,
-    platformCommissionPct,
-    netValue: parseFloat(netPerRide.toFixed(2)),
     valuePerKm: 0,
-    commissionAmount: parseFloat((commissionAmount / totalTrips).toFixed(2)),
   }));
 
   const inserted = await db.insert(ridesTable).values(ridesData).returning();
@@ -116,7 +109,6 @@ router.post("/confirm", requireAuth, async (req, res) => {
     message: "Importação concluída com sucesso",
     ridesCreated: inserted.length,
     totalEarnings,
-    netValue,
   });
 });
 

@@ -32,7 +32,7 @@ router.get("/earnings", requireAuth, async (req, res) => {
   for (const r of rides) {
     const key = r.createdAt.toISOString().split("T")[0];
     if (dailyMap[key]) {
-      dailyMap[key].earnings += r.netValue;
+      dailyMap[key].earnings += r.value;
       dailyMap[key].rides += 1;
     }
   }
@@ -54,7 +54,7 @@ router.get("/earnings", requireAuth, async (req, res) => {
   const platformMap: Record<string, { earnings: number; rides: number }> = {};
   for (const r of rides) {
     if (!platformMap[r.platform]) platformMap[r.platform] = { earnings: 0, rides: 0 };
-    platformMap[r.platform].earnings += r.netValue;
+    platformMap[r.platform].earnings += r.value;
     platformMap[r.platform].rides += 1;
   }
   const byPlatform = Object.entries(platformMap).map(([platform, v]) => ({
@@ -67,7 +67,7 @@ router.get("/earnings", requireAuth, async (req, res) => {
   for (let i = 0; i < 7; i++) dowMap[i] = { earnings: 0, costs: 0, rides: 0 };
   for (const r of rides) {
     const dow = new Date(r.createdAt).getDay();
-    dowMap[dow].earnings += r.netValue;
+    dowMap[dow].earnings += r.value;
     dowMap[dow].rides += 1;
   }
   const byDayOfWeek = Object.entries(dowMap).map(([dow, v]) => ({
