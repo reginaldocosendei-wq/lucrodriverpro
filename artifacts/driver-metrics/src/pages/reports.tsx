@@ -13,6 +13,28 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+function CustomTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card/90 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl">
+        <p className="font-bold text-white mb-3 text-sm">{label}</p>
+        <div className="space-y-2">
+          {payload.map((entry: any) => (
+            <div key={entry.dataKey} className="flex items-center justify-between gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="text-muted-foreground font-medium">{entry.name}</span>
+              </div>
+              <span className="font-bold tabular-nums text-white">{formatBRL(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function Reports() {
   const { data: user } = useGetMe();
   const [, navigate] = useLocation();
@@ -176,28 +198,6 @@ export default function Reports() {
     </div>
   );
   if (!reports) return null;
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card/90 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl">
-          <p className="font-bold text-white mb-3 text-sm">{label}</p>
-          <div className="space-y-2">
-            {payload.map((entry: any, index: number) => (
-              <div key={index} className="flex items-center justify-between gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span className="text-muted-foreground font-medium">{entry.name}</span>
-                </div>
-                <span className="font-bold tabular-nums text-white">{formatBRL(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-10">

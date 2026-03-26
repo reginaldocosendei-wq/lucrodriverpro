@@ -214,8 +214,8 @@ function DailyAnalysisCard({ summary }: { summary: any }) {
       {/* Secondary insights */}
       {insights.length > 0 && (
         <div className="space-y-2">
-          {insights.map((insight, i) => (
-            <div key={i} className="flex items-start gap-2">
+          {insights.map((insight) => (
+            <div key={insight} className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: cfg.color }} />
               <p className="text-xs text-white/50 leading-relaxed">{insight}</p>
             </div>
@@ -228,7 +228,7 @@ function DailyAnalysisCard({ summary }: { summary: any }) {
         <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/30 mb-2.5">💡 Como melhorar</p>
         <div className="space-y-2">
           {cfg.suggestions.map((s, i) => (
-            <div key={i} className="flex items-start gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2.5">
+            <div key={s} className="flex items-start gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2.5">
               <span className="text-xs font-extrabold shrink-0" style={{ color: cfg.color }}>{i + 1}.</span>
               <p className="text-xs text-white/60 leading-relaxed">{s}</p>
             </div>
