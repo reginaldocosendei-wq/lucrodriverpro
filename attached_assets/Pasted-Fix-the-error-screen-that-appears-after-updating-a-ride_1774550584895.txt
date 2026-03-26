@@ -1,0 +1,83 @@
+Fix the error screen that appears after updating a ride in my app "Lucro Driver".
+
+GOAL:
+When the user updates ride data, the app must save successfully and remain stable, without showing the "Algo deu errado" page.
+
+ISSUE:
+After editing or updating a ride, the app shows an error page asking to reload. This must be fixed.
+
+REQUIRED FIXES:
+
+1. FORM SUBMIT
+- Prevent default form reload
+- Use event.preventDefault() in all ride update forms
+
+Example:
+async function handleSubmit(e) {
+  e.preventDefault();
+  ...
+}
+
+2. SAFE ASYNC UPDATE
+- Ensure update logic waits for save completion before navigating
+- Use try/catch in update handlers
+
+Example:
+async function handleSubmit(e) {
+  e.preventDefault();
+  try {
+    setLoading(true);
+    await updateRide(data);
+    setLoading(false);
+    navigate("/dashboard");
+  } catch (error) {
+    console.error("Failed to update ride:", error);
+    setLoading(false);
+    setError("Could not update ride");
+  }
+}
+
+3. DO NOT RELOAD PAGE
+- Remove any window.location.reload() after updating a ride
+- Remove any forced page refresh after save
+
+4. ROUTING FIX
+- Ensure the route used after updating exists and works
+- If using navigate("/dashboard"), confirm dashboard route is valid
+- Avoid broken redirects
+
+5. STATE SAFETY
+- Make sure the updated ride state is valid before rendering
+- Do not render null or undefined objects without checks
+
+Example:
+if (!ride) return null;
+
+6. ERROR BOUNDARY / FALLBACK
+- Add a safe fallback UI instead of crashing to a generic error page
+- Show friendly message if update fails:
+  "Não foi possível atualizar a corrida. Tente novamente."
+
+7. MOBILE STABILITY
+- Ensure update flow works on mobile browsers
+- Avoid DOM mismatch or unstable rendering after update
+
+8. SUCCESS FEEDBACK
+After successful update, show:
+"Corrida atualizada com sucesso."
+
+9. DEBUG
+Check all update-related files and functions such as:
+- EditRide
+- RideForm
+- UpdateRide
+- handleSubmit
+- updateRide
+- navigate after submit
+
+10. FINAL RESULT
+When user edits or updates a ride:
+- data saves correctly
+- no error page appears
+- app stays on a valid screen
+- success message is shown

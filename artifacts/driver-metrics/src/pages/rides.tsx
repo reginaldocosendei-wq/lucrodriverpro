@@ -139,6 +139,7 @@ export default function Rides() {
       <AnimatePresence>
         {savedDay && (
           <motion.div
+            key="success-toast"
             initial={{ opacity: 0, y: -16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8 }}
@@ -181,6 +182,7 @@ export default function Rides() {
         <AnimatePresence>
           {formError && (
             <motion.div
+              key="form-error"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}

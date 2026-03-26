@@ -30,33 +30,50 @@ const queryClient = new QueryClient({
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; errorMsg: string }
 > {
   constructor(props: any) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMsg: "" };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error.message };
   }
 
   componentDidCatch(error: Error) {
-    console.error("App error:", error.message);
+    console.error("App render error:", error.message);
   }
+
+  handleReset = () => {
+    this.setState({ hasError: false, errorMsg: "" });
+  };
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-2">
+            <span className="text-2xl">⚠️</span>
+          </div>
           <p className="text-white font-bold text-lg">Algo deu errado</p>
-          <p className="text-white/50 text-sm">Recarregue a página para continuar.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-2 px-6 py-3 bg-primary text-black font-bold rounded-xl text-sm"
-          >
-            Recarregar
-          </button>
+          <p className="text-white/50 text-sm max-w-xs leading-relaxed">
+            Ocorreu um erro inesperado. Tente novamente ou recarregue a página.
+          </p>
+          <div className="flex flex-col gap-2 w-full max-w-xs mt-2">
+            <button
+              onClick={this.handleReset}
+              className="px-6 py-3 bg-primary text-black font-bold rounded-xl text-sm"
+            >
+              Tentar novamente
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 border border-white/10 text-white/60 font-medium rounded-xl text-sm hover:border-white/20 transition-colors"
+            >
+              Recarregar página
+            </button>
+          </div>
         </div>
       );
     }

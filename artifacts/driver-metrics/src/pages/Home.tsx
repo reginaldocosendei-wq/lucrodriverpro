@@ -163,7 +163,9 @@ function DailyAnalysisCard({ summary }: { summary: any }) {
 
   return (
     <motion.div
-      variants={item}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className={`rounded-3xl border ${cfg.border} bg-gradient-to-br ${cfg.bg} to-transparent p-5 space-y-4`}
     >
       {/* Header row */}
@@ -409,7 +411,9 @@ export default function Home() {
       </motion.div>
 
       {/* ─── DAILY ANALYSIS ─── */}
-      <DailyAnalysisCard summary={summary} />
+      <motion.div variants={item}>
+        <DailyAnalysisCard summary={summary} />
+      </motion.div>
 
       {/* ─── REVENUE + MONTH PROFIT ─── */}
       <motion.div variants={item} className="grid grid-cols-2 gap-3">
