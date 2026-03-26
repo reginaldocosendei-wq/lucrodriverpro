@@ -122,8 +122,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
+        queryClient.setQueryData(["/api/auth/me"], null);
         queryClient.clear();
-        window.location.reload();
       },
     });
   };

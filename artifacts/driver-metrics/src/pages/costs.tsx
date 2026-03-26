@@ -52,6 +52,7 @@ export default function Costs() {
   const deleteMutation = useDeleteCost();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<CostFormData>({
     resolver: zodResolver(costSchema),
@@ -64,13 +65,18 @@ export default function Costs() {
   });
 
   const onSubmit = form.handleSubmit((data) => {
+    setSubmitError(null);
     createMutation.mutate({ data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/costs"] });
         queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
         setIsModalOpen(false);
+        setSubmitError(null);
         form.reset({ ...form.getValues(), description: "", amount: undefined });
-      }
+      },
+      onError: () => {
+        setSubmitError("Erro ao salvar custo. Tente novamente.");
+      },
     });
   });
 
@@ -243,8 +249,11 @@ export default function Costs() {
       )}
 
       {!isFree && (
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Adicionar Custo">
+        <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSubmitError(null); }} title="Adicionar Custo">
           <form onSubmit={onSubmit} className="space-y-5">
+            {submitError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">{submitError}</p>
+            )}
             <div>
               <Label>Valor (R$)</Label>
               <Input type="number" step="0.01" placeholder="0.00" className="font-display font-bold text-lg h-14" {...form.register("amount")} />

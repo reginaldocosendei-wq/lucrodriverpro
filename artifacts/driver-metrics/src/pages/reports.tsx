@@ -102,6 +102,7 @@ export default function Reports() {
           <AnimatePresence>
             {trialError && (
               <motion.div
+                key="trial-error"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
@@ -120,6 +121,7 @@ export default function Reports() {
           <AnimatePresence>
             {trialSuccess && (
               <motion.div
+                key="trial-success"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}

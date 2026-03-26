@@ -54,7 +54,10 @@ export default function Goals() {
         queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
         queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
         toast({ title: "Suas metas foram salvas com sucesso!" });
-      }
+      },
+      onError: () => {
+        toast({ title: "Erro ao salvar metas. Tente novamente.", variant: "destructive" });
+      },
     });
   });
 

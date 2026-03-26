@@ -127,6 +127,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       {isOpen && (
         <>
           <motion.div
+            key="modal-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -134,6 +135,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
             className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
           />
           <motion.div
+            key="modal-card"
             initial={{ opacity: 0, y: 100, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.95 }}

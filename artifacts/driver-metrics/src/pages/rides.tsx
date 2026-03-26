@@ -402,6 +402,7 @@ export default function Rides() {
                     <AnimatePresence>
                       {expanded && (
                         <motion.div
+                          key="day-detail"
                           initial={{ height: 0 }}
                           animate={{ height: "auto" }}
                           exit={{ height: 0 }}
