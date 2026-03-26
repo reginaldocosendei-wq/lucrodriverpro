@@ -172,31 +172,26 @@ export default function ImportPage() {
       {/* Content */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px 100px" }}>
         <AnimatePresence mode="wait">
+          <motion.div key={step} {...slide}>
 
           {/* LOCKED */}
           {step === "locked" && (
-            <motion.div key="locked" {...slide}>
-              <LockedView onUpgrade={() => navigate("/upgrade")} />
-            </motion.div>
+            <LockedView onUpgrade={() => navigate("/upgrade")} />
           )}
 
           {/* ENTRY */}
           {step === "entry" && (
-            <motion.div key="entry" {...slide}>
-              <EntryView onStart={() => setStep("instructions")} />
-            </motion.div>
+            <EntryView onStart={() => setStep("instructions")} />
           )}
 
           {/* INSTRUCTIONS */}
           {step === "instructions" && (
-            <motion.div key="instructions" {...slide}>
-              <InstructionsView onUpload={() => setStep("upload")} />
-            </motion.div>
+            <InstructionsView onUpload={() => setStep("upload")} />
           )}
 
           {/* UPLOAD */}
           {step === "upload" && (
-            <motion.div key="upload" {...slide}>
+            <div>
               <div>
                 <h2 style={{ color: "#f9fafb", fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Enviar screenshot</h2>
                 <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 24 }}>
@@ -260,8 +255,7 @@ export default function ImportPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
-                  capture="environment"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/*"
                   style={{ display: "none" }}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -292,13 +286,12 @@ export default function ImportPage() {
                   Enviar screenshot
                 </button>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* PROCESSING */}
           {step === "processing" && (
-            <motion.div key="processing" {...slide}>
-              <div style={{ textAlign: "center", paddingTop: 40 }}>
+            <div style={{ textAlign: "center", paddingTop: 40 }}>
                 {previewUrl && (
                   <div style={{
                     width: 160, height: 120, borderRadius: 16, overflow: "hidden",
@@ -355,14 +348,12 @@ export default function ImportPage() {
                     />
                   ))}
                 </div>
-              </div>
-            </motion.div>
+            </div>
           )}
 
           {/* RESULT */}
           {step === "result" && (
-            <motion.div key="result" {...slide}>
-              <div>
+            <div>
                 <div style={{
                   background: "rgba(0,255,136,0.06)",
                   border: "1px solid rgba(0,255,136,0.2)",
@@ -571,14 +562,12 @@ export default function ImportPage() {
                     Confirmar e salvar
                   </button>
                 </div>
-              </div>
-            </motion.div>
+            </div>
           )}
 
           {/* CONFIRM (loading) */}
           {step === "confirm" && (
-            <motion.div key="confirm" {...slide}>
-              <div style={{ textAlign: "center", paddingTop: 60 }}>
+            <div style={{ textAlign: "center", paddingTop: 60 }}>
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
@@ -593,14 +582,12 @@ export default function ImportPage() {
                   <CheckCircle size={36} color="#0a0a0a" />
                 </motion.div>
                 <p style={{ color: "#f9fafb", fontSize: 18, fontWeight: 600 }}>Salvando seu dia...</p>
-              </div>
-            </motion.div>
+            </div>
           )}
 
           {/* SUCCESS */}
           {step === "success" && (
-            <motion.div key="success" {...slide}>
-              <div style={{ textAlign: "center", paddingTop: 32 }}>
+            <div style={{ textAlign: "center", paddingTop: 32 }}>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -693,9 +680,9 @@ export default function ImportPage() {
                   </div>
                 </motion.div>
               </div>
-            </motion.div>
           )}
 
+          </motion.div>
         </AnimatePresence>
       </div>
     </div>
