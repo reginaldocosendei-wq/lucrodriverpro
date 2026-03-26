@@ -8,7 +8,8 @@ import {
   Zap, Star, Image as ImageIcon, AlertCircle, X
 } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { getApiBase } from "@/lib/api";
+const BASE = getApiBase();
 
 const PLATFORMS = ["Uber", "99", "InDrive", "Outro"];
 

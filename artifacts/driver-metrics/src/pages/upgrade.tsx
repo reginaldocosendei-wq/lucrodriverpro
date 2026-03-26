@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lock, Zap, TrendingUp, BarChart2, Target, ChevronRight, ArrowLeft, Shield, Clock, AlertTriangle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui";
+import { Capacitor } from "@capacitor/core";
+import { getApiBase } from "@/lib/api";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = getApiBase();
 
 const PLANS = [
   {
@@ -94,7 +96,15 @@ export default function Upgrade() {
         return;
       }
 
-      window.location.href = checkoutData.url;
+      if (Capacitor.isNativePlatform()) {
+        // On Android/iOS, open Stripe in the system browser.
+        // The user will return to the app after payment; the resume listener
+        // in App.tsx will refresh their plan automatically.
+        window.open(checkoutData.url, "_system");
+        setIsLoading(false);
+      } else {
+        window.location.href = checkoutData.url;
+      }
     } catch (err) {
       console.error("Stripe checkout error:", err);
       setError("Não foi possível iniciar o pagamento. Verifique sua conexão e tente novamente.");

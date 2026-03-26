@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { getApiBase } from "@/lib/api";
+const BASE = getApiBase();
 
 const PLATFORMS = [
   { value: "uber", label: "Uber", color: "#1a1a1a", text: "#fff" },

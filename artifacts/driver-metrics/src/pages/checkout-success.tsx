@@ -4,7 +4,8 @@ import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { getApiBase } from "@/lib/api";
+const BASE = getApiBase();
 
 export default function CheckoutSuccess() {
   const queryClient = useQueryClient();

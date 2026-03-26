@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 import Home from "@/pages/Home";
 import Rides from "@/pages/rides";
@@ -145,6 +147,35 @@ function Router() {
   );
 }
 
+/**
+ * Mounted inside QueryClientProvider.
+ * Listens for native app lifecycle events and refreshes data accordingly.
+ * No-ops in browser (non-native) environments.
+ */
+function NativeEventListeners() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let handle: { remove: () => void } | null = null;
+
+    CapApp.addListener("resume", () => {
+      // User returned to the app (e.g., after Stripe payment in system browser).
+      // Refresh the user plan so any subscription update is reflected immediately.
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    }).then((h) => {
+      handle = h;
+    });
+
+    return () => {
+      handle?.remove();
+    };
+  }, [queryClient]);
+
+  return null;
+}
+
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
 
@@ -159,6 +190,7 @@ function AppShell() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
+            <NativeEventListeners />
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>

@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { getApiBase } from "@/lib/api";
+const BASE = getApiBase();
 
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
