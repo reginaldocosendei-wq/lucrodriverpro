@@ -229,7 +229,7 @@ export default function Reports() {
         </div>
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={reports.daily} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+            <LineChart data={reports.daily || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="date" tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }} tickLine={false} axisLine={false} dy={10} />
               <YAxis tickFormatter={(val) => `R$${val}`} tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }} tickLine={false} axisLine={false} dx={-10} />
@@ -248,7 +248,7 @@ export default function Reports() {
           <h3 className="font-display font-bold text-xl mb-8">Ganhos por Plataforma</h3>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reports.byPlatform} layout="vertical" margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+              <BarChart data={reports.byPlatform || []} layout="vertical" margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis type="number" tickFormatter={(val) => `R$${val}`} tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="platform" type="category" tick={{ fill: '#fff', fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} dx={-10} />
@@ -263,7 +263,7 @@ export default function Reports() {
           <h3 className="font-display font-bold text-xl mb-8">Melhores Dias da Semana</h3>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reports.byDayOfWeek} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <BarChart data={reports.byDayOfWeek || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="date" tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
                 <YAxis tickFormatter={(val) => `R$${val}`} tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} dx={-10} />

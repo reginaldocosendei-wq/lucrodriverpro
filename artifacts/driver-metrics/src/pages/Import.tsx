@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
@@ -47,9 +48,17 @@ function platformColor(p: string | null) {
 export default function ImportPage() {
   const [, navigate] = useLocation();
   const { data: me } = useGetMe();
+  const queryClient = useQueryClient();
   const isPro = me?.plan === "pro";
 
-  const [step, setStep] = useState<Step>(isPro ? "entry" : "locked");
+  const [step, setStep] = useState<Step>("locked");
+
+  useEffect(() => {
+    if (isPro && step === "locked") {
+      setStep("entry");
+    }
+  }, [isPro, step]);
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [extracted, setExtracted] = useState<Extracted>({ earnings: null, trips: null, platform: null });
@@ -137,6 +146,8 @@ export default function ImportPage() {
         return;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       setStep("success");
     } catch (err) {
       console.error("Import confirm error:", err);

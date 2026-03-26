@@ -38,15 +38,16 @@ export default function Goals() {
     defaultValues: { daily: 0, weekly: 0, monthly: 0 }
   });
 
+  const { reset } = form;
   useEffect(() => {
     if (goals) {
-      form.reset({
+      reset({
         daily: goals.daily,
         weekly: goals.weekly,
         monthly: goals.monthly,
       });
     }
-  }, [goals, form]);
+  }, [goals, reset]);
 
   const onSubmit = form.handleSubmit((data) => {
     updateMutation.mutate({ data }, {

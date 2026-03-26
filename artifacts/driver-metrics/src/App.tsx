@@ -41,8 +41,13 @@ class ErrorBoundary extends React.Component<
     return { hasError: true, errorMsg: error.message };
   }
 
-  componentDidCatch(error: Error) {
-    console.error("App render error:", error.message);
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("App render error:", error.message, error.stack);
+    console.log("[ErrorBoundary] Crash:", {
+      message: error.message,
+      route: typeof window !== "undefined" ? window.location.pathname : "unknown",
+      componentStack: info.componentStack?.slice(0, 800),
+    });
   }
 
   handleReset = () => {

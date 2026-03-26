@@ -304,7 +304,7 @@ export default function Home() {
     });
   }
 
-  if (summary.bestPlatform) {
+  if (summary.bestPlatform && summary.bestPlatform !== "-") {
     const meta = platformMeta[summary.bestPlatform] ?? { label: summary.bestPlatform, pronoun: "nele" };
     alerts.push({
       id: "destaque",
