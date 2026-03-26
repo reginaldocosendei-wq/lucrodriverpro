@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { SplashScreen } from "@/components/SplashScreen";
 
 import Home from "@/pages/Home";
 import Rides from "@/pages/rides";
@@ -57,7 +58,7 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-2">
             <span className="text-2xl">⚠️</span>
           </div>
@@ -71,13 +72,13 @@ class ErrorBoundary extends React.Component<
                 this.handleReset();
                 window.location.href = import.meta.env.BASE_URL || "/";
               }}
-              className="px-6 py-3 bg-primary text-black font-bold rounded-xl text-sm"
+              className="px-6 py-3 bg-primary text-black font-bold rounded-xl text-sm active:scale-95 transition-transform"
             >
               Voltar ao início
             </button>
             <button
               onClick={this.handleReset}
-              className="px-6 py-3 border border-white/10 text-white/60 font-medium rounded-xl text-sm hover:border-white/20 transition-colors"
+              className="px-6 py-3 border border-white/10 text-white/60 font-medium rounded-xl text-sm active:scale-95 transition-transform"
             >
               Tentar novamente
             </button>
@@ -89,7 +90,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-const fadeTransition = { duration: 0.18, ease: "easeInOut" };
+const fadeTransition = { duration: 0.2, ease: "easeInOut" };
 const fadeProps = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
@@ -102,8 +103,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin glow-primary" />
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
@@ -113,7 +114,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return (
     <AnimatePresence mode="wait" initial={false}>
       {isAuthed ? (
-        <motion.div key="authed" {...fadeProps} style={{ minHeight: "100vh" }}>
+        <motion.div key="authed" {...fadeProps} style={{ minHeight: "100dvh" }}>
           <Layout>{children}</Layout>
         </motion.div>
       ) : (
@@ -144,19 +145,29 @@ function Router() {
   );
 }
 
-function App() {
+function AppShell() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 1600);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <>
+      <SplashScreen show={showSplash} />
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </>
   );
 }
 
-export default App;
+export default AppShell;

@@ -146,7 +146,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const showBanner = trialActive && !bannerDismissed;
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-0 md:pl-24">
+    <div className="min-h-[100dvh] bg-background pb-24 md:pb-0 md:pl-24">
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-primary/20 shadow-[0_4px_30px_rgba(0,255,136,0.05)]">
         <div className="px-4 py-4 flex items-center justify-between">

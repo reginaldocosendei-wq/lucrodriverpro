@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme inline {
@@ -24,7 +24,7 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+
   --color-gold: hsl(var(--gold));
   --color-gold-foreground: hsl(var(--gold-foreground));
 
@@ -68,7 +68,7 @@
   --chart-3: 45 100% 51%;
   --chart-4: 220 90% 60%;
   --chart-5: 280 80% 65%;
-  
+
   --shadow-sm: 0px 0px 0px 0px rgba(0,0,0,0);
   --shadow: 0px 0px 0px 0px rgba(0,0,0,0);
   --shadow-md: 0px 0px 0px 0px rgba(0,0,0,0);
@@ -77,34 +77,104 @@
   --shadow-2xl: 0px 0px 0px 0px rgba(0,0,0,0);
   --shadow-inner: 0px 0px 0px 0px rgba(0,0,0,0);
 
-  /* Premium Gold */
   --gold: 44 100% 50%;
   --gold-foreground: 0 0% 0%;
 
   --radius: 1rem;
 }
 
+/* ─── BASE MOBILE RESETS ─────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border;
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  html {
+    /* Fill entire viewport including notch areas */
+    height: 100%;
+    height: -webkit-fill-available;
+    /* Prevent overscroll bounce (iOS) */
+    overscroll-behavior: none;
+    /* Smooth scroll */
+    scroll-behavior: smooth;
+    /* Consistent text rendering */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    -webkit-tap-highlight-color: transparent;
+    /* Fill dynamic viewport (handles mobile address bar) */
+    min-height: 100dvh;
+    /* Prevent pull-to-refresh and overscroll */
+    overscroll-behavior-y: none;
+    /* Touch scrolling momentum */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text selection on long-press */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Better font rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Allow text selection only in inputs and text areas */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply tracking-tight font-bold;
   }
-  
+
+  /* Remove tap delay on all interactive elements */
+  a, button, [role="button"], label, select, summary {
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+
+  /* Active state for native-app button feel */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.97);
+    transition: transform 0.08s ease;
+  }
+
+  /* Scrollable containers: momentum scrolling */
+  .overflow-y-auto, .overflow-y-scroll, main {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
   /* Hide scrollbar for clean mobile UI */
   ::-webkit-scrollbar {
-    width: 0px;
+    width: 0;
+    height: 0;
     background: transparent;
+  }
+
+  /* Focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+
+  /* Input auto-fill background fix */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 50px hsl(var(--input)) inset;
+    -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
   }
 }
 
+/* ─── UTILITY CLASSES ────────────────────────────────────── */
 @layer utilities {
   .text-gradient {
     background: linear-gradient(135deg, #fff 0%, #00ff88 100%);
@@ -126,27 +196,105 @@
   }
 
   .glass-panel {
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
   }
 
-  @supports (font: -apple-system-body) and (-webkit-appearance: none) {
-    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
+  /* Safe area padding helpers */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 8px);
   }
-  .pb-safe { padding-bottom: 8px; }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Full-height that adapts to mobile browsers */
+  .h-screen-safe {
+    height: 100dvh;
+  }
+  .min-h-screen-safe {
+    min-height: 100dvh;
+  }
 
   .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+
+  /* Disable animation for reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* Recharts Customization to fit dark theme */
+/* ─── RECHARTS DARK THEME ────────────────────────────────── */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
   stroke: hsl(var(--border) / 0.5);
 }
 .recharts-tooltip-cursor {
   fill: hsl(var(--muted) / 0.3);
+}
+
+/* ─── INPUT RANGE SLIDER (Simulator) ────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 6px;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  height: 6px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #00ff88;
+  border: 3px solid #0a0a0a;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+  margin-top: -8px;
+  cursor: grab;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.6);
+}
+
+input[type="range"]::-moz-range-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  height: 6px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #00ff88;
+  border: 3px solid #0a0a0a;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+  cursor: grab;
 }

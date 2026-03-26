@@ -47,6 +47,25 @@ A full-featured ride-share driver earnings tracker (Lucro Driver). Features:
 - Smart dashboard with earnings summaries and alerts
 - Earnings reports and charts (Recharts) — PRO feature
 - Freemium model: free plan gets basics, PRO unlocks reports & simulator
+- 7-day PRO trial on new accounts (`trialStartDate` column, `computeEffectivePlan()` helper)
+- Stripe subscription integration (monthly/yearly plans)
+
+### PWA / Mobile App
+- **Manifest**: `artifacts/driver-metrics/public/manifest.json` — standalone display, pt-BR, shortcuts
+- **Service Worker**: `artifacts/driver-metrics/public/sw.js` — cache-first for assets, network-first for navigation, skips API calls
+- **Icons**: `public/images/icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (generated from `public/icon.svg` via ImageMagick)
+- **Splash Screen**: `src/components/SplashScreen.tsx` — 1.6s animated splash, fades into app
+- **Mobile CSS**: `index.css` — `100dvh`, `overscroll-behavior: none`, safe-area insets, touch-action, momentum scrolling, `-webkit-tap-highlight-color: transparent`
+- **SW registration**: `main.tsx` — registers `${BASE_URL}sw.js` on window load
+- **Installable on Android** via Chrome "Add to Home Screen" prompt
+
+### Known Patterns & Gotchas
+- `goals.tsx` useEffect: always use `const { reset } = form` (destructured), never put the whole `form` object in deps (causes infinite re-render)
+- `Import.tsx`: always initializes `step = "locked"`, transitions to `"entry"` via `useEffect([isPro, step])` when user data loads
+- `reports.tsx` chart props: always use `|| []` guards (Recharts crashes on null/undefined data)
+- `Home.tsx` `bestPlatform`: guard with `!== "-"` before using as alert condition
+- ErrorBoundary uses `console.log` (not just `console.error`) for crash logs — captured by log tool
+- Dashboard API always returns numeric fields (never null) — no `?? 0` guards needed
 
 ### DB Schema (lib/db/src/schema/)
 - `users` — id, name, email, password_hash, plan (free/pro)
