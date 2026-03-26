@@ -83,6 +83,158 @@ const platformMeta: Record<string, { label: string; pronoun: string }> = {
   outro: { label: "Outro", pronoun: "nele" },
 };
 
+// ─── DAILY ANALYSIS CARD ───────────────────────────────────────────────────
+function DailyAnalysisCard({ summary }: { summary: any }) {
+  const {
+    earningsToday, costsToday, realProfitToday,
+    ridesCountToday, earningsPerRideToday, avgPerRide,
+  } = summary;
+
+  if (!earningsToday || earningsToday <= 0) return null;
+
+  const profitMarginPct = earningsToday > 0 ? (realProfitToday / earningsToday) * 100 : 0;
+  const costRatioPct    = earningsToday > 0 ? (costsToday / earningsToday) * 100 : 0;
+
+  type Status = "great" | "good" | "weak" | "negative";
+  let status: Status;
+  if (realProfitToday <= 0)         status = "negative";
+  else if (profitMarginPct >= 50)   status = "great";
+  else if (profitMarginPct >= 25)   status = "good";
+  else                              status = "weak";
+
+  const cfg = {
+    great: {
+      label: "Ótimo dia! 🔥",
+      color: "#00ff88",
+      bg: "from-emerald-500/15",
+      border: "border-emerald-500/30",
+      message: "Excelente performance! Você manteve uma ótima margem de lucro hoje.",
+      suggestions: [
+        "Replique a estratégia de hoje amanhã",
+        "Seus custos estão controlados — continue assim",
+        "Registre o que funcionou para repetir",
+      ],
+    },
+    good: {
+      label: "Bom dia 👍",
+      color: "#4ade80",
+      bg: "from-green-500/10",
+      border: "border-green-500/20",
+      message: "Dia consistente. Você lucrou de forma sólida com os ganhos de hoje.",
+      suggestions: [
+        "Trabalhe nos horários de pico para aumentar ainda mais",
+        "Prefira corridas mais longas quando possível",
+        "Analise quais horas renderam mais hoje",
+      ],
+    },
+    weak: {
+      label: "Dia fraco ⚠️",
+      color: "#eab308",
+      bg: "from-yellow-500/10",
+      border: "border-yellow-500/20",
+      message: "Você trabalhou, mas o lucro foi baixo. Vale rever seus custos e horários.",
+      suggestions: [
+        "Foque nos horários de maior demanda",
+        "Evite corridas curtas de baixo valor",
+        "Controle os gastos com combustível",
+      ],
+    },
+    negative: {
+      label: "Dia no prejuízo ❌",
+      color: "#ef4444",
+      bg: "from-red-500/10",
+      border: "border-red-500/20",
+      message: "Você trabalhou mas não lucrou hoje. Seus custos superaram os ganhos.",
+      suggestions: [
+        "Reduza seus custos fixos com urgência",
+        "Evite trabalhar em horários de baixa demanda",
+        "Priorize regiões e horários com mais corridas",
+      ],
+    },
+  }[status];
+
+  const insights: string[] = [];
+  if (costRatioPct > 40 && costsToday > 0)
+    insights.push(`Custos representaram ${Math.round(costRatioPct)}% dos seus ganhos hoje — acima do ideal de 40%.`);
+  if (avgPerRide > 0 && earningsPerRideToday > 0 && earningsPerRideToday < avgPerRide * 0.8)
+    insights.push(`Corridas renderam ${formatBRL(earningsPerRideToday)} cada — abaixo da sua média de ${formatBRL(avgPerRide)}.`);
+  if (ridesCountToday > 0 && realProfitToday > 0)
+    insights.push(`Lucro médio por corrida hoje: ${formatBRL(realProfitToday / ridesCountToday)}.`);
+
+  return (
+    <motion.div
+      variants={item}
+      className={`rounded-3xl border ${cfg.border} bg-gradient-to-br ${cfg.bg} to-transparent p-5 space-y-4`}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-1">Análise do dia</p>
+          <p className="text-xl font-display font-extrabold text-white">{cfg.label}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[10px] text-white/40 font-medium mb-1">Lucro hoje</p>
+          <p className="text-2xl font-display font-extrabold tabular-nums" style={{ color: cfg.color }}>
+            {formatBRL(realProfitToday)}
+          </p>
+        </div>
+      </div>
+
+      {/* Profit margin bar */}
+      <div>
+        <div className="flex justify-between text-[10px] text-white/40 font-bold mb-1.5">
+          <span>Ganhos: {formatBRL(earningsToday)}</span>
+          <span>Custos: {formatBRL(costsToday)}</span>
+        </div>
+        <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: cfg.color, boxShadow: `0 0 10px ${cfg.color}50` }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.max(2, Math.min(100, Math.abs(profitMarginPct)))}%` }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+          />
+        </div>
+        <p className="text-[10px] text-white/30 mt-1 font-medium">
+          {realProfitToday > 0
+            ? `${Math.round(profitMarginPct)}% de margem de lucro`
+            : "Margem negativa — gastos acima dos ganhos"}
+        </p>
+      </div>
+
+      {/* Main message */}
+      <div className="rounded-2xl bg-black/20 px-4 py-3">
+        <p className="text-sm text-white/70 leading-relaxed">{cfg.message}</p>
+      </div>
+
+      {/* Secondary insights */}
+      {insights.length > 0 && (
+        <div className="space-y-2">
+          {insights.map((insight, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: cfg.color }} />
+              <p className="text-xs text-white/50 leading-relaxed">{insight}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Suggestions */}
+      <div>
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/30 mb-2.5">💡 Como melhorar</p>
+        <div className="space-y-2">
+          {cfg.suggestions.map((s, i) => (
+            <div key={i} className="flex items-start gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2.5">
+              <span className="text-xs font-extrabold shrink-0" style={{ color: cfg.color }}>{i + 1}.</span>
+              <p className="text-xs text-white/60 leading-relaxed">{s}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: user } = useGetMe();
@@ -255,6 +407,9 @@ export default function Home() {
           </div>
         </div>
       </motion.div>
+
+      {/* ─── DAILY ANALYSIS ─── */}
+      <DailyAnalysisCard summary={summary} />
 
       {/* ─── REVENUE + MONTH PROFIT ─── */}
       <motion.div variants={item} className="grid grid-cols-2 gap-3">

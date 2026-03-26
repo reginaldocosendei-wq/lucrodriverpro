@@ -41,9 +41,16 @@ router.get("/summary", requireAuth, async (req, res) => {
   const weekStart = startOfWeek();
   const monthStart = startOfMonth();
 
-  const earningsToday = rides
-    .filter((r) => r.createdAt.toISOString().split("T")[0] >= today)
-    .reduce((s, r) => s + r.value, 0);
+  const ridesToday = rides.filter((r) => r.createdAt.toISOString().split("T")[0] >= today);
+  const earningsToday = ridesToday.reduce((s, r) => s + r.value, 0);
+  const ridesCountToday = ridesToday.length;
+
+  const costsToday = costs
+    .filter((c) => c.date >= today)
+    .reduce((s, c) => s + c.amount, 0);
+
+  const realProfitToday = earningsToday - costsToday;
+  const earningsPerRideToday = ridesCountToday > 0 ? earningsToday / ridesCountToday : 0;
 
   const earningsWeek = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= weekStart)
@@ -85,6 +92,10 @@ router.get("/summary", requireAuth, async (req, res) => {
     earningsToday,
     earningsWeek,
     earningsMonth,
+    ridesCountToday,
+    costsToday,
+    realProfitToday,
+    earningsPerRideToday,
     totalRides,
     avgPerRide,
     avgPerKm,
