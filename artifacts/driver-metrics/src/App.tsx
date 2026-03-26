@@ -52,26 +52,29 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-2">
             <span className="text-2xl">⚠️</span>
           </div>
-          <p className="text-white font-bold text-lg">Algo deu errado</p>
+          <p className="text-white font-bold text-xl">Algo não saiu como esperado</p>
           <p className="text-white/50 text-sm max-w-xs leading-relaxed">
-            Ocorreu um erro inesperado. Tente novamente ou recarregue a página.
+            Tente novamente em instantes.
           </p>
           <div className="flex flex-col gap-2 w-full max-w-xs mt-2">
             <button
-              onClick={this.handleReset}
+              onClick={() => {
+                this.handleReset();
+                window.location.href = import.meta.env.BASE_URL || "/";
+              }}
               className="px-6 py-3 bg-primary text-black font-bold rounded-xl text-sm"
             >
-              Tentar novamente
+              Voltar ao início
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={this.handleReset}
               className="px-6 py-3 border border-white/10 text-white/60 font-medium rounded-xl text-sm hover:border-white/20 transition-colors"
             >
-              Recarregar página
+              Tentar novamente
             </button>
           </div>
         </div>

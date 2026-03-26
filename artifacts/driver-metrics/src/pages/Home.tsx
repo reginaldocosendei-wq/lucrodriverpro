@@ -85,6 +85,8 @@ const platformMeta: Record<string, { label: string; pronoun: string }> = {
 
 // ─── DAILY ANALYSIS CARD ───────────────────────────────────────────────────
 function DailyAnalysisCard({ summary }: { summary: any }) {
+  if (!summary) return null;
+
   const {
     earningsToday, costsToday, realProfitToday,
     ridesCountToday, earningsPerRideToday, avgPerRide,

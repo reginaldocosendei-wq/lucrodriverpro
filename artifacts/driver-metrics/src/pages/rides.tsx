@@ -106,11 +106,20 @@ export default function Rides() {
   const handleDeleteDay = async (key: string) => {
     setDeletingDay(key);
     try {
-      await fetch(`${BASE}/api/rides/day/${key}`, { method: "DELETE", credentials: "include" });
-      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-    } catch {}
-    setDeletingDay(null);
+      const res = await fetch(`${BASE}/api/rides/day/${key}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setFormError(d.error || "Erro ao remover registros. Tente novamente.");
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      }
+    } catch (err) {
+      console.error("Delete day error:", err);
+      setFormError("Erro de conexão ao remover registros.");
+    } finally {
+      setDeletingDay(null);
+    }
   };
 
   const toggleDay = (key: string) => {

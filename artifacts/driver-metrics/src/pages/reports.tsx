@@ -46,7 +46,8 @@ export default function Reports() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       }, 800);
-    } catch {
+    } catch (err) {
+      console.error("Start trial error:", err);
       setTrialError("Algo deu errado. Tente novamente.");
     } finally {
       setTrialLoading(false);

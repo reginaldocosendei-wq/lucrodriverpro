@@ -89,14 +89,15 @@ export default function Upgrade() {
       const checkoutData = await checkoutRes.json();
 
       if (!checkoutRes.ok || !checkoutData.url) {
-        setError(checkoutData.error || "Erro ao iniciar pagamento.");
+        setError("Não foi possível iniciar o pagamento. Tente novamente.");
         setIsLoading(false);
         return;
       }
 
       window.location.href = checkoutData.url;
-    } catch {
-      setError("Erro de conexão. Verifique sua internet e tente novamente.");
+    } catch (err) {
+      console.error("Stripe checkout error:", err);
+      setError("Não foi possível iniciar o pagamento. Verifique sua conexão e tente novamente.");
       setIsLoading(false);
     }
   };

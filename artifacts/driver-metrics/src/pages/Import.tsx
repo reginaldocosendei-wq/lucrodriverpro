@@ -108,9 +108,10 @@ export default function ImportPage() {
       setEditTrips(data.trips?.toString() ?? "");
       setEditPlatform(data.platform || "Uber");
       setStep("result");
-    } catch {
+    } catch (err) {
+      console.error("Import analyze error:", err);
       if (msgIntervalRef.current) clearInterval(msgIntervalRef.current);
-      setError("Erro de conexão. Tente novamente.");
+      setError("Não foi possível ler o print. Tente outra imagem.");
       setStep("upload");
     }
   };
@@ -137,8 +138,9 @@ export default function ImportPage() {
       }
 
       setStep("success");
-    } catch {
-      setError("Erro de conexão. Tente novamente.");
+    } catch (err) {
+      console.error("Import confirm error:", err);
+      setError("Não foi possível salvar os dados. Tente novamente.");
       setStep("result");
     }
   };
