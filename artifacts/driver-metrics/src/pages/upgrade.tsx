@@ -75,11 +75,16 @@ export default function Upgrade() {
         return;
       }
 
+      const origin = window.location.origin;
       const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ priceId: price.id }),
+        body: JSON.stringify({
+          priceId: price.id,
+          successUrl: `${origin}${BASE}/checkout/success`,
+          cancelUrl:  `${origin}${BASE}/checkout/cancel`,
+        }),
       });
       const checkoutData = await checkoutRes.json();
 

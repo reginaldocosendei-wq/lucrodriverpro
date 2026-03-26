@@ -47,7 +47,7 @@ router.get("/products-with-prices", async (_req, res) => {
 // Create Stripe Checkout session
 router.post("/checkout", requireAuth, async (req: any, res) => {
   try {
-    const { priceId } = req.body;
+    const { priceId, successUrl: clientSuccessUrl, cancelUrl: clientCancelUrl } = req.body;
     if (!priceId) return res.status(400).json({ error: "priceId é obrigatório" });
 
     const user = await storage.getUser(req.session.userId);
@@ -61,12 +61,17 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
       customerId = customer.id;
     }
 
+    // Prefer URLs passed from the frontend (they include the correct base path).
+    // Fall back to host-derived URLs if not provided.
     const baseUrl = `https://${req.headers.host}`;
+    const successUrl = clientSuccessUrl || `${baseUrl}/checkout/success`;
+    const cancelUrl  = clientCancelUrl  || `${baseUrl}/checkout/cancel`;
+
     const session = await stripeService.createCheckoutSession(
       customerId,
       priceId,
-      `${baseUrl}/checkout/success`,
-      `${baseUrl}/checkout/cancel`,
+      successUrl,
+      cancelUrl,
     );
 
     res.json({ url: session.url });
