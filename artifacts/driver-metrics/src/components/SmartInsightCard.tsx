@@ -72,14 +72,6 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
         borderLeft: `4px solid ${c.color}`,
       }}
     >
-      {/* Ambient corner glow */}
-      <div style={{
-        position: "absolute",
-        top: -32, right: -24,
-        width: 140, height: 120,
-        background: `radial-gradient(ellipse, ${c.glow} 0%, transparent 70%)`,
-        pointerEvents: "none",
-      }} />
 
       <div style={{ position: "relative", zIndex: 1, padding: "20px" }}>
 
@@ -110,8 +102,6 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
             </span>
           </div>
 
-          {/* Icon floated right */}
-          <span style={{ marginLeft: "auto", fontSize: 18 }}>{c.icon}</span>
         </div>
 
         {/* ── Message ────────────────────────────────────────────────────── */}
@@ -136,28 +126,16 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
         }} />
 
         {/* ── Suggestion ─────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
-          <div style={{
-            width: 26, height: 26, flexShrink: 0,
-            borderRadius: 8,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13,
-          }}>
-            💡
-          </div>
-          <p style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: "rgba(255,255,255,0.48)",
-            lineHeight: 1.68,
-            wordBreak: "break-word",
-            overflowWrap: "break-word",
-          }}>
-            {suggestion}
-          </p>
-        </div>
+        <p style={{
+          fontSize: 13,
+          fontWeight: 400,
+          color: "rgba(255,255,255,0.42)",
+          lineHeight: 1.7,
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
+        }}>
+          {suggestion}
+        </p>
 
       </div>
     </motion.div>

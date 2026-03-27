@@ -133,14 +133,6 @@ export default function Home() {
           </p>
           <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.015em" }}>{t("home.dashboard")}</p>
         </div>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.1)",
-          borderRadius: 20, padding: "5px 12px",
-        }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#00ff88", opacity: 0.7 }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(0,255,136,0.6)", letterSpacing: "0.05em" }}>{t("home.live")}</span>
-        </div>
       </motion.div>
 
 
@@ -404,19 +396,6 @@ export default function Home() {
               <div style={{ position: "relative", marginBottom: 10 }}>
                 <Bar pct={goalPct} color={gColor} height={8} delay={0.3} />
 
-                {/* Milestone markers at 25/50/75% */}
-                {[25, 50, 75].map((m) => (
-                  <div
-                    key={m}
-                    style={{
-                      position: "absolute", top: "50%", left: `${m}%`,
-                      transform: "translate(-50%,-50%)",
-                      width: 3, height: 14, borderRadius: 999,
-                      background: goalPct >= m ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.12)",
-                      transition: "background 0.8s ease",
-                    }}
-                  />
-                ))}
               </div>
 
               {/* Footer */}
@@ -468,7 +447,6 @@ export default function Home() {
           <Link href="/upgrade">
             <motion.div whileTap={{ scale: 0.98 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(234,179,8,0.1),rgba(217,119,6,0.05))", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, background: "rgba(234,179,8,0.1)", borderRadius: "50%", filter: "blur(32px)", pointerEvents: "none" }} />
               <div style={{ position: "relative", zIndex: 1, padding: "14px 18px", border: "1px solid rgba(234,179,8,0.16)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#eab308,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Lock size={18} color="#000" />
@@ -490,7 +468,7 @@ export default function Home() {
           <motion.div whileTap={{ scale: 0.97 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(0,255,136,0.09),rgba(0,204,106,0.04))", pointerEvents: "none" }} />
             <div style={{ position: "relative", zIndex: 1, padding: "14px 18px", border: "1px solid rgba(0,255,136,0.13)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#00ff88,#00cc6a)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 6px 20px rgba(0,255,136,0.25)" }}>
+              <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#00ff88,#00cc6a)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Camera size={18} color="#000" />
               </div>
               <div style={{ flex: 1 }}>
@@ -519,7 +497,7 @@ export default function Home() {
             width: 58, height: 58, borderRadius: "50%",
             background: "#00ff88",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 8px 32px rgba(0,255,136,0.45), 0 2px 8px rgba(0,0,0,0.4)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
             position: "relative",
           }}>
             <Camera size={24} color="#000" strokeWidth={2.2} />

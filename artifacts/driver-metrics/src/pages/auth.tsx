@@ -77,7 +77,7 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
               transition: "all 0.2s ease",
               background: mode === m ? "#00ff88" : "transparent",
               color: mode === m ? "#000" : "rgba(255,255,255,0.4)",
-              boxShadow: mode === m ? "0 4px 16px rgba(0,255,136,0.25)" : "none",
+              boxShadow: "none",
               fontFamily: "inherit",
             }}
           >
@@ -212,12 +212,6 @@ export default function AuthScreen() {
         background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
       }} />
 
-      {/* Bottom glow */}
-      <div style={{
-        position: "absolute", bottom: -80, left: "50%", transform: "translateX(-50%)",
-        width: 360, height: 300, pointerEvents: "none",
-        background: "radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 65%)",
-      }} />
 
       <AnimatePresence mode="wait">
         {!showForm ? (
@@ -238,15 +232,10 @@ export default function AuthScreen() {
               transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               style={{ marginBottom: 32, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
-              {/* Ambient glow ring */}
-              <div style={{
-                position: "absolute", inset: -16, borderRadius: 34, pointerEvents: "none",
-                background: "radial-gradient(ellipse, rgba(0,255,136,0.09) 0%, transparent 68%)",
-              }} />
               <div style={{
                 width: 72, height: 72, borderRadius: 20, overflow: "hidden",
-                border: "1px solid rgba(0,255,136,0.22)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,255,136,0.14), 0 12px 32px rgba(0,0,0,0.5)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
                 position: "relative", zIndex: 1,
               }}>
                 <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
@@ -275,27 +264,14 @@ export default function AuthScreen() {
               {t("auth.subtitle")}
             </motion.p>
 
-            {/* Feature chips */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.36, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 36 }}
+            {/* Proof line */}
+            <motion.p
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ delay: 0.36, duration: 0.4 }}
+              style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: "0.01em", marginBottom: 36 }}
             >
-              {[
-                { icon: "🔒", text: "7 dias grátis" },
-                { icon: "📊", text: "Lucro real" },
-                { icon: "📱", text: "Offline" },
-              ].map(({ icon, text }) => (
-                <div key={text} style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
-                  borderRadius: 999, padding: "5px 12px",
-                }}>
-                  <span style={{ fontSize: 12 }}>{icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", letterSpacing: "0.02em" }}>{text}</span>
-                </div>
-              ))}
-            </motion.div>
+              7 dias grátis · Sem cartão necessário
+            </motion.p>
 
             {/* CTAs */}
             <motion.div
@@ -312,7 +288,7 @@ export default function AuthScreen() {
                   fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em",
                   cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  boxShadow: "0 16px 48px rgba(0,255,136,0.42), 0 4px 16px rgba(0,0,0,0.4)",
+                  boxShadow: "0 4px 20px rgba(0,255,136,0.2)",
                   fontFamily: "inherit",
                 }}
               >
