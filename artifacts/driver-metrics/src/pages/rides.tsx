@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, Calendar, Navigation, Clock, Star,
   Trash2, TrendingUp, AlertCircle, Plus, CheckCircle,
+  FlaskConical, TriangleAlert,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatBRL, formatDate } from "@/lib/utils";
@@ -183,6 +184,197 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
         {message}
       </p>
     </motion.div>
+  );
+}
+
+// ─── Dev Admin Panel (only rendered when import.meta.env.DEV === true) ────────
+function DevAdminPanel({
+  onPurged,
+  showToast,
+}: {
+  onPurged: () => void;
+  showToast: (msg: string, type: "success" | "error") => void;
+}) {
+  const queryClient = useQueryClient();
+  type Summary = { rides: number; summaries: number };
+  const [summary, setSummary]         = useState<Summary | null>(null);
+  const [loadingCount, setLoadingCount] = useState(true);
+  const [confirming, setConfirming]   = useState(false);
+  const [purging, setPurging]         = useState(false);
+
+  const fetchSummary = useCallback(async () => {
+    setLoadingCount(true);
+    try {
+      const res  = await fetch(`${BASE}/api/dev/test-data-summary`, { credentials: "include" });
+      const data = await res.json();
+      setSummary(data);
+    } catch {
+      setSummary(null);
+    } finally {
+      setLoadingCount(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
+
+  const handlePurge = async () => {
+    setPurging(true);
+    try {
+      const res  = await fetch(`${BASE}/api/dev/purge-test-data`, { method: "DELETE", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      showToast(
+        `Removidos: ${data.deleted.rides} corridas e ${data.deleted.summaries} resumos.`,
+        "success",
+      );
+      setConfirming(false);
+      onPurged();
+      fetchSummary();
+    } catch {
+      showToast("Erro ao remover os dados de teste.", "error");
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const total = (summary?.rides ?? 0) + (summary?.summaries ?? 0);
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      {/* DEV badge separator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ flex: 1, height: 1, background: "rgba(239,68,68,0.15)" }} />
+        <div style={{
+          display: "flex", alignItems: "center", gap: 5,
+          background: "rgba(239,68,68,0.07)",
+          border: "1px solid rgba(239,68,68,0.2)",
+          borderRadius: 6, padding: "3px 8px",
+        }}>
+          <FlaskConical size={11} color="#ef4444" />
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", color: "#ef4444", textTransform: "uppercase" }}>
+            Modo DEV
+          </span>
+        </div>
+        <div style={{ flex: 1, height: 1, background: "rgba(239,68,68,0.15)" }} />
+      </div>
+
+      {/* Panel card */}
+      <div style={{
+        background: "rgba(239,68,68,0.04)",
+        border: "1px solid rgba(239,68,68,0.14)",
+        borderRadius: 18, padding: "18px 18px",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <TriangleAlert size={16} color="#ef4444" />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.8)", marginBottom: 3 }}>
+              Apagar todos os registros de teste
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>
+              Remove <strong style={{ color: "rgba(255,255,255,0.5)" }}>todas as corridas e resumos diários</strong> da conta atual.
+              Irreversível — use apenas para limpar dados de teste.
+            </p>
+          </div>
+        </div>
+
+        {/* Count summary */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16,
+        }}>
+          {[
+            { label: "Corridas", value: loadingCount ? "…" : String(summary?.rides ?? 0) },
+            { label: "Resumos",  value: loadingCount ? "…" : String(summary?.summaries ?? 0) },
+            { label: "Total",    value: loadingCount ? "…" : String(total) },
+          ].map(({ label, value }) => (
+            <div key={label} style={{
+              background: "rgba(0,0,0,0.25)", borderRadius: 10, padding: "10px 10px", textAlign: "center",
+              border: "1px solid rgba(255,255,255,0.05)",
+            }}>
+              <p style={{ fontSize: 18, fontWeight: 900, color: "#f9fafb", marginBottom: 2 }}>{value}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <AnimatePresence mode="wait">
+          {!confirming ? (
+            <motion.button
+              key="trigger"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setConfirming(true)}
+              disabled={loadingCount || total === 0}
+              style={{
+                width: "100%", height: 44, borderRadius: 13,
+                background: total === 0 ? "rgba(255,255,255,0.03)" : "rgba(239,68,68,0.08)",
+                border: `1px solid ${total === 0 ? "rgba(255,255,255,0.06)" : "rgba(239,68,68,0.25)"}`,
+                color: total === 0 ? "rgba(255,255,255,0.2)" : "#ef4444",
+                fontWeight: 700, fontSize: 13, cursor: total === 0 ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              }}
+            >
+              <Trash2 size={14} strokeWidth={2.5} />
+              {total === 0 ? "Nenhum registro encontrado" : `Apagar ${total} registros de teste`}
+            </motion.button>
+          ) : (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            >
+              <p style={{ fontSize: 12, color: "#ef4444", fontWeight: 700, textAlign: "center", marginBottom: 4 }}>
+                ⚠️ Tem certeza? Esta ação não pode ser desfeita.
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => setConfirming(false)}
+                  style={{
+                    flex: 1, height: 42, borderRadius: 12,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handlePurge}
+                  disabled={purging}
+                  style={{
+                    flex: 1, height: 42, borderRadius: 12,
+                    background: purging ? "rgba(239,68,68,0.3)" : "#ef4444",
+                    border: "none",
+                    color: "#fff", fontWeight: 800, fontSize: 13,
+                    cursor: purging ? "not-allowed" : "pointer", fontFamily: "inherit",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  }}
+                >
+                  {purging ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
+                      style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff" }}
+                    />
+                  ) : (
+                    <><Trash2 size={13} /> Apagar tudo</>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
@@ -595,6 +787,17 @@ export default function RidesPage() {
               </motion.div>
             )}
           </>
+        )}
+
+        {/* ── Dev-only purge panel ──────────────────────────────────────────── */}
+        {import.meta.env.DEV && !loading && (
+          <DevAdminPanel
+            showToast={(msg, type) => setToast({ message: msg, type })}
+            onPurged={() => {
+              setSummaries([]);
+              queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+            }}
+          />
         )}
       </div>
     </div>

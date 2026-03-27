@@ -11,6 +11,7 @@ import importRouter from "./import";
 import dailySummariesRouter from "./dailySummaries";
 import insightsRouter from "./insights";
 import weeklyPerformanceRouter from "./weeklyPerformance";
+import devAdminRouter from "./devAdmin";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,8 @@ router.use("/import", importRouter);
 router.use("/daily-summaries", dailySummariesRouter);
 router.use("/insights", insightsRouter);
 router.use("/weekly-performance", weeklyPerformanceRouter);
+
+// Dev-only utilities — the router itself refuses all requests in production
+router.use("/dev", devAdminRouter);
 
 export default router;
