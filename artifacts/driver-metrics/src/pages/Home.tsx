@@ -11,6 +11,7 @@ import { motion, animate, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { DecisionEngine } from "@/components/DecisionEngine";
+import { DailyGoalCard } from "@/components/DailyGoalCard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -637,6 +638,14 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* ─── DAILY GOAL ──────────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <DailyGoalCard
+          goalDaily={summary.goalDaily ?? 0}
+          earningsToday={summary.earningsToday ?? 0}
+        />
       </motion.div>
 
       {/* ─── DAILY ANALYSIS ─────────────────────────────────────────────────── */}
