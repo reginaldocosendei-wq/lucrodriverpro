@@ -13,9 +13,11 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 // ── POST /api/pix/request ──────────────────────────────────────────────────────
-// Records a PIX payment intent from an authenticated user.
+// Records a PIX payment intent. Accepts optional proofData (base64 data URL).
 router.post("/request", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
+  const { proofData } = req.body ?? {};
+
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (!user) {
@@ -23,14 +25,28 @@ router.post("/request", requireAuth, async (req, res) => {
       return;
     }
 
+    // Validate base64 data URL if present (must be image, max ~5 MB uncompressed)
+    if (proofData !== undefined && proofData !== null) {
+      if (typeof proofData !== "string" || !proofData.startsWith("data:image/")) {
+        res.status(400).json({ error: "Comprovante inválido" });
+        return;
+      }
+      const approxBytes = Math.ceil((proofData.length * 3) / 4);
+      if (approxBytes > 5 * 1024 * 1024) {
+        res.status(400).json({ error: "Comprovante muito grande (máx 5 MB)" });
+        return;
+      }
+    }
+
     const [record] = await db
       .insert(pixPaymentsTable)
       .values({
-        userId:  user.id,
-        email:   user.email,
-        name:    user.name,
-        amount:  "19.90",
-        status:  "pending",
+        userId:   user.id,
+        email:    user.email,
+        name:     user.name,
+        amount:   "19.90",
+        status:   "pending",
+        proofUrl: proofData ?? null,
       })
       .returning();
 

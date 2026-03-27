@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Search, Check, X, Trash2, RefreshCw,
-  Clock, CheckCircle, XCircle, Shield, AlertTriangle,
+  Clock, CheckCircle, XCircle, Shield, AlertTriangle, ZoomIn,
 } from "lucide-react";
 import { getApiBase } from "@/lib/api";
 
@@ -22,6 +22,7 @@ interface PixPayment {
   requestedAt: string;
   confirmedAt: string | null;
   rejectedAt:  string | null;
+  proofUrl:    string | null;
   notes:       string | null;
 }
 
@@ -72,6 +73,7 @@ export default function AdminPixPage() {
   const [access, setAccess]           = useState<"ok" | "denied" | "loading">("loading");
   const [toasts, setToasts]           = useState<Toast[]>([]);
   const [actionStates, setActionStates] = useState<Record<number, ActionState>>({});
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const addToast = (msg: string, type: "ok" | "err") => {
     const id = Date.now();
@@ -167,6 +169,53 @@ export default function AdminPixPage() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "#080808", display: "flex", flexDirection: "column" }}>
+
+      {/* ── Lightbox ────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            key="lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxUrl(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 200,
+              background: "rgba(0,0,0,0.92)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 20,
+            }}
+          >
+            <motion.img
+              src={lightboxUrl}
+              alt="Comprovante ampliado"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: "100%", maxHeight: "90dvh",
+                borderRadius: 16,
+                boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+                objectFit: "contain",
+              }}
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              style={{
+                position: "fixed", top: 20, right: 20,
+                width: 40, height: 40, borderRadius: 12,
+                background: "rgba(255,255,255,0.1)", border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <X size={20} color="rgba(255,255,255,0.8)" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Toasts ──────────────────────────────────────────────────────────── */}
       <div style={{ position: "fixed", top: 16, right: 16, zIndex: 100, display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none" }}>
@@ -350,6 +399,38 @@ export default function AdminPixPage() {
                       <span style={{ fontSize: 10, fontWeight: 800, color: cfg.color, letterSpacing: "0.04em" }}>{cfg.label}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* ── Proof section ──────────────────────────────────── */}
+                <div style={{
+                  background: "rgba(255,255,255,0.025)", borderRadius: 12,
+                  padding: "10px 12px", marginBottom: 12,
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  {p.proofUrl ? (
+                    <>
+                      <img
+                        src={p.proofUrl}
+                        alt="Comprovante"
+                        onClick={() => setLightboxUrl(p.proofUrl!)}
+                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(255,255,255,0.1)", flexShrink: 0, cursor: "pointer" }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 1 }}>Comprovante enviado</p>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>Toque na imagem para ampliar</p>
+                      </div>
+                      <button
+                        onClick={() => setLightboxUrl(p.proofUrl!)}
+                        style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(255,255,255,0.05)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+                      >
+                        <ZoomIn size={14} color="rgba(255,255,255,0.4)" />
+                      </button>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, fontStyle: "italic" }}>
+                      Comprovante não enviado
+                    </p>
+                  )}
                 </div>
 
                 {/* Action buttons */}

@@ -11,6 +11,7 @@ export const pixPaymentsTable = pgTable("pix_payments", {
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
   confirmedAt: timestamp("confirmed_at"),
   rejectedAt:  timestamp("rejected_at"),
+  proofUrl:    text("proof_url"),
   notes:       text("notes"),
 });
 

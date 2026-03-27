@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { ChevronLeft, Copy, Check, Clock } from "lucide-react";
+import { ChevronLeft, Copy, Check, Clock, ImagePlus, X } from "lucide-react";
 import { useGetMe } from "@workspace/api-client-react";
 import { getApiBase } from "@/lib/api";
 
@@ -70,6 +70,30 @@ function useCopy(text: string, resetMs = 2200) {
   return { copied, copy };
 }
 
+// ─── Canvas image compressor ─────────────────────────────────────────────────
+function compressImage(file: File, maxPx = 1400, quality = 0.78): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.round(img.width  * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width  = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target!.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -79,12 +103,35 @@ export default function PixPaymentPage() {
   const { data: user } = useGetMe();
   const { copied: keyCopied, copy: copyKey }   = useCopy(PIX_KEY);
   const { copied: codeCopied, copy: copyCode } = useCopy(PIX_PAYLOAD);
+  const [proofData, setProofData]   = useState<string | null>(null);
+  const [proofName, setProofName]   = useState<string>("");
+  const [compressing, setCompressing] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCompressing(true);
+    try {
+      const compressed = await compressImage(file);
+      setProofData(compressed);
+      setProofName(file.name);
+    } catch {
+      setProofData(null);
+    } finally {
+      setCompressing(false);
+    }
+    e.target.value = "";
+  };
 
   const handlePaid = () => {
     const email = (user as any)?.email ?? "";
 
-    fetch(`${BASE}/api/pix/request`, { method: "POST", credentials: "include" })
-      .catch(() => {});
+    fetch(`${BASE}/api/pix/request`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proofData: proofData ?? undefined }),
+    }).catch(() => {});
 
     const text = encodeURIComponent(
       `Olá, acabei de pagar o Lucro Driver PRO via Pix.\n\nMeu email é: ${email}\n\nSegue o comprovante:`
@@ -286,6 +333,56 @@ export default function PixPaymentPage() {
                   : <><Copy size={13} strokeWidth={2} /> Copiar código Pix Copia e Cola</>
                 }
               </motion.button>
+
+              {/* ── Proof upload ───────────────────────────────────────── */}
+              <div style={{
+                background: "#0e0e0e",
+                border: `1px solid ${proofData ? "rgba(0,255,136,0.18)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: 18, padding: "16px 18px",
+                marginBottom: 14,
+                transition: "border-color 0.2s ease",
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 12 }}>
+                  Comprovante de pagamento
+                </p>
+
+                {proofData ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <img
+                      src={proofData}
+                      alt="Comprovante"
+                      style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", border: "1px solid rgba(0,255,136,0.2)", flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#00ff88", marginBottom: 2 }}>Comprovante anexado</p>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{proofName}</p>
+                    </div>
+                    <button
+                      onClick={() => { setProofData(null); setProofName(""); }}
+                      style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(239,68,68,0.08)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+                    >
+                      <X size={14} color="#f87171" />
+                    </button>
+                  </div>
+                ) : (
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: compressing ? "wait" : "pointer" }}>
+                    <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleFileChange} disabled={compressing} />
+                    <div style={{
+                      flex: 1, height: 44, borderRadius: 12,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px dashed rgba(255,255,255,0.12)",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600,
+                    }}>
+                      {compressing ? (
+                        <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} /> Comprimindo...</>
+                      ) : (
+                        <><ImagePlus size={16} strokeWidth={1.8} /> Anexar comprovante</>
+                      )}
+                    </div>
+                  </label>
+                )}
+              </div>
 
               {/* Instructions */}
               <div style={{
