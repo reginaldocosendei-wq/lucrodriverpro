@@ -1,0 +1,177 @@
+Refactor my project "Lucro Driver" into a professional and scalable codebase, and improve the driver metrics system to work similarly to apps like Gigu, but based on reliable daily data import.
+
+GOAL:
+Make the code professional, organized, maintainable, and improve the app so it can calculate useful driver metrics such as:
+- earnings per trip
+- earnings per km
+- earnings per hour
+- passenger rating
+using imported daily summaries and screenshot reading.
+
+IMPORTANT BUSINESS RULE:
+Do NOT subtract any commission percentage from imported earnings.
+The imported value from screenshot is already the final amount received by the driver.
+
+-----------------------------------
+1. PROFESSIONAL PROJECT STRUCTURE
+-----------------------------------
+
+Organize the project into folders:
+
+/frontend/src/components
+/frontend/src/pages
+/frontend/src/services
+/frontend/src/hooks
+/frontend/src/utils
+/frontend/src/assets
+
+/backend/routes
+/backend/controllers
+/backend/services
+/backend/middlewares
+/backend/config
+
+/database
+/payments
+/docs
+
+Fix all imports after moving files.
+Do not break the app.
+
+-----------------------------------
+2. DRIVER METRICS SYSTEM
+-----------------------------------
+
+Replace the old "ride by ride" concept with a daily summary model.
+
+Main daily data should be:
+
+- total earnings received today
+- total number of trips
+- total km driven today
+- total hours worked today
+- passenger rating (if available)
+
+These values may come from:
+- screenshot import
+- manual edit if OCR cannot detect all fields
+
+-----------------------------------
+3. SCREENSHOT IMPORT LOGIC
+-----------------------------------
+
+Use screenshot import as the main input method.
+
+From the screenshot, try to extract:
+- total earnings
+- total trips
+- total km
+- total hours
+- passenger rating
+
+If some values are missing from the screenshot:
+- allow the user to edit and complete them manually
+
+Do not force per-ride entry.
+
+-----------------------------------
+4. CALCULATIONS
+-----------------------------------
+
+Calculate and display:
+
+- Average per trip = earnings / trips
+- Earnings per km = earnings / km
+- Earnings per hour = earnings / hours
+- Real profit = earnings - expenses
+
+If a value is missing, do not crash.
+Show a safe fallback like:
+"Not available yet"
+
+-----------------------------------
+5. PASSENGER RATING
+-----------------------------------
+
+If passenger rating is found in screenshot, display it.
+If not found, allow optional manual input.
+
+Do not invent values.
+
+-----------------------------------
+6. UI / UX
+-----------------------------------
+
+Create a premium mobile-first dashboard.
+
+Main cards:
+- Total received today
+- Trips today
+- R$/trip
+- R$/km
+- R$/hour
+- Passenger rating
+- Real profit
+
+Use:
+- dark theme
+- green for positive/profit
+- gold for premium highlights
+- rounded cards
+- smooth spacing
+- touch-friendly layout
+
+-----------------------------------
+7. APP STABILITY
+-----------------------------------
+
+Make all screens safe and stable.
+
+- Add guards for null/undefined data
+- Prevent form reload with event.preventDefault()
+- Use try/catch in all async actions
+- Do not navigate before save/update finishes
+- Avoid generic crash screens
+
+-----------------------------------
+8. DATA MODEL
+-----------------------------------
+
+Store daily summaries with fields like:
+
+- date
+- earnings
+- trips
+- km
+- hours
+- rating
+- expenses
+- profit
+
+-----------------------------------
+9. FUTURE-READY INTEGRATION LAYER
+-----------------------------------
+
+Create a clean service layer so the app can later support official integrations if available.
+
+Example:
+- /services/importService
+- /services/metricsService
+- /services/platformAdapters
+
+Prepare adapters for:
+- Uber
+- 99
+
+But do not depend on direct API integration now.
+
+-----------------------------------
+10. FINAL RESULT
+-----------------------------------
+
+The app should:
+- have a professional folder structure
+- be easier to maintain
+- work with daily screenshot import
+- calculate trip, km, hour, and rating metrics safely
+- feel like a premium driver analytics app

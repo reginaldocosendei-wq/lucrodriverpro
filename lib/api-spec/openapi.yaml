@@ -487,6 +487,8 @@ components:
           type: number
         earningsMonth:
           type: number
+        ridesCountToday:
+          type: number
         totalRides:
           type: number
         avgPerRide:
@@ -497,12 +499,44 @@ components:
           type: number
         bestPlatform:
           type: string
-        costsMonth:
+        costsToday:
           type: number
-        realProfitMonth:
+        costsMonth:
           type: number
         realProfitToday:
           type: number
+        realProfitMonth:
+          type: number
+        earningsPerTripToday:
+          type: number
+          nullable: true
+        earningsPerKmToday:
+          type: number
+          nullable: true
+        earningsPerHourToday:
+          type: number
+          nullable: true
+        ratingToday:
+          type: number
+          nullable: true
+        earningsPerTripAll:
+          type: number
+          nullable: true
+        earningsPerKmAll:
+          type: number
+          nullable: true
+        earningsPerHourAll:
+          type: number
+          nullable: true
+        ratingAll:
+          type: number
+          nullable: true
+        kmToday:
+          type: number
+          nullable: true
+        hoursToday:
+          type: number
+          nullable: true
         goalDaily:
           type: number
         goalWeekly:
@@ -515,13 +549,7 @@ components:
           type: number
         goalMonthlyPct:
           type: number
-        currentStreak:
-          type: integer
-        avgPerRideHistory:
-          type: number
-        ridesThisWeek:
-          type: integer
-      required: [earningsToday, earningsWeek, earningsMonth, totalRides, avgPerRide, avgPerKm, bestRide, bestPlatform, costsMonth, realProfitMonth, realProfitToday, goalDaily, goalWeekly, goalMonthly, goalDailyPct, goalWeeklyPct, goalMonthlyPct, currentStreak, avgPerRideHistory, ridesThisWeek]
+      required: [earningsToday, earningsWeek, earningsMonth, ridesCountToday, totalRides, avgPerRide, avgPerKm, bestRide, bestPlatform, costsToday, costsMonth, realProfitToday, realProfitMonth, goalDaily, goalWeekly, goalMonthly, goalDailyPct, goalWeeklyPct, goalMonthlyPct]
 
     EarningsDataPoint:
       type: object

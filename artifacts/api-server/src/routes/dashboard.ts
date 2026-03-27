@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { db, ridesTable, costsTable, goalsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, ridesTable, costsTable, goalsTable, dailySummariesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { aggregateMetrics } from "../services/metricsService";
 
 const router = Router();
 
@@ -33,53 +34,85 @@ function startOfMonth(): string {
 router.get("/summary", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
 
-  const rides = await db.select().from(ridesTable).where(eq(ridesTable.userId, userId));
-  const costs = await db.select().from(costsTable).where(eq(costsTable.userId, userId));
-  const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1);
+  const [summaries, rides, costs, [goal]] = await Promise.all([
+    db.select().from(dailySummariesTable).where(eq(dailySummariesTable.userId, userId)),
+    db.select().from(ridesTable).where(eq(ridesTable.userId, userId)),
+    db.select().from(costsTable).where(eq(costsTable.userId, userId)),
+    db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1),
+  ]);
 
   const today = getDateStr(0);
   const weekStart = startOfWeek();
   const monthStart = startOfMonth();
 
+  // ── daily_summaries aggregations ──────────────────────────────────────────
+  const summariesToday = summaries.filter((s) => s.date >= today);
+  const summariesWeek = summaries.filter((s) => s.date >= weekStart);
+  const summariesMonth = summaries.filter((s) => s.date >= monthStart);
+
+  const todayAgg = aggregateMetrics(summariesToday);
+  const weekAgg = aggregateMetrics(summariesWeek);
+  const monthAgg = aggregateMetrics(summariesMonth);
+  const allAgg = aggregateMetrics(summaries);
+
+  // ── legacy rides (fallback for accounts that haven't migrated) ────────────
   const ridesToday = rides.filter((r) => r.createdAt.toISOString().split("T")[0] >= today);
-  const earningsToday = ridesToday.reduce((s, r) => s + r.value, 0);
+  const ridesEarningsToday = ridesToday.reduce((s, r) => s + r.value, 0);
   const ridesCountToday = ridesToday.length;
 
-  const costsToday = costs
-    .filter((c) => c.date >= today)
-    .reduce((s, c) => s + c.amount, 0);
-
-  const realProfitToday = earningsToday - costsToday;
-  const earningsPerRideToday = ridesCountToday > 0 ? earningsToday / ridesCountToday : 0;
-
-  const earningsWeek = rides
+  const ridesEarningsWeek = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= weekStart)
     .reduce((s, r) => s + r.value, 0);
 
-  const earningsMonth = rides
+  const ridesEarningsMonth = rides
     .filter((r) => r.createdAt.toISOString().split("T")[0] >= monthStart)
     .reduce((s, r) => s + r.value, 0);
 
-  const costsMonth = costs
-    .filter((c) => c.date >= monthStart)
-    .reduce((s, c) => s + c.amount, 0);
+  // ── Prefer daily_summaries over rides ─────────────────────────────────────
+  const earningsToday = todayAgg.totalEarnings > 0 ? todayAgg.totalEarnings : ridesEarningsToday;
+  const tripsToday = todayAgg.totalTrips > 0 ? todayAgg.totalTrips : ridesCountToday;
+  const earningsWeek = weekAgg.totalEarnings > 0 ? weekAgg.totalEarnings : ridesEarningsWeek;
+  const earningsMonth = monthAgg.totalEarnings > 0 ? monthAgg.totalEarnings : ridesEarningsMonth;
 
-  const totalRides = rides.length;
-  const avgPerRide = totalRides > 0 ? rides.reduce((s, r) => s + r.value, 0) / totalRides : 0;
-  const avgPerKm = rides.length > 0
-    ? rides.reduce((s, r) => s + r.valuePerKm, 0) / rides.length
-    : 0;
-  const bestRide = rides.length > 0 ? Math.max(...rides.map(r => r.value)) : 0;
+  // ── Costs ──────────────────────────────────────────────────────────────────
+  const costsToday = costs.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
+  const costsMonth = costs.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
 
-  const platformEarnings: Record<string, number> = {};
-  for (const r of rides) {
-    platformEarnings[r.platform] = (platformEarnings[r.platform] ?? 0) + r.value;
-  }
-  const bestPlatform =
-    Object.entries(platformEarnings).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
-
+  const realProfitToday = earningsToday - costsToday;
   const realProfitMonth = earningsMonth - costsMonth;
 
+  // ── New metrics from daily_summaries ──────────────────────────────────────
+  const earningsPerTripToday = todayAgg.earningsPerTrip;
+  const earningsPerKmToday = todayAgg.earningsPerKm;
+  const earningsPerHourToday = todayAgg.earningsPerHour;
+  const ratingToday = todayAgg.avgRating;
+
+  const earningsPerTripAll = allAgg.earningsPerTrip;
+  const earningsPerKmAll = allAgg.earningsPerKm;
+  const earningsPerHourAll = allAgg.earningsPerHour;
+  const ratingAll = allAgg.avgRating;
+
+  // ── Legacy per-km from rides (fallback) ───────────────────────────────────
+  const legacyAvgPerKm =
+    rides.length > 0 ? rides.reduce((s, r) => s + r.valuePerKm, 0) / rides.length : 0;
+
+  const avgPerKm = earningsPerKmAll ?? legacyAvgPerKm;
+  const avgPerRide = earningsPerTripAll ?? (rides.length > 0 ? rides.reduce((s, r) => s + r.value, 0) / rides.length : 0);
+
+  // ── Best platform ─────────────────────────────────────────────────────────
+  const platformMap: Record<string, number> = {};
+  for (const s of summaries) {
+    if (s.platform) platformMap[s.platform] = (platformMap[s.platform] ?? 0) + s.earnings;
+  }
+  for (const r of rides) {
+    platformMap[r.platform] = (platformMap[r.platform] ?? 0) + r.value;
+  }
+  const bestPlatform = Object.entries(platformMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
+
+  const totalRides = summaries.reduce((s, r) => s + r.trips, 0) + rides.length;
+  const bestRide = rides.length > 0 ? Math.max(...rides.map((r) => r.value)) : 0;
+
+  // ── Goals ─────────────────────────────────────────────────────────────────
   const goalDaily = goal?.daily ?? 0;
   const goalWeekly = goal?.weekly ?? 0;
   const goalMonthly = goal?.monthly ?? 0;
@@ -89,26 +122,43 @@ router.get("/summary", requireAuth, async (req, res) => {
   const goalMonthlyPct = goalMonthly > 0 ? Math.min((earningsMonth / goalMonthly) * 100, 100) : 0;
 
   res.json({
+    // Earnings
     earningsToday,
     earningsWeek,
     earningsMonth,
-    ridesCountToday,
-    costsToday,
-    realProfitToday,
-    earningsPerRideToday,
+    // Trips
+    ridesCountToday: tripsToday,
     totalRides,
+    // Daily metrics
+    earningsPerTripToday,
+    earningsPerKmToday,
+    earningsPerHourToday,
+    ratingToday,
+    // All-time metrics
+    earningsPerTripAll,
+    earningsPerKmAll,
+    earningsPerHourAll,
+    ratingAll,
+    // Legacy compat
     avgPerRide,
     avgPerKm,
     bestRide,
     bestPlatform,
+    // Costs / profit
+    costsToday,
+    realProfitToday,
     costsMonth,
     realProfitMonth,
+    // Goals
     goalDaily,
     goalWeekly,
     goalMonthly,
     goalDailyPct,
     goalWeeklyPct,
     goalMonthlyPct,
+    // km/hours totals (today)
+    kmToday: todayAgg.totalKm,
+    hoursToday: todayAgg.totalHours,
   });
 });
 

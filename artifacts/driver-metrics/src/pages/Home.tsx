@@ -4,7 +4,7 @@ import { formatBRL } from "@/lib/utils";
 import { Card } from "@/components/ui";
 import {
   TrendingUp, Car, MapPin, AlertCircle, Target, Award,
-  Zap, Lock, Plus, ChevronRight, Camera
+  Zap, Lock, Plus, ChevronRight, Camera, Clock, Navigation, Star
 } from "lucide-react";
 import { motion, animate } from "framer-motion";
 import { Link } from "wouter";
@@ -479,25 +479,107 @@ export default function Home() {
         </Card>
       </motion.div>
 
-      {/* ─── STATS ROW ─── */}
-      <motion.div variants={item} className="grid grid-cols-3 gap-3">
-        <Card className="p-4 bg-white/[0.02] border-white/[0.04] text-center">
-          <MapPin size={16} className="text-primary mx-auto mb-2" />
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide mb-1">Por km</p>
-          <p className="text-base font-display font-bold tabular-nums">{formatBRL(summary.avgPerKm)}</p>
-        </Card>
-        <Card className="p-4 bg-white/[0.02] border-white/[0.04] text-center">
-          <TrendingUp size={16} className="text-primary mx-auto mb-2" />
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide mb-1">Por corrida</p>
-          <p className="text-base font-display font-bold tabular-nums">{formatBRL(summary.avgPerRide)}</p>
-        </Card>
-        <Card className="p-4 bg-white/[0.02] border-white/[0.04] text-center">
-          <Award size={16} className="text-yellow-500 mx-auto mb-2" />
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide mb-1">Melhor plat.</p>
-          <p className="text-base font-display font-bold">
-            {summary.bestPlatform ? (platformMeta[summary.bestPlatform]?.label ?? summary.bestPlatform) : "—"}
-          </p>
-        </Card>
+      {/* ─── METRICS GRID ─── */}
+      <motion.div variants={item}>
+        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Métricas do dia</p>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Trips today */}
+          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <Car size={14} className="text-primary" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Corridas hoje</p>
+            </div>
+            <p className="text-2xl font-display font-bold tabular-nums text-white">
+              {summary.ridesCountToday ?? 0}
+            </p>
+          </Card>
+
+          {/* Earnings per trip */}
+          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp size={14} className="text-primary" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/corrida</p>
+            </div>
+            <p className="text-2xl font-display font-bold tabular-nums text-white">
+              {summary.earningsPerTripToday != null
+                ? formatBRL(summary.earningsPerTripToday)
+                : summary.avgPerRide > 0 ? formatBRL(summary.avgPerRide) : <span className="text-base text-white/30">Sem dados</span>}
+            </p>
+          </Card>
+
+          {/* Earnings per km */}
+          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <Navigation size={14} className="text-primary" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/km</p>
+            </div>
+            {summary.earningsPerKmToday != null ? (
+              <>
+                <p className="text-2xl font-display font-bold tabular-nums text-white">
+                  {formatBRL(summary.earningsPerKmToday)}
+                </p>
+                {summary.kmToday != null && (
+                  <p className="text-[10px] text-white/30 mt-1">{summary.kmToday.toFixed(1)} km hoje</p>
+                )}
+              </>
+            ) : summary.avgPerKm > 0 ? (
+              <p className="text-2xl font-display font-bold tabular-nums text-white">{formatBRL(summary.avgPerKm)}</p>
+            ) : (
+              <p className="text-base text-white/30 mt-1 font-medium">Informe km</p>
+            )}
+          </Card>
+
+          {/* Earnings per hour */}
+          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={14} className="text-primary" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/hora</p>
+            </div>
+            {summary.earningsPerHourToday != null ? (
+              <>
+                <p className="text-2xl font-display font-bold tabular-nums text-white">
+                  {formatBRL(summary.earningsPerHourToday)}
+                </p>
+                {summary.hoursToday != null && (
+                  <p className="text-[10px] text-white/30 mt-1">{summary.hoursToday.toFixed(1)}h trabalhadas</p>
+                )}
+              </>
+            ) : (
+              <p className="text-base text-white/30 mt-1 font-medium">Informe horas</p>
+            )}
+          </Card>
+
+          {/* Rating */}
+          <Card className={`p-4 ${(summary.ratingToday ?? summary.ratingAll) ? "bg-yellow-500/5 border-yellow-500/15" : "bg-white/[0.02] border-white/[0.04]"}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <Star size={14} className="text-yellow-400" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Avaliação</p>
+            </div>
+            {(summary.ratingToday ?? summary.ratingAll) != null ? (
+              <div className="flex items-baseline gap-1">
+                <p className="text-2xl font-display font-bold tabular-nums text-yellow-400">
+                  {(summary.ratingToday ?? summary.ratingAll)!.toFixed(1)}
+                </p>
+                <p className="text-sm text-yellow-400/60">/ 5</p>
+              </div>
+            ) : (
+              <p className="text-base text-white/30 mt-1 font-medium">Sem dados</p>
+            )}
+          </Card>
+
+          {/* Best platform */}
+          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <Award size={14} className="text-yellow-500" />
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Melhor plat.</p>
+            </div>
+            <p className="text-xl font-display font-bold text-white">
+              {summary.bestPlatform && summary.bestPlatform !== "-"
+                ? (platformMeta[summary.bestPlatform]?.label ?? summary.bestPlatform)
+                : "—"}
+            </p>
+          </Card>
+        </div>
       </motion.div>
 
       {/* ─── WEEKLY CHART ─── */}

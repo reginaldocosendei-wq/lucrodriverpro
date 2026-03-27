@@ -1,7 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { db, ridesTable } from "@workspace/db";
+import { db, dailySummariesTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { parseExtracted, todayDateStr } from "../services/importService";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -32,12 +34,17 @@ router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, re
           role: "system",
           content: `Você é um assistente especializado em extrair dados de screenshots de aplicativos de motoristas de aplicativo (Uber, 99, InDrive, etc.).
 Analise a imagem e extraia:
-1. O valor total de ganhos recebidos pelo motorista (em reais) — este é o valor final já descontado pela plataforma
-2. O número total de corridas/viagens
-3. A plataforma (Uber, 99, InDrive, ou "outro")
+1. O valor total de ganhos recebidos pelo motorista (em reais) — este é o valor final já recebido, sem descontar comissão
+2. O número total de corridas/viagens realizadas
+3. A plataforma (Uber, 99, InDrive, ou "Outro")
+4. A distância total percorrida em km (se visível)
+5. O tempo total trabalhado em horas (se visível; converta minutos para decimal, ex: 90 min = 1.5)
+6. A avaliação média dos passageiros (nota de 0 a 5, se visível)
 
-Responda APENAS com JSON no formato: {"earnings": <número>, "trips": <número>, "platform": "<nome>"}
-Se não conseguir identificar algum valor, use null.
+Responda APENAS com JSON neste formato exato:
+{"earnings": <número ou null>, "trips": <número inteiro ou null>, "platform": "<nome ou null>", "kmDriven": <número ou null>, "hoursWorked": <número decimal ou null>, "rating": <número de 0 a 5 ou null>}
+
+Se não conseguir identificar um valor, use null para aquele campo.
 Não inclua texto adicional, apenas o JSON.`,
         },
         {
@@ -52,7 +59,7 @@ Não inclua texto adicional, apenas o JSON.`,
             },
             {
               type: "text",
-              text: "Extraia os dados de ganhos desta screenshot do aplicativo de motorista.",
+              text: "Extraia todos os dados de ganhos desta screenshot do aplicativo de motorista.",
             },
           ],
         },
@@ -60,56 +67,81 @@ Não inclua texto adicional, apenas o JSON.`,
     });
 
     const content = response.choices[0]?.message?.content?.trim() ?? "{}";
-    let extracted: { earnings: number | null; trips: number | null; platform: string | null };
-
+    let parsed: unknown;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      extracted = jsonMatch ? JSON.parse(jsonMatch[0]) : { earnings: null, trips: null, platform: null };
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
     } catch {
-      extracted = { earnings: null, trips: null, platform: null };
+      parsed = {};
     }
 
-    res.json({
-      earnings: extracted.earnings,
-      trips: extracted.trips,
-      platform: extracted.platform,
-    });
+    const extracted = parseExtracted(parsed);
+    res.json(extracted);
   } catch (err: any) {
     console.error("Import analyze error:", err);
-    res.status(500).json({ error: "Erro ao analisar imagem" });
+    res.status(500).json({ error: "Erro ao analisar imagem. Tente novamente." });
   }
 });
 
 router.post("/confirm", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const { earnings, trips, platform } = req.body;
+  const { earnings, trips, platform, kmDriven, hoursWorked, rating, date } = req.body;
 
-  if (!earnings || !trips || !platform) {
-    res.status(400).json({ error: "Dados incompletos" });
+  if (!earnings || !trips) {
+    res.status(400).json({ error: "Ganhos e número de corridas são obrigatórios" });
     return;
   }
 
-  const totalEarnings = parseFloat(earnings);
-  const totalTrips = parseInt(trips);
-  const perRide = parseFloat((totalEarnings / totalTrips).toFixed(2));
+  const summaryDate = date ?? todayDateStr();
+  const earningsNum = parseFloat(earnings);
+  const tripsNum = parseInt(trips);
 
-  const ridesData = Array.from({ length: totalTrips }, () => ({
-    userId,
-    value: perRide,
-    distanceKm: 0,
-    durationMinutes: 0,
-    platform: platform || "Outro",
-    passengerRating: 5,
-    valuePerKm: 0,
-  }));
+  if (isNaN(earningsNum) || earningsNum <= 0) {
+    res.status(400).json({ error: "Valor de ganhos inválido" });
+    return;
+  }
+  if (isNaN(tripsNum) || tripsNum <= 0) {
+    res.status(400).json({ error: "Número de corridas inválido" });
+    return;
+  }
 
-  const inserted = await db.insert(ridesTable).values(ridesData).returning();
+  try {
+    const existing = await db
+      .select()
+      .from(dailySummariesTable)
+      .where(and(eq(dailySummariesTable.userId, userId), eq(dailySummariesTable.date, summaryDate)))
+      .limit(1);
 
-  res.status(201).json({
-    message: "Importação concluída com sucesso",
-    ridesCreated: inserted.length,
-    totalEarnings,
-  });
+    const payload = {
+      userId,
+      date: summaryDate,
+      earnings: earningsNum,
+      trips: tripsNum,
+      platform: platform || "Outro",
+      kmDriven: kmDriven != null ? parseFloat(kmDriven) : null,
+      hoursWorked: hoursWorked != null ? parseFloat(hoursWorked) : null,
+      rating: rating != null ? parseFloat(rating) : null,
+    };
+
+    let result;
+    if (existing.length > 0) {
+      result = await db
+        .update(dailySummariesTable)
+        .set({ ...payload, updatedAt: new Date() })
+        .where(eq(dailySummariesTable.id, existing[0].id))
+        .returning();
+    } else {
+      result = await db.insert(dailySummariesTable).values(payload).returning();
+    }
+
+    res.status(201).json({
+      message: "Resumo do dia salvo com sucesso",
+      summary: result[0],
+    });
+  } catch (err: any) {
+    console.error("Import confirm error:", err);
+    res.status(500).json({ error: "Erro ao salvar resumo. Tente novamente." });
+  }
 });
 
 export default router;

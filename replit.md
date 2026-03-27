@@ -84,6 +84,31 @@ pnpm run cap:sync
 pnpm run cap:open
 ```
 
+### Internal Code Organization
+
+**Frontend (`artifacts/driver-metrics/src/`)**
+- `pages/` — all app screens (Home, Import, rides=DailySummaries, costs, goals, reports, upgrade, auth)
+- `components/` — reusable components (ui/, layout.tsx, SplashScreen.tsx)
+- `services/` — business logic: `metricsService.ts`, `importService.ts`, `platformAdapters.ts`
+- `hooks/` — React hooks (use-mobile, use-toast)
+- `utils/` — pure utilities: `formatters.ts` (BRL, dates, km, hours), `metrics.ts` (safeDiv, quality labels)
+- `lib/` — base config: `api.ts` (getApiBase), `utils.ts` (re-exports)
+
+**Backend (`artifacts/api-server/src/`)**
+- `routes/` — all Express route handlers (dashboard, import, dailySummaries, rides, costs, goals, stripe, auth)
+- `services/` — `metricsService.ts` (aggregateMetrics, calculateDailyMetrics), `importService.ts` (parseExtracted, todayDateStr)
+- `middlewares/` — Express middleware
+- `lib/` — logger.ts
+
+### Daily Summary Metrics System
+- New `daily_summaries` table replaces per-ride imports: date, earnings, trips, kmDriven, hoursWorked, rating, platform
+- **IMPORTANT:** The imported value IS the final amount received — never subtract commission
+- `import/analyze` — GPT-4o extracts: earnings, trips, km, hours, rating, platform from screenshot
+- `import/confirm` — upserts a daily summary for the given date (not individual rides)
+- Dashboard shows new metrics: R$/corrida, R$/km, R$/hora, Avaliação — safe `null` fallback when km/hours not provided
+- `rides.tsx` page renamed to "Resumos diários" — shows daily summary history list
+- `metricsService.ts` on backend: `aggregateMetrics()` computes all-time averages; `calculateDailyMetrics()` for single day
+
 ### Known Patterns & Gotchas
 - `goals.tsx` useEffect: always use `const { reset } = form` (destructured), never put the whole `form` object in deps (causes infinite re-render)
 - `Import.tsx`: always initializes `step = "locked"`, transitions to `"entry"` via `useEffect([isPro, step])` when user data loads

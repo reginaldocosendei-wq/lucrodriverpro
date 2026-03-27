@@ -8,6 +8,7 @@ import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
 import stripeRouter from "./stripe";
 import importRouter from "./import";
+import dailySummariesRouter from "./dailySummaries";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/stripe", stripeRouter);
 router.use("/import", importRouter);
+router.use("/daily-summaries", dailySummariesRouter);
 
 export default router;
