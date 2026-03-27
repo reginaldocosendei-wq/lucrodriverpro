@@ -126,6 +126,69 @@ function ScoreBand({ label, range, color, active }: { label: string; range: stri
   );
 }
 
+// ─── STOP BANNER ──────────────────────────────────────────────────────────────
+function StopBanner({ dropPercent }: { dropPercent: number | null }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        background: "linear-gradient(135deg, rgba(239,68,68,0.18) 0%, rgba(185,28,28,0.12) 100%)",
+        border: "1.5px solid rgba(239,68,68,0.45)",
+        borderRadius: 18,
+        padding: "14px 16px",
+        marginBottom: 16,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* pulse ring */}
+      <div style={{
+        position: "absolute", inset: 0, borderRadius: 18,
+        boxShadow: "inset 0 0 24px rgba(239,68,68,0.08)",
+        pointerEvents: "none",
+      }} />
+
+      {/* icon */}
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: "rgba(239,68,68,0.2)",
+        border: "1px solid rgba(239,68,68,0.35)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 18,
+      }}>
+        🛑
+      </div>
+
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#ef4444", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            Hora de parar
+          </p>
+          {dropPercent !== null && (
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              background: "rgba(239,68,68,0.2)",
+              color: "#fca5a5",
+              borderRadius: 20, padding: "2px 8px",
+              border: "1px solid rgba(239,68,68,0.3)",
+            }}>
+              −{dropPercent}% por hora
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", lineHeight: 1.55 }}>
+          Você está trabalhando mais, mas ganhando menos. Considere encerrar o turno agora.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── DECISION CARD ────────────────────────────────────────────────────────────
 function DecisionCard({ decision }: { decision: Decision }) {
   const cfg = STATUS[decision.status];
@@ -152,6 +215,11 @@ function DecisionCard({ decision }: { decision: Decision }) {
       }} />
 
       <div style={{ position: "relative", zIndex: 1, padding: "24px 20px 20px" }}>
+
+        {/* Stop-time alert — only renders when the signal fires */}
+        {decision.stopNow && (
+          <StopBanner dropPercent={decision.dropPercent} />
+        )}
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>

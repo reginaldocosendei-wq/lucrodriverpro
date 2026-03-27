@@ -18,6 +18,8 @@ export interface Decision {
   message: string;
   suggestion: string;
   dominantCause: string;
+  stopNow: boolean;
+  dropPercent: number | null;
 }
 
 export interface InsightsResponse {

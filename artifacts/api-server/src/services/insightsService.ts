@@ -9,12 +9,14 @@ export interface Insight {
 }
 
 export interface Decision {
-  score: number;           // 0–100 efficiency score
-  status: InsightStatus;   // good / average / bad
-  verdict: string;         // "EFICIENTE" | "ATENÇÃO" | "CRÍTICO"
-  message: string;         // "Ótima performance. Continue rodando."
-  suggestion: string;      // Actionable one-liner
-  dominantCause: string;   // which factor drove the score most
+  score: number;              // 0–100 efficiency score
+  status: InsightStatus;      // good / average / bad
+  verdict: string;            // "EFICIENTE" | "ATENÇÃO" | "CRÍTICO"
+  message: string;            // "Ótima performance. Continue rodando."
+  suggestion: string;         // Actionable one-liner
+  dominantCause: string;      // which factor drove the score most
+  stopNow: boolean;           // true when R$/hora dropped >20% vs 7-day avg
+  dropPercent: number | null; // how much it dropped, e.g. 28
 }
 
 interface DailySummaryRow {
@@ -314,6 +316,30 @@ export function generateInsights(input: InsightInput): Insight[] {
     }
   }
 
+  // ─── 8. STOP-TIME SIGNAL ─────────────────────────────────────────────────
+  // Fires when R$/hora has dropped >20% vs 7-day average with 2+ hours worked.
+  if (earningsPerHourToday != null && hoursToday !== null && hoursToday >= 2) {
+    const avgH = avg(
+      last7
+        .filter((s) => s.hoursWorked && s.hoursWorked > 0)
+        .map((s) => safeDiv(s.earnings, s.hoursWorked!)!)
+        .filter((v): v is number => v !== null),
+    );
+    if (avgH !== null && avgH > 0) {
+      const drop = (avgH - earningsPerHourToday) / avgH;
+      if (drop > 0.2) {
+        const pct = Math.round(drop * 100);
+        insights.push({
+          type: "stopTime",
+          status: "bad",
+          title: `Hora de parar 🛑`,
+          message: `Você está trabalhando mais, mas ganhando menos. Sua taxa por hora caiu ${pct}% em relação à sua média — continuar pode não compensar.`,
+          suggestion: "Encerre o turno agora e retome amanhã em um horário de maior demanda.",
+        });
+      }
+    }
+  }
+
   // Prioritize: bad first, then good, then average. Max 5 insights.
   const prioritized = [
     ...insights.filter((i) => i.status === "bad"),
@@ -506,6 +532,31 @@ export function calculateDecision(input: InsightInput): Decision | null {
 
   const cause = dominantCause in messages ? dominantCause : "geral";
 
+  // ── Stop-time detection ────────────────────────────────────────────────────
+  // Fires when R$/hora today has dropped >20% vs the 7-day average,
+  // AND the driver has been working at least 2 hours (avoids false early alarms).
+  let stopNow = false;
+  let dropPercent: number | null = null;
+
+  if (earningsPerHourToday != null && hoursToday != null && hoursToday >= 2) {
+    const avgH = avg(
+      last7
+        .filter((s) => s.hoursWorked && s.hoursWorked > 0)
+        .map((s) => safeDiv(s.earnings, s.hoursWorked!)!)
+        .filter((v): v is number => v !== null),
+    );
+    if (avgH !== null && avgH > 0) {
+      const drop = (avgH - earningsPerHourToday) / avgH;
+      if (drop > 0.2) {
+        stopNow = true;
+        dropPercent = Math.round(drop * 100);
+      }
+    }
+  } else if (hoursToday != null && hoursToday >= 12) {
+    // No historical data but worked 12+ hours — always recommend stopping
+    stopNow = true;
+  }
+
   return {
     score,
     status,
@@ -513,5 +564,7 @@ export function calculateDecision(input: InsightInput): Decision | null {
     message: messages[cause][status],
     suggestion: suggestions[cause][status],
     dominantCause: cause,
+    stopNow,
+    dropPercent,
   };
 }
