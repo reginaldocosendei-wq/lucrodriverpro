@@ -108,7 +108,7 @@ export default function ImportPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<ExtractedData>({
     earnings: null, trips: null, platform: null,
-    kmDriven: null, hoursWorked: null, rating: null,
+    km: null, hours: null, rating: null,
   });
 
   const [editEarnings, setEditEarnings] = useState("");
@@ -129,8 +129,8 @@ export default function ImportPage() {
     setEditEarnings(data.earnings?.toFixed(2) ?? "");
     setEditTrips(data.trips?.toString() ?? "");
     setEditPlatform(data.platform || "Uber");
-    setEditKm(data.kmDriven?.toFixed(1) ?? "");
-    setEditHours(data.hoursWorked?.toFixed(1) ?? "");
+    setEditKm(data.km?.toFixed(1) ?? "");
+    setEditHours(data.hours?.toFixed(1) ?? "");
     setEditRating(data.rating?.toFixed(1) ?? "");
   }
 
@@ -171,8 +171,8 @@ export default function ImportPage() {
         earnings: parseFloat(editEarnings),
         trips: parseInt(editTrips),
         platform: editPlatform,
-        kmDriven: editKm ? parseFloat(editKm) : null,
-        hoursWorked: editHours ? parseFloat(editHours) : null,
+        km: editKm ? parseFloat(editKm) : null,
+        hours: editHours ? parseFloat(editHours) : null,
         rating: editRating ? parseFloat(editRating) : null,
       });
 

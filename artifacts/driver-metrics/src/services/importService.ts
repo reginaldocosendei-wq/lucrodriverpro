@@ -4,8 +4,8 @@ export interface ExtractedData {
   earnings: number | null;
   trips: number | null;
   platform: string | null;
-  kmDriven: number | null;
-  hoursWorked: number | null;
+  km: number | null;
+  hours: number | null;
   rating: number | null;
 }
 
@@ -32,8 +32,8 @@ export async function confirmImport(data: {
   earnings: number;
   trips: number;
   platform: string;
-  kmDriven: number | null;
-  hoursWorked: number | null;
+  km: number | null;
+  hours: number | null;
   rating: number | null;
   date?: string;
 }): Promise<{ message: string; summary: unknown }> {

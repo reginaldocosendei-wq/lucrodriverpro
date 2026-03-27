@@ -3,7 +3,7 @@ import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { db, dailySummariesTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
-import { parseExtracted, todayDateStr } from "../services/importService";
+import { parseExtracted, parseBRLNumber, parseTrips, todayDateStr } from "../services/importService";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -15,6 +15,49 @@ function requireAuth(req: any, res: any, next: any) {
   }
   next();
 }
+
+const SYSTEM_PROMPT = `Você é um especialista em leitura de screenshots de aplicativos de transporte para motoristas parceiros no Brasil.
+
+Analise a imagem e extraia exatamente estes dados:
+
+1. **earnings** — Valor total RECEBIDO pelo motorista (já descontada comissão do app). Em reais.
+   - Procure por: "Ganhos", "Total ganho", "Você recebeu", "Valor líquido", valores como "R$ 234,50"
+   - NUNCA retorne o valor bruto ou a comissão separada
+   - Se houver período exibido (dia, semana, mês), prefira o TOTAL do período
+
+2. **trips** — Número total de corridas/viagens realizadas.
+   - Procure por: "Viagens", "Corridas", "Trips", "Entregas" seguido de número
+   - Deve ser um número inteiro positivo
+
+3. **km** — Distância total percorrida em quilômetros (apenas se visível).
+   - Procure por: "km online", "km dirigidos", "distância", "km percorridos", valores como "45,3 km"
+   - Converta para número decimal: "45,3 km" → 45.3
+
+4. **hours** — Tempo total trabalhado em HORAS decimais (apenas se visível).
+   - Procure por: "horas online", "tempo online", "tempo ativo", "horas trabalhadas"
+   - Converta obrigatoriamente para decimal:
+     * "2h 30min" → 2.5
+     * "1h 45min" → 1.75
+     * "45min"    → 0.75
+     * "3:30"     → 3.5
+   - Retorne sempre como número decimal, NUNCA como string
+
+5. **rating** — Avaliação média dos passageiros de 0 a 5 (apenas se visível).
+   - Procure por: estrelas ★, "avaliação", "nota", valores como "4,92" ou "4.8"
+   - Deve ser um número entre 0 e 5
+
+6. **platform** — Nome do aplicativo.
+   - Detecte pelo logo, cores ou nome na tela: "Uber", "99", "InDrive", "Cabify"
+   - Se não reconhecer, use "Outro"
+
+REGRAS ABSOLUTAS:
+- Responda APENAS com JSON válido, sem texto adicional, sem markdown
+- Se não conseguir identificar um campo com certeza, use null
+- Não invente valores que não estejam na imagem
+- Se a tela mostrar múltiplos períodos (hoje, semana, mês), extraia o que estiver em destaque ou o maior período completo
+
+FORMATO DE RESPOSTA (exatamente assim):
+{"earnings": <número ou null>, "trips": <número inteiro ou null>, "km": <número ou null>, "hours": <número decimal ou null>, "rating": <número 0-5 ou null>, "platform": "<string ou null>"}`;
 
 router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, res) => {
   if (!req.file) {
@@ -28,24 +71,11 @@ router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, re
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      max_completion_tokens: 512,
+      max_completion_tokens: 256,
       messages: [
         {
           role: "system",
-          content: `Você é um assistente especializado em extrair dados de screenshots de aplicativos de motoristas de aplicativo (Uber, 99, InDrive, etc.).
-Analise a imagem e extraia:
-1. O valor total de ganhos recebidos pelo motorista (em reais) — este é o valor final já recebido, sem descontar comissão
-2. O número total de corridas/viagens realizadas
-3. A plataforma (Uber, 99, InDrive, ou "Outro")
-4. A distância total percorrida em km (se visível)
-5. O tempo total trabalhado em horas (se visível; converta minutos para decimal, ex: 90 min = 1.5)
-6. A avaliação média dos passageiros (nota de 0 a 5, se visível)
-
-Responda APENAS com JSON neste formato exato:
-{"earnings": <número ou null>, "trips": <número inteiro ou null>, "platform": "<nome ou null>", "kmDriven": <número ou null>, "hoursWorked": <número decimal ou null>, "rating": <número de 0 a 5 ou null>}
-
-Se não conseguir identificar um valor, use null para aquele campo.
-Não inclua texto adicional, apenas o JSON.`,
+          content: SYSTEM_PROMPT,
         },
         {
           role: "user",
@@ -59,7 +89,7 @@ Não inclua texto adicional, apenas o JSON.`,
             },
             {
               type: "text",
-              text: "Extraia todos os dados de ganhos desta screenshot do aplicativo de motorista.",
+              text: "Extraia todos os dados de ganhos desta screenshot de aplicativo de motorista. Responda apenas com o JSON.",
             },
           ],
         },
@@ -67,15 +97,20 @@ Não inclua texto adicional, apenas o JSON.`,
     });
 
     const content = response.choices[0]?.message?.content?.trim() ?? "{}";
-    let parsed: unknown;
+
+    let rawParsed: unknown = {};
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+      // Strip markdown code fences if the model wrapped it
+      const cleaned = content.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        rawParsed = JSON.parse(jsonMatch[0]);
+      }
     } catch {
-      parsed = {};
+      rawParsed = {};
     }
 
-    const extracted = parseExtracted(parsed);
+    const extracted = parseExtracted(rawParsed);
     res.json(extracted);
   } catch (err: any) {
     console.error("Import analyze error:", err);
@@ -85,7 +120,11 @@ Não inclua texto adicional, apenas o JSON.`,
 
 router.post("/confirm", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const { earnings, trips, platform, kmDriven, hoursWorked, rating, date } = req.body;
+  // Accept both new (km/hours) and old (kmDriven/hoursWorked) field names for backwards compat
+  const { earnings, trips, platform, km, hours, kmDriven, hoursWorked, rating, date } = req.body;
+
+  const resolvedKm = km ?? kmDriven ?? null;
+  const resolvedHours = hours ?? hoursWorked ?? null;
 
   if (!earnings || !trips) {
     res.status(400).json({ error: "Ganhos e número de corridas são obrigatórios" });
@@ -93,14 +132,14 @@ router.post("/confirm", requireAuth, async (req, res) => {
   }
 
   const summaryDate = date ?? todayDateStr();
-  const earningsNum = parseFloat(earnings);
-  const tripsNum = parseInt(trips);
+  const earningsNum = parseBRLNumber(earnings);
+  const tripsNum = parseTrips(trips);
 
-  if (isNaN(earningsNum) || earningsNum <= 0) {
+  if (earningsNum === null || earningsNum <= 0) {
     res.status(400).json({ error: "Valor de ganhos inválido" });
     return;
   }
-  if (isNaN(tripsNum) || tripsNum <= 0) {
+  if (tripsNum === null || tripsNum <= 0) {
     res.status(400).json({ error: "Número de corridas inválido" });
     return;
   }
@@ -118,9 +157,9 @@ router.post("/confirm", requireAuth, async (req, res) => {
       earnings: earningsNum,
       trips: tripsNum,
       platform: platform || "Outro",
-      kmDriven: kmDriven != null ? parseFloat(kmDriven) : null,
-      hoursWorked: hoursWorked != null ? parseFloat(hoursWorked) : null,
-      rating: rating != null ? parseFloat(rating) : null,
+      kmDriven: resolvedKm != null ? parseBRLNumber(resolvedKm) : null,
+      hoursWorked: resolvedHours != null ? parseFloat(String(resolvedHours)) : null,
+      rating: rating != null ? parseFloat(String(rating)) : null,
     };
 
     let result;
