@@ -122,11 +122,11 @@ export default function Home() {
   return (
     <motion.div
       variants={container} initial="hidden" animate="show"
-      style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 112 }}
+      style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 112 }}
     >
 
       {/* ── Greeting ──────────────────────────────────────────────────────── */}
-      <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
+      <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
             {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
@@ -152,7 +152,7 @@ export default function Home() {
           ║  1. LUCRO — Big profit number
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
-        <div style={{ position: "relative", borderRadius: 28, overflow: "hidden" }}>
+        <div style={{ position: "relative", borderRadius: 24, overflow: "hidden" }}>
           {/* Base */}
           <div style={{ position: "absolute", inset: 0, background: "#080808", pointerEvents: "none" }} />
 
@@ -172,11 +172,11 @@ export default function Home() {
               : "radial-gradient(ellipse,rgba(239,68,68,0.17) 0%,transparent 70%)",
           }} />
 
-          <div style={{ position: "relative", zIndex: 2, padding: "28px 24px 26px" }}>
+          <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
             {/* Label */}
             <p style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.42)", textTransform: "uppercase", marginBottom: 10,
+              fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+              color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 8,
             }}>
               {t("home.profitCard")}
             </p>
@@ -267,8 +267,8 @@ export default function Home() {
       <motion.div variants={item}>
         {/* Row label */}
         <p style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.22)", textTransform: "uppercase",
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+          color: "rgba(255,255,255,0.25)", textTransform: "uppercase",
           marginBottom: 10,
         }}>
           {t("home.indicators")}
@@ -335,7 +335,7 @@ export default function Home() {
           ║  3. INSIGHTS — Smart analysis
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
-        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
           {t("home.dailyAnalysis")}
         </p>
 
@@ -361,7 +361,7 @@ export default function Home() {
           ╚══════════════════════════════════════════════════════════════════ */}
       {(isLoading || goalDaily > 0) && (
         <motion.div variants={item}>
-          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
             {t("home.dailyGoal")}
           </p>
 
@@ -373,7 +373,7 @@ export default function Home() {
           ) : (
             <div style={{
               background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 22, padding: "20px 18px",
+              borderRadius: 20, padding: "20px",
               position: "relative", overflow: "hidden",
             }}>
               {/* Subtle glow behind bar */}
@@ -465,7 +465,7 @@ export default function Home() {
             <div style={{
               display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
               background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)",
-              borderRadius: 18, padding: "16px 18px",
+              borderRadius: 20, padding: "16px 20px",
             }}>
               <div style={{ width: 36, height: 36, borderRadius: 11, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Zap size={17} color="#00ff88" />
@@ -488,7 +488,7 @@ export default function Home() {
             <motion.div whileTap={{ scale: 0.98 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(234,179,8,0.1),rgba(217,119,6,0.05))", pointerEvents: "none" }} />
               <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, background: "rgba(234,179,8,0.1)", borderRadius: "50%", filter: "blur(32px)", pointerEvents: "none" }} />
-              <div style={{ position: "relative", zIndex: 1, padding: "14px 16px", border: "1px solid rgba(234,179,8,0.16)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
+              <div style={{ position: "relative", zIndex: 1, padding: "14px 18px", border: "1px solid rgba(234,179,8,0.16)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#eab308,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Lock size={18} color="#000" />
                 </div>
@@ -508,7 +508,7 @@ export default function Home() {
         <Link href="/import">
           <motion.div whileTap={{ scale: 0.97 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(0,255,136,0.09),rgba(0,204,106,0.04))", pointerEvents: "none" }} />
-            <div style={{ position: "relative", zIndex: 1, padding: "14px 16px", border: "1px solid rgba(0,255,136,0.13)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
+            <div style={{ position: "relative", zIndex: 1, padding: "14px 18px", border: "1px solid rgba(0,255,136,0.13)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
               <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#00ff88,#00cc6a)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 6px 20px rgba(0,255,136,0.25)" }}>
                 <Camera size={18} color="#000" />
               </div>
@@ -579,11 +579,11 @@ function MetricTile({
         background: "#0e0e0e",
         border: "1px solid rgba(255,255,255,0.07)",
         borderTop: `3px solid ${accent}`,
-        borderRadius: 18,
-        padding: "16px 12px 18px",
+        borderRadius: 16,
+        padding: "16px 12px",
         display: "flex", flexDirection: "column",
         alignItems: "flex-start", gap: 10,
-        minHeight: 108,
+        minHeight: 104,
         position: "relative", overflow: "hidden",
       }}
     >
@@ -604,7 +604,7 @@ function MetricTile({
           {icon}
         </div>
         <span style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: "0.09em",
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
           textTransform: "uppercase" as const, color: "rgba(255,255,255,0.3)",
         }}>
           {label}

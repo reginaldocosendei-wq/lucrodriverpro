@@ -65,7 +65,7 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       style={{
         position: "relative",
-        borderRadius: 22,
+        borderRadius: 20,
         overflow: "hidden",
         background: c.bg,
         border: `1px solid ${c.border}`,
@@ -81,7 +81,7 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
         pointerEvents: "none",
       }} />
 
-      <div style={{ position: "relative", zIndex: 1, padding: "20px 18px" }}>
+      <div style={{ position: "relative", zIndex: 1, padding: "20px" }}>
 
         {/* ── Status row ─────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
