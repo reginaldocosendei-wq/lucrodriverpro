@@ -37,14 +37,14 @@ function ScanPreview({ src }: { src: string }) {
       <img src={src} alt="screenshot" style={{ width: "100%", display: "block", maxHeight: 320, objectFit: "cover" }} />
 
       {/* dark overlay */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", pointerEvents: "none" }} />
 
       {/* scan line */}
       <motion.div
         animate={{ top: ["0%", "100%"] }}
         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         style={{
-          position: "absolute", left: 0, right: 0, height: 3,
+          position: "absolute", left: 0, right: 0, height: 3, pointerEvents: "none",
           background: "linear-gradient(90deg, transparent 0%, #00ff88 40%, #00ff88 60%, transparent 100%)",
           boxShadow: "0 0 18px 4px rgba(0,255,136,0.55)",
         }}
@@ -57,7 +57,7 @@ function ScanPreview({ src }: { src: string }) {
         { bottom: 12, left: 12, borderBottom: "2px solid #00ff88", borderLeft: "2px solid #00ff88" },
         { bottom: 12, right: 12, borderBottom: "2px solid #00ff88", borderRight: "2px solid #00ff88" },
       ].map((s, i) => (
-        <div key={i} style={{ position: "absolute", width: 20, height: 20, borderRadius: 2, ...s }} />
+        <div key={i} style={{ position: "absolute", width: 20, height: 20, borderRadius: 2, pointerEvents: "none", ...s }} />
       ))}
     </div>
   );
@@ -251,7 +251,7 @@ export default function ImportPage() {
                       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                       style={{
                         position: "absolute", inset: -10, borderRadius: "50%",
-                        background: "rgba(0,255,136,0.15)",
+                        background: "rgba(0,255,136,0.15)", pointerEvents: "none",
                       }}
                     />
                     <div style={{
@@ -336,7 +336,7 @@ export default function ImportPage() {
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
                       style={{
-                        position: "absolute", inset: 0, borderRadius: "50%",
+                        position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none",
                         border: "2.5px solid rgba(0,255,136,0.12)",
                         borderTopColor: "#00ff88",
                       }}
@@ -345,12 +345,12 @@ export default function ImportPage() {
                       animate={{ rotate: -360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       style={{
-                        position: "absolute", inset: 8, borderRadius: "50%",
+                        position: "absolute", inset: 8, borderRadius: "50%", pointerEvents: "none",
                         border: "2px solid rgba(0,255,136,0.07)",
                         borderBottomColor: "rgba(0,255,136,0.5)",
                       }}
                     />
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                       <span style={{ fontSize: 20 }}>🔍</span>
                     </div>
                   </div>
@@ -479,7 +479,7 @@ export default function ImportPage() {
                   {previewUrl && (
                     <div style={{ height: 72, overflow: "hidden", position: "relative" }}>
                       <img src={previewUrl} alt="screenshot" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,14,14,0) 0%, #0e0e0e 100%)" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,14,14,0) 0%, #0e0e0e 100%)", pointerEvents: "none" }} />
                     </div>
                   )}
 
@@ -674,11 +674,11 @@ export default function ImportPage() {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
                     style={{
-                      position: "absolute", inset: 0, borderRadius: "50%",
+                      position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none",
                       border: "3px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88",
                     }}
                   />
-                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                     <span style={{ fontSize: 22 }}>💾</span>
                   </div>
                 </div>
