@@ -7,24 +7,24 @@ import { z } from "zod";
 import { Input, Label } from "@/components/ui";
 import { Mail, Lock, User, ArrowRight, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// ─── SCHEMAS ──────────────────────────────────────────────────────────────────
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha muito curta"),
-});
-
-const registerSchema = loginSchema.extend({
-  name: z.string().min(2, "Nome obrigatório"),
-});
+import { useT } from "@/lib/i18n";
 
 // ─── AUTH FORM ────────────────────────────────────────────────────────────────
 function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
+  const { t } = useT();
   const [mode, setMode] = useState<"login" | "register">(defaultMode);
   const [errorMsg, setErrorMsg] = useState("");
   const queryClient = useQueryClient();
-  const loginMutation = useLogin();
+  const loginMutation    = useLogin();
   const registerMutation = useRegister();
+
+  const loginSchema = z.object({
+    email:    z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(6, t("auth.passwordTooShort")),
+  });
+  const registerSchema = loginSchema.extend({
+    name: z.string().min(2, t("auth.nameRequired")),
+  });
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -40,7 +40,7 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
     setErrorMsg("");
     loginMutation.mutate({ data }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
-      onError: (err: any) => { setErrorMsg(err?.response?.data?.error || "E-mail ou senha incorretos."); },
+      onError:   (err: any) => { setErrorMsg(err?.response?.data?.error || t("auth.loginError")); },
     });
   });
 
@@ -48,11 +48,16 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
     setErrorMsg("");
     registerMutation.mutate({ data }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
-      onError: (err: any) => { setErrorMsg(err?.response?.data?.error || "Não foi possível criar sua conta."); },
+      onError:   (err: any) => { setErrorMsg(err?.response?.data?.error || t("auth.registerError")); },
     });
   });
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
+
+  const labelStyle: React.CSSProperties = {
+    color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700,
+    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block",
+  };
 
   return (
     <div style={{ width: "100%" }}>
@@ -73,9 +78,10 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
               background: mode === m ? "#00ff88" : "transparent",
               color: mode === m ? "#000" : "rgba(255,255,255,0.4)",
               boxShadow: mode === m ? "0 4px 16px rgba(0,255,136,0.25)" : "none",
+              fontFamily: "inherit",
             }}
           >
-            {m === "login" ? "Entrar" : "Criar conta"}
+            {m === "login" ? t("auth.tabLogin") : t("auth.tabRegister")}
           </button>
         ))}
       </div>
@@ -104,23 +110,18 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
             <div>
-              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
-                Email
-              </Label>
-              <Input type="email" icon={<Mail size={17} />} placeholder="seu@email.com" {...loginForm.register("email")} />
+              <Label style={labelStyle}>{t("auth.labelEmail")}</Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder={t("auth.placeholderEmail")} {...loginForm.register("email")} />
               {loginForm.formState.errors.email && (
                 <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{loginForm.formState.errors.email.message}</p>
               )}
             </div>
             <div>
-              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
-                Senha
-              </Label>
+              <Label style={labelStyle}>{t("auth.labelPassword")}</Label>
               <Input type="password" icon={<Lock size={17} />} placeholder="••••••" {...loginForm.register("password")} />
             </div>
             <button
-              type="submit"
-              disabled={isPending}
+              type="submit" disabled={isPending}
               style={{
                 marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
                 background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
@@ -128,9 +129,10 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
                 opacity: isPending ? 0.6 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+                fontFamily: "inherit",
               }}
             >
-              {isPending ? "Entrando..." : "Acessar painel"}
+              {isPending ? t("auth.btnLoginLoading") : t("auth.btnLogin")}
             </button>
           </motion.form>
         ) : (
@@ -144,35 +146,28 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
             <div>
-              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
-                Nome
-              </Label>
-              <Input type="text" icon={<User size={17} />} placeholder="João Silva" {...registerForm.register("name")} />
+              <Label style={labelStyle}>{t("auth.labelName")}</Label>
+              <Input type="text" icon={<User size={17} />} placeholder={t("auth.placeholderName")} {...registerForm.register("name")} />
               {registerForm.formState.errors.name && (
                 <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.name.message}</p>
               )}
             </div>
             <div>
-              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
-                Email
-              </Label>
-              <Input type="email" icon={<Mail size={17} />} placeholder="seu@email.com" {...registerForm.register("email")} />
+              <Label style={labelStyle}>{t("auth.labelEmail")}</Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder={t("auth.placeholderEmail")} {...registerForm.register("email")} />
               {registerForm.formState.errors.email && (
                 <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.email.message}</p>
               )}
             </div>
             <div>
-              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
-                Senha
-              </Label>
-              <Input type="password" icon={<Lock size={17} />} placeholder="Mínimo 6 caracteres" {...registerForm.register("password")} />
+              <Label style={labelStyle}>{t("auth.labelPassword")}</Label>
+              <Input type="password" icon={<Lock size={17} />} placeholder={t("auth.placeholderPassword")} {...registerForm.register("password")} />
               {registerForm.formState.errors.password && (
                 <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.password.message}</p>
               )}
             </div>
             <button
-              type="submit"
-              disabled={isPending}
+              type="submit" disabled={isPending}
               style={{
                 marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
                 background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
@@ -180,9 +175,10 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
                 opacity: isPending ? 0.6 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+                fontFamily: "inherit",
               }}
             >
-              {isPending ? "Criando conta..." : "Criar conta grátis"}
+              {isPending ? t("auth.btnRegisterLoading") : t("auth.btnRegister")}
             </button>
           </motion.form>
         )}
@@ -190,7 +186,7 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
 
       {/* Trial note */}
       <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 18, lineHeight: 1.6 }}>
-        7 dias de PRO grátis · Sem cartão de crédito
+        {t("auth.trialNote")}
       </p>
     </div>
   );
@@ -198,52 +194,44 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
 
 // ─── MAIN AUTH SCREEN ─────────────────────────────────────────────────────────
 export default function AuthScreen() {
+  const { t } = useT();
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<"login" | "register">("register");
 
   return (
     <div style={{
-      minHeight: "100dvh",
-      background: "#080808",
-      display: "flex",
-      flexDirection: "column",
-      position: "relative",
-      overflow: "hidden",
+      minHeight: "100dvh", background: "#080808",
+      display: "flex", flexDirection: "column",
+      position: "relative", overflow: "hidden",
     }}>
 
-      {/* ── Ambient grid texture ── */}
+      {/* Ambient grid */}
       <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        opacity: 0.04,
-        backgroundImage:
-          "linear-gradient(rgba(0,255,136,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,1) 1px, transparent 1px)",
+        position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
+        backgroundImage: "linear-gradient(rgba(0,255,136,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,1) 1px, transparent 1px)",
         backgroundSize: "36px 36px",
       }} />
 
-      {/* ── Top glow ── */}
+      {/* Top glow */}
       <div style={{
         position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
         width: 500, height: 400, pointerEvents: "none",
         background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 65%)",
       }} />
 
-      {/* ── Bottom glow ── */}
+      {/* Bottom glow */}
       <div style={{
         position: "absolute", bottom: -80, left: "50%", transform: "translateX(-50%)",
         width: 360, height: 300, pointerEvents: "none",
         background: "radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 65%)",
       }} />
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          LANDING HERO
-      ══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence mode="wait">
         {!showForm ? (
+          /* ── Landing ── */
           <motion.div
             key="landing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -24 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -24 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             style={{
               flex: 1, display: "flex", flexDirection: "column",
@@ -251,10 +239,9 @@ export default function AuthScreen() {
               padding: "0 28px", textAlign: "center", position: "relative", zIndex: 2,
             }}
           >
-            {/* Logo mark */}
+            {/* Logo */}
             <motion.div
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               style={{ marginBottom: 40 }}
             >
@@ -264,50 +251,35 @@ export default function AuthScreen() {
                 boxShadow: "0 0 40px rgba(0,255,136,0.2), 0 12px 32px rgba(0,0,0,0.6)",
                 margin: "0 auto",
               }}>
-                <img
-                  src={`${import.meta.env.BASE_URL}icon.svg`}
-                  alt="Lucro Driver"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  draggable={false}
-                />
+                <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
               </div>
             </motion.div>
 
             {/* Headline */}
             <motion.h1
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                fontSize: 52, fontWeight: 900, lineHeight: 1.06,
-                color: "#f9fafb", letterSpacing: "-0.025em",
-                marginBottom: 18,
-              }}
+              style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.06, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 18 }}
             >
-              Faturamento<br />
+              {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
               <span style={{ color: "#00ff88", textShadow: "0 0 32px rgba(0,255,136,0.4)" }}>
-                engana.
+                {t("auth.tagline").split(" ").slice(-1)[0]}
               </span>
             </motion.h1>
 
             {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                fontSize: 18, fontWeight: 500, lineHeight: 1.5,
-                color: "rgba(255,255,255,0.42)",
-                marginBottom: 48, maxWidth: 280,
-              }}
+              style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.5, color: "rgba(255,255,255,0.42)", marginBottom: 48, maxWidth: 280 }}
             >
-              Veja seu lucro real em segundos.
+              {t("auth.subtitle")}
             </motion.p>
 
-            {/* Primary CTA */}
+            {/* CTAs */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.38, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               style={{ width: "100%", maxWidth: 320 }}
             >
@@ -324,11 +296,10 @@ export default function AuthScreen() {
                   fontFamily: "inherit",
                 }}
               >
-                Importar meu dia
+                {t("auth.cta")}
                 <ArrowRight size={20} strokeWidth={2.5} />
               </motion.button>
 
-              {/* Secondary link */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => { setFormMode("login"); setShowForm(true); }}
@@ -337,59 +308,35 @@ export default function AuthScreen() {
                   background: "transparent", border: "1px solid rgba(255,255,255,0.09)",
                   color: "rgba(255,255,255,0.4)", fontWeight: 600, fontSize: 14,
                   cursor: "pointer", fontFamily: "inherit",
-                  transition: "border-color 0.2s, color 0.2s",
                 }}
               >
-                Já tenho conta — Entrar
+                {t("auth.alreadyHaveAccount")}
               </motion.button>
             </motion.div>
 
-            {/* Trust line */}
+            {/* Trust */}
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.55, duration: 0.4 }}
-              style={{
-                marginTop: 36, fontSize: 12,
-                color: "rgba(255,255,255,0.18)",
-                letterSpacing: "0.02em",
-              }}
+              style={{ marginTop: 36, fontSize: 12, color: "rgba(255,255,255,0.18)", letterSpacing: "0.02em" }}
             >
-              🔒 Grátis · Sem cartão · 7 dias PRO
+              {t("auth.trustLine")}
             </motion.p>
           </motion.div>
 
         ) : (
 
-          /* ══════════════════════════════════════════════════════════════════════
-              AUTH FORM PANEL
-          ══════════════════════════════════════════════════════════════════════ */
+          /* ── Form panel ── */
           <motion.div
             key="form"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              justifyContent: "flex-end",
-              position: "relative", zIndex: 2,
-            }}
+            style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", zIndex: 2 }}
           >
-            {/* Compact headline above form */}
+            {/* Compact headline */}
             <div style={{ textAlign: "center", padding: "40px 28px 0" }}>
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.05, duration: 0.4 }}
-                style={{ marginBottom: 20 }}
-              >
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12, overflow: "hidden",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 0 24px rgba(0,255,136,0.15)",
-                  margin: "0 auto",
-                }}>
+              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.05, duration: 0.4 }} style={{ marginBottom: 20 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto" }}>
                   <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
                 </div>
               </motion.div>
@@ -397,32 +344,29 @@ export default function AuthScreen() {
                 Lucro <span style={{ color: "#00ff88" }}>Driver</span>
               </p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
-                Seu painel inteligente de ganhos
+                {t("auth.appSubtitle")}
               </p>
             </div>
 
-            {/* Back hint */}
+            {/* Back */}
             <div style={{ display: "flex", justifyContent: "center", padding: "18px 0 0" }}>
               <button
                 onClick={() => setShowForm(false)}
                 style={{
                   background: "transparent", border: "none", cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 4,
-                  color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600,
-                  fontFamily: "inherit",
+                  color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
                 }}
               >
                 <ChevronDown size={14} />
-                voltar
+                {t("auth.goBack")}
               </button>
             </div>
 
-            {/* Form card — slides up from bottom */}
+            {/* Form card */}
             <div style={{
-              background: "#111111",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "28px 28px 0 0",
-              padding: "28px 24px",
+              background: "#111111", borderTop: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "28px 28px 0 0", padding: "28px 24px",
               marginTop: 20,
               paddingBottom: "calc(28px + env(safe-area-inset-bottom, 0px))",
             }}>
@@ -431,7 +375,6 @@ export default function AuthScreen() {
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

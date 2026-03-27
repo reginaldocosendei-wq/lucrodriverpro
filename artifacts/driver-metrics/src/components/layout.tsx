@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Globe } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useT, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type TrialUser = {
@@ -17,6 +18,7 @@ type TrialUser = {
 
 // ─── TRIAL BANNER ─────────────────────────────────────────────────────────────
 function TrialBanner({ days, onUpgrade, onDismiss }: { days: number; onUpgrade: () => void; onDismiss: () => void }) {
+  const { t } = useT();
   const isLastDay = days <= 1;
   const isUrgent  = days <= 3;
 
@@ -24,17 +26,17 @@ function TrialBanner({ days, onUpgrade, onDismiss }: { days: number; onUpgrade: 
     bg: "rgba(127,29,29,0.7)", border: "rgba(239,68,68,0.3)",
     icon: <Flame size={13} color="#f87171" />,
     badge: { bg: "rgba(239,68,68,0.15)", color: "#f87171", border: "rgba(239,68,68,0.25)" },
-    text: "🚨 Último dia!", cta: "Fazer upgrade agora", ctaColor: "#ef4444", dismiss: false,
+    text: t("layout.trialLastDay"), cta: t("layout.upgradeNow"), ctaColor: "#ef4444", dismiss: false,
   } : isUrgent ? {
     bg: "rgba(120,53,15,0.7)", border: "rgba(251,146,60,0.25)",
     icon: <AlertTriangle size={13} color="#fb923c" />,
     badge: { bg: "rgba(251,146,60,0.12)", color: "#fb923c", border: "rgba(251,146,60,0.22)" },
-    text: `⚠️ ${days} dias restantes`, cta: "Manter PRO", ctaColor: "#f97316", dismiss: false,
+    text: t("layout.trialUrgent", { days }), cta: t("layout.keepPro"), ctaColor: "#f97316", dismiss: false,
   } : {
     bg: "rgba(66,32,6,0.6)", border: "rgba(234,179,8,0.15)",
     icon: <Clock size={13} color="#eab308" />,
     badge: { bg: "rgba(234,179,8,0.08)", color: "#ca8a04", border: "rgba(234,179,8,0.18)" },
-    text: `Teste PRO — ${days} dias`, cta: "Fazer upgrade", ctaColor: "#eab308", dismiss: true,
+    text: t("layout.trialNormal", { days }), cta: t("layout.upgrade"), ctaColor: "#eab308", dismiss: true,
   };
 
   return (
@@ -75,13 +77,91 @@ function TrialBanner({ days, onUpgrade, onDismiss }: { days: number; onUpgrade: 
   );
 }
 
+// ─── LANGUAGE PICKER ──────────────────────────────────────────────────────────
+function LangPicker() {
+  const { lang, setLang, t } = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const current = LANG_OPTIONS.find((l) => l.id === lang)!;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={t("layout.language")}
+        style={{
+          width: 36, height: 36, borderRadius: 12,
+          background: open ? "rgba(0,255,136,0.08)" : "rgba(255,255,255,0.04)",
+          border: `1px solid ${open ? "rgba(0,255,136,0.2)" : "rgba(255,255,255,0.07)"}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", fontSize: 15, transition: "all 0.15s ease",
+        }}
+      >
+        {current.flag}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.95 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            style={{
+              position: "absolute", top: "calc(100% + 8px)", right: 0,
+              background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 14, padding: "6px", zIndex: 200,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+              minWidth: 150,
+            }}
+          >
+            {LANG_OPTIONS.map((opt) => {
+              const isActive = opt.id === lang;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => { setLang(opt.id as Lang); setOpen(false); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 10,
+                    padding: "9px 12px", borderRadius: 10, border: "none",
+                    background: isActive ? "rgba(0,255,136,0.08)" : "transparent",
+                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{opt.flag}</span>
+                  <span style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, color: isActive ? "#00ff88" : "rgba(255,255,255,0.65)" }}>
+                    {opt.label}
+                  </span>
+                  {isActive && (
+                    <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "#00ff88", flexShrink: 0 }} />
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
-const NAV = [
-  { path: "/",        Icon: Home,     label: "Início" },
-  { path: "/rides",   Icon: Car,      label: "Corridas" },
-  { path: "/costs",   Icon: Wallet,   label: "Custos" },
-  { path: "/goals",   Icon: Target,   label: "Metas" },
-  { path: "/reports", Icon: BarChart2, label: "Relatórios", isPro: true },
+const NAV_DEFS = [
+  { path: "/",        Icon: Home,     key: "nav.home" },
+  { path: "/rides",   Icon: Car,      key: "nav.rides" },
+  { path: "/costs",   Icon: Wallet,   key: "nav.costs" },
+  { path: "/goals",   Icon: Target,   key: "nav.goals" },
+  { path: "/reports", Icon: BarChart2, key: "nav.reports", isPro: true },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -92,10 +172,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { data: user }       = useGetMe();
   const logout               = useLogout();
   const queryClient          = useQueryClient();
+  const { t }                = useT();
   const u = user as TrialUser | undefined;
 
-  const trialActive  = u?.trialActive === true;
-  const trialExpired = u?.trialExpired === true;
+  const trialActive   = u?.trialActive === true;
+  const trialExpired  = u?.trialExpired === true;
   const trialDaysLeft = u?.trialDaysLeft ?? 7;
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const showBanner = trialActive && !bannerDismissed;
@@ -112,8 +193,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       onSuccess: () => { queryClient.setQueryData(["/api/auth/me"], null); queryClient.clear(); },
     });
   };
-
-  const activeIdx = NAV.findIndex((n) => n.path === location);
 
   return (
     <div style={{ minHeight: "100dvh", background: "#080808", display: "flex", flexDirection: "column" }}>
@@ -152,7 +231,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   padding: "2px 6px", borderRadius: 4, letterSpacing: "0.08em",
                   verticalAlign: "middle",
                 }}>
-                  {trialActive ? "TESTE" : "PRO"}
+                  {trialActive ? t("layout.trialBadge") : "PRO"}
                 </div>
               )}
             </div>
@@ -177,6 +256,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </motion.div>
               </Link>
             )}
+
+            {/* Language picker */}
+            <LangPicker />
+
             <motion.button
               whileTap={{ scale: 0.92 }}
               onClick={handleLogout}
@@ -187,7 +270,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: "pointer",
               }}
-              title="Sair"
+              title={t("layout.logout")}
             >
               <LogOut size={16} color="rgba(255,255,255,0.45)" />
             </motion.button>
@@ -242,7 +325,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           padding: "0 8px",
           position: "relative",
         }}>
-          {NAV.map((nav, idx) => {
+          {NAV_DEFS.map((nav) => {
             const isActive = location === nav.path;
             const { Icon } = nav;
 
@@ -304,13 +387,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     )}
                   </div>
 
-                  {/* Label */}
+                  {/* Label — translated */}
                   <motion.span
                     animate={{ opacity: isActive ? 1 : 0.35, color: isActive ? "#00ff88" : "#fff" }}
                     transition={{ duration: 0.2 }}
                     style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", lineHeight: 1, position: "relative", zIndex: 1 }}
                   >
-                    {nav.label}
+                    {t(nav.key)}
                   </motion.span>
 
                   {/* Active underline dot */}

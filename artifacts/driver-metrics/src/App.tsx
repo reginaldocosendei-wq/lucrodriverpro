@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { I18nProvider } from "@/lib/i18n";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -185,7 +186,7 @@ function AppShell() {
   }, []);
 
   return (
-    <>
+    <I18nProvider>
       <SplashScreen show={showSplash} />
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
@@ -198,7 +199,7 @@ function AppShell() {
           </TooltipProvider>
         </QueryClientProvider>
       </ErrorBoundary>
-    </>
+    </I18nProvider>
   );
 }
 

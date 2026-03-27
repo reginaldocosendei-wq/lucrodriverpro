@@ -9,6 +9,7 @@ import {
 import { Link } from "wouter";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 const BASE = getApiBase();
 
@@ -82,6 +83,7 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
 function ConfirmModal({ onConfirm, onCancel, isDeleting }: {
   onConfirm: () => void; onCancel: () => void; isDeleting: boolean;
 }) {
+  const { t } = useT();
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -112,10 +114,10 @@ function ConfirmModal({ onConfirm, onCancel, isDeleting }: {
           <Trash2 size={22} color="#ef4444" />
         </div>
         <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", textAlign: "center", marginBottom: 8 }}>
-          Excluir registro?
+          {t("history.deleteTitle")}
         </p>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 1.6, marginBottom: 28 }}>
-          Tem certeza que deseja excluir este registro?<br />Essa ação não pode ser desfeita.
+          {t("history.deleteMessage")}
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onCancel} style={{
@@ -123,7 +125,7 @@ function ConfirmModal({ onConfirm, onCancel, isDeleting }: {
             background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
             color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: 15,
             cursor: "pointer", fontFamily: "inherit",
-          }}>Cancelar</button>
+          }}>{t("common.cancel")}</button>
           <button onClick={onConfirm} disabled={isDeleting} style={{
             flex: 1, height: 50, borderRadius: 15, border: "none",
             background: isDeleting ? "rgba(239,68,68,0.4)" : "#ef4444",
@@ -134,7 +136,7 @@ function ConfirmModal({ onConfirm, onCancel, isDeleting }: {
             {isDeleting
               ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
                   style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff" }} />
-              : <><Trash2 size={15} strokeWidth={2.5} /> Excluir</>}
+              : <><Trash2 size={15} strokeWidth={2.5} /> {t("common.delete")}</>}
           </button>
         </div>
       </motion.div>
@@ -149,6 +151,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
   onClose: () => void;
   isSaving: boolean;
 }) {
+  const { t } = useT();
   const [earnings,    setEarnings]    = useState(String(record.earnings));
   const [trips,       setTrips]       = useState(String(record.trips));
   const [km,          setKm]          = useState(record.kmDriven   != null ? String(record.kmDriven)   : "");
@@ -210,7 +213,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px 20px" }}>
           <div>
-            <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>Editar registro</p>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>{t("history.editTitle")}</p>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
               <Calendar size={11} style={{ display: "inline", marginRight: 4 }} />
               {formatDate(record.date)}
@@ -230,7 +233,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
           {/* Earnings + Trips row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Ganhos (R$)</label>
+              <label style={labelStyle}>{t("history.earnings")}</label>
               <input
                 type="number" step="0.01" min="0" required
                 value={earnings} onChange={(e) => setEarnings(e.target.value)}
@@ -238,7 +241,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
               />
             </div>
             <div>
-              <label style={labelStyle}>Corridas</label>
+              <label style={labelStyle}>{t("history.tripsCount")}</label>
               <input
                 type="number" min="1" step="1" required
                 value={trips} onChange={(e) => setTrips(e.target.value)}
@@ -250,17 +253,17 @@ function EditModal({ record, onSave, onClose, isSaving }: {
           {/* KM + Hours row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>KM rodados</label>
+              <label style={labelStyle}>{t("history.km")}</label>
               <input
-                type="number" step="0.1" min="0" placeholder="Opcional"
+                type="number" step="0.1" min="0" placeholder={t("common.optional")}
                 value={km} onChange={(e) => setKm(e.target.value)}
                 style={inputStyle}
               />
             </div>
             <div>
-              <label style={labelStyle}>Horas trabalhadas</label>
+              <label style={labelStyle}>{t("history.hours")}</label>
               <input
-                type="number" step="0.1" min="0" placeholder="Opcional"
+                type="number" step="0.1" min="0" placeholder={t("common.optional")}
                 value={hours} onChange={(e) => setHours(e.target.value)}
                 style={inputStyle}
               />
@@ -270,17 +273,17 @@ function EditModal({ record, onSave, onClose, isSaving }: {
           {/* Rating + Platform row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Avaliação (1–5)</label>
+              <label style={labelStyle}>{t("history.rating")}</label>
               <input
-                type="number" step="0.1" min="1" max="5" placeholder="Opcional"
+                type="number" step="0.1" min="1" max="5" placeholder={t("common.optional")}
                 value={rating} onChange={(e) => setRating(e.target.value)}
                 style={inputStyle}
               />
             </div>
             <div>
-              <label style={labelStyle}>Plataforma</label>
+              <label style={labelStyle}>{t("history.platform")}</label>
               <input
-                type="text" placeholder="Uber, 99..."
+                type="text" placeholder={t("history.platformPlaceholder")}
                 value={platform} onChange={(e) => setPlatform(e.target.value)}
                 style={inputStyle}
               />
@@ -295,7 +298,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
               display: "flex", gap: 20,
             }}>
               <div>
-                <p style={{ fontSize: 10, color: "rgba(0,255,136,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>R$/corrida</p>
+                <p style={{ fontSize: 10, color: "rgba(0,255,136,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>R$/{t("history.perTrip")}</p>
                 <p style={{ fontSize: 16, fontWeight: 800, color: "#00ff88" }}>
                   {formatBRL(parseFloat(earnings) / parseInt(trips))}
                 </p>
@@ -333,7 +336,7 @@ function EditModal({ record, onSave, onClose, isSaving }: {
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
                 style={{ width: 20, height: 20, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000" }} />
             ) : (
-              <><CheckCircle size={18} strokeWidth={2.5} /> Salvar alterações</>
+              <><CheckCircle size={18} strokeWidth={2.5} /> {t("history.saveChanges")}</>
             )}
           </button>
 
@@ -465,6 +468,7 @@ const cardVariants = {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function RidesPage() {
   const queryClient = useQueryClient();
+  const { t } = useT();
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [summaries, setSummaries] = useState<DailySummary[] | null>(null);
@@ -544,9 +548,9 @@ export default function RidesPage() {
           : s.id !== confirmTarget.id
       ) ?? null);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      setToast({ message: "Registro excluído com sucesso.", type: "success" });
+      setToast({ message: t("history.deleteSuccess"), type: "success" });
     } catch {
-      setToast({ message: "Não foi possível excluir este registro.", type: "error" });
+      setToast({ message: t("history.deleteError"), type: "error" });
     } finally {
       setIsDeleting(false);
       setConfirmTarget(null);
@@ -592,10 +596,10 @@ export default function RidesPage() {
         return [updated, ...prev].sort((a, b) => b.date.localeCompare(a.date));
       });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      setToast({ message: "Registro atualizado com sucesso.", type: "success" });
+      setToast({ message: t("history.updateSuccess"), type: "success" });
       setEditTarget(null);
     } catch {
-      setToast({ message: "Não foi possível salvar o registro.", type: "error" });
+      setToast({ message: t("history.updateError"), type: "error" });
     } finally {
       setIsSaving(false);
     }
@@ -603,11 +607,11 @@ export default function RidesPage() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   const FILTERS: { id: Filter; label: string }[] = [
-    { id: "today", label: "Hoje" },
-    { id: "week",  label: "Semana" },
-    { id: "month", label: "Mês" },
-    { id: "all",   label: "Todos" },
-    { id: "custom",label: "Período" },
+    { id: "today",  label: t("common.today") },
+    { id: "week",   label: t("common.week") },
+    { id: "month",  label: t("common.month") },
+    { id: "all",    label: t("common.all") },
+    { id: "custom", label: t("common.period") },
   ];
 
   return (
@@ -654,10 +658,10 @@ export default function RidesPage() {
               </button>
             </Link>
             <div>
-              <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>Histórico</p>
+              <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>{t("history.title")}</p>
               {summaries && summaries.length > 0 && (
                 <p style={{ color: "#6b7280", fontSize: 11, marginTop: 1 }}>
-                  {summaries.length} registro{summaries.length !== 1 ? "s" : ""} salvos
+                  {summaries.length} {summaries.length !== 1 ? t("common.records") : t("common.record")} {t("common.saved")}
                 </p>
               )}
             </div>
@@ -681,7 +685,7 @@ export default function RidesPage() {
                 color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
               }}>
-                <Plus size={14} /> Novo
+                <Plus size={14} /> {t("common.new")}
               </button>
             </Link>
           </div>
@@ -719,8 +723,8 @@ export default function RidesPage() {
                   >
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingBottom: 14 }}>
                       {[
-                        { label: "De", value: customFrom, onChange: setCustomFrom },
-                        { label: "Até", value: customTo,   onChange: setCustomTo },
+                        { label: t("common.from"), value: customFrom, onChange: setCustomFrom },
+                        { label: t("common.to"),   value: customTo,   onChange: setCustomTo },
                       ].map(({ label, value, onChange }) => (
                         <div key={label}>
                           <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>{label}</p>
@@ -749,7 +753,7 @@ export default function RidesPage() {
           <div style={{ textAlign: "center", paddingTop: 72 }}>
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
               style={{ width: 44, height: 44, borderRadius: "50%", border: "3px solid rgba(0,255,136,0.1)", borderTopColor: "#00ff88", margin: "0 auto 16px" }} />
-            <p style={{ color: "#6b7280", fontSize: 14 }}>Carregando histórico...</p>
+            <p style={{ color: "#6b7280", fontSize: 14 }}>{t("history.loadingHistory")}</p>
           </div>
         )}
 
@@ -770,14 +774,14 @@ export default function RidesPage() {
                   <Calendar size={36} color="#374151" />
                 </div>
                 <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>
-                  Você ainda não tem registros salvos.
+                  {t("history.noRecords")}
                 </p>
                 <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
-                  Importe um screenshot de ganhos para começar a acompanhar seu histórico.
+                  {t("history.noRecordsSub")}
                 </p>
                 <Link href="/import">
                   <button style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
-                    Adicionar registro
+                    {t("history.addRecord")}
                   </button>
                 </Link>
               </motion.div>
@@ -787,10 +791,10 @@ export default function RidesPage() {
             {summaries.length > 0 && filtered.length === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center", paddingTop: 56 }}>
                 <p style={{ color: "#6b7280", fontSize: 15, marginBottom: 14 }}>
-                  Nenhum registro encontrado para este período.
+                  {t("history.noResultsForPeriod")}
                 </p>
                 <button onClick={() => setFilter("all")} style={{ background: "none", border: "none", color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                  Ver todos os registros
+                  {t("history.viewAll")}
                 </button>
               </motion.div>
             )}
@@ -803,9 +807,9 @@ export default function RidesPage() {
                 <motion.div variants={cardVariants}>
                   <div style={{ background: "#111", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 4 }}>
                     {[
-                      { label: filter === "today" ? "Hoje" : filter === "week" ? "Semana" : filter === "month" ? "Mês" : "Total", value: formatBRL(totalEarnings), color: "#00ff88" },
-                      { label: "Corridas", value: String(totalTrips), color: "#f9fafb" },
-                      { label: "Dias",     value: String(filtered.length), color: "#f9fafb" },
+                      { label: filter === "today" ? t("common.today") : filter === "week" ? t("common.week") : filter === "month" ? t("common.month") : t("history.total"), value: formatBRL(totalEarnings), color: "#00ff88" },
+                      { label: t("history.tripsCount"), value: String(totalTrips), color: "#f9fafb" },
+                      { label: t("common.days"),        value: String(filtered.length), color: "#f9fafb" },
                     ].map(({ label, value, color }) => (
                       <div key={label}>
                         <p style={{ color: "#6b7280", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</p>
@@ -818,7 +822,7 @@ export default function RidesPage() {
                 {/* Section label */}
                 <motion.div variants={cardVariants}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", textTransform: "uppercase", margin: "6px 0 4px" }}>
-                    Registros salvos
+                    {t("history.savedRecords")}
                   </p>
                 </motion.div>
 
@@ -865,8 +869,8 @@ export default function RidesPage() {
                                   {formatBRL(s.earnings)}
                                 </p>
                                 <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 500 }}>
-                                  {s.trips} corrida{s.trips !== 1 ? "s" : ""}
-                                  {perTrip != null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700 }}> · {formatBRL(perTrip)}/corrida</span>}
+                                  {s.trips} {t("history.tripsCount").toLowerCase()}
+                                  {perTrip != null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700 }}> · {formatBRL(perTrip)}/{t("history.perTrip")}</span>}
                                 </p>
                               </div>
 
@@ -880,7 +884,7 @@ export default function RidesPage() {
                                     color: "#818cf8", cursor: "pointer",
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                   }}
-                                  title="Editar"
+                                  title={t("common.edit")}
                                 >
                                   <Pencil size={14} strokeWidth={2.5} />
                                 </button>
@@ -892,7 +896,7 @@ export default function RidesPage() {
                                     color: "#ef4444", cursor: "pointer",
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                   }}
-                                  title="Excluir"
+                                  title={t("common.delete")}
                                 >
                                   <Trash2 size={14} strokeWidth={2.5} />
                                 </button>

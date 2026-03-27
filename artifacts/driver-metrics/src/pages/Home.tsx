@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
+import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
 import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-react";
 import { motion, animate } from "framer-motion";
@@ -71,10 +72,11 @@ function Skeleton({ h = 24, w = "100%", r = 8 }: { h?: number; w?: number | stri
 export default function Home() {
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: user } = useGetMe();
+  const { t } = useT();
 
   const isFree  = user?.plan !== "pro";
   const hour    = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const greeting = hour < 12 ? t("home.goodMorning") : hour < 18 ? t("home.goodAfternoon") : t("home.goodEvening");
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const profit        = summary?.realProfitToday ?? 0;
@@ -103,17 +105,18 @@ export default function Home() {
     : marginPct < 40 ? "average"
     : "good";
 
+  const pct = Math.round(marginPct);
   const insightMessage =
-    insightStatus === "good"    ? `Margem de ${Math.round(marginPct)}% hoje — você está maximizando cada real ganho.`
-    : insightStatus === "average" ? `Margem de ${Math.round(marginPct)}% — ainda há espaço para melhorar.`
-    : insightStatus === "bad"     ? profit <= 0 ? "Seus custos superaram os ganhos hoje." : `Margem baixa de ${Math.round(marginPct)}% — dia difícil.`
-    : "Nenhum ganho registrado ainda hoje.";
+    insightStatus === "good"    ? t("home.insightGood",     { pct })
+    : insightStatus === "average" ? t("home.insightAverage", { pct })
+    : insightStatus === "bad"     ? profit <= 0 ? t("home.insightNegative") : t("home.insightBad", { pct })
+    : t("home.insightIdle");
 
   const insightSuggestion =
-    insightStatus === "good"    ? "Replique a estratégia de hoje nos próximos dias."
-    : insightStatus === "average" ? "Prefira corridas mais longas para aumentar o R$/km."
-    : insightStatus === "bad"     ? "Foque nos horários de alta demanda para recuperar."
-    : "Importe seu resultado via screenshot do app.";
+    insightStatus === "good"    ? t("home.suggestionGood")
+    : insightStatus === "average" ? t("home.suggestionAverage")
+    : insightStatus === "bad"     ? t("home.suggestionBad")
+    : t("home.suggestionIdle");
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -128,7 +131,7 @@ export default function Home() {
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
             {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
           </p>
-          <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>Painel financeiro</p>
+          <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>{t("home.dashboard")}</p>
         </div>
         <motion.div
           animate={{ opacity: [1, 0.35, 1] }}
@@ -140,7 +143,7 @@ export default function Home() {
           }}
         >
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#00ff88", letterSpacing: "0.06em" }}>AO VIVO</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#00ff88", letterSpacing: "0.06em" }}>{t("home.live")}</span>
         </motion.div>
       </motion.div>
 
@@ -175,7 +178,7 @@ export default function Home() {
               fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
               color: "rgba(255,255,255,0.42)", textTransform: "uppercase", marginBottom: 10,
             }}>
-              Seu lucro real hoje
+              {t("home.profitCard")}
             </p>
 
             {/* Big number */}
@@ -206,9 +209,9 @@ export default function Home() {
             {/* Earnings · costs */}
             {!isLoading && (
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400, marginBottom: 20 }}>
-                Ganhou{" "}
+                {t("home.earned")}{" "}
                 <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(earnings)}</span>
-                <span style={{ color: "rgba(255,255,255,0.2)" }}> · gastou </span>
+                <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
                 <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
               </p>
             )}
@@ -217,7 +220,7 @@ export default function Home() {
             {!isLoading && earnings > 0 && (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>Margem de lucro</span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{t("home.margin")}</span>
                   <span style={{ fontSize: 12, fontWeight: 800, color: pColor }}>
                     {Math.round(Math.abs(marginPct))}%
                   </span>
@@ -248,7 +251,7 @@ export default function Home() {
                   borderRadius: 12, padding: "10px 14px",
                 }}>
                   <Camera size={14} color="#00ff88" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#00ff88" }}>Importar resultado do dia</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#00ff88" }}>{t("home.importDay")}</span>
                 </div>
               </Link>
             )}
@@ -267,14 +270,14 @@ export default function Home() {
           color: "rgba(255,255,255,0.22)", textTransform: "uppercase",
           marginBottom: 10,
         }}>
-          Indicadores
+          {t("home.indicators")}
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           {/* Corridas */}
           <MetricTile
             icon={<Car size={15} color="#60a5fa" />}
-            label="Corridas"
+            label={t("home.rides")}
             accent="#60a5fa"
             loading={isLoading}
             value={isLoading ? null : (
@@ -287,7 +290,7 @@ export default function Home() {
           {/* R$/hora */}
           <MetricTile
             icon={<Clock size={15} color="#c084fc" />}
-            label="R$/hora"
+            label={t("home.perHour")}
             accent="#c084fc"
             loading={isLoading}
             value={isLoading ? null : rph != null ? (
@@ -299,7 +302,7 @@ export default function Home() {
               </>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
-                Informe horas
+                {t("home.enterHours")}
               </span>
             )}
           />
@@ -307,7 +310,7 @@ export default function Home() {
           {/* R$/km */}
           <MetricTile
             icon={<Navigation size={15} color="#fb923c" />}
-            label="R$/km"
+            label={t("home.perKm")}
             accent="#fb923c"
             loading={isLoading}
             value={isLoading ? null : rpkm != null ? (
@@ -319,7 +322,7 @@ export default function Home() {
               </>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
-                Informe km
+                {t("home.enterKm")}
               </span>
             )}
           />
@@ -332,7 +335,7 @@ export default function Home() {
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
         <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
-          Análise do dia
+          {t("home.dailyAnalysis")}
         </p>
 
         {isLoading ? (
@@ -358,7 +361,7 @@ export default function Home() {
       {(isLoading || goalDaily > 0) && (
         <motion.div variants={item}>
           <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
-            Meta do dia
+            {t("home.dailyGoal")}
           </p>
 
           {isLoading ? (
@@ -384,14 +387,14 @@ export default function Home() {
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16, position: "relative" }}>
                 <div>
                   <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 4 }}>
-                    Ganhos hoje
+                    {t("home.earnedToday")}
                   </p>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
                     <span style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
                       {formatBRL(earnings)}
                     </span>
                     <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
-                      de {formatBRL(goalDaily)}
+                      {t("home.of")} {formatBRL(goalDaily)}
                     </span>
                   </div>
                 </div>
@@ -437,15 +440,15 @@ export default function Home() {
               {/* Footer */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
                 {goalPct >= 100 ? (
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#00ff88" }}>✓ Meta batida! Parabéns!</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#00ff88" }}>✓ {t("home.goalReached")}</p>
                 ) : (
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
-                    Faltam <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.55)", fontVariantNumeric: "tabular-nums" }}>{formatBRL(goalRemaining)}</span> para a meta
+                    {t("home.goalRemaining", { value: formatBRL(goalRemaining) })}
                   </p>
                 )}
                 <Link href="/goals">
                   <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontWeight: 600, cursor: "pointer" }}>
-                    Editar meta →
+                    {t("home.editGoal")}
                   </span>
                 </Link>
               </div>
@@ -467,8 +470,8 @@ export default function Home() {
                 <Zap size={17} color="#00ff88" />
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>Defina sua meta diária</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Acompanhe seu progresso em tempo real</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>{t("home.setGoal")}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{t("home.setGoalSub")}</p>
               </div>
               <ChevronRight size={16} color="rgba(255,255,255,0.25)" />
             </div>
@@ -489,8 +492,8 @@ export default function Home() {
                   <Lock size={18} color="#000" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", marginBottom: 2 }}>Ative o PRO ✦</p>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Relatórios, histórico e importação por screenshot</p>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", marginBottom: 2 }}>{t("home.activatePro")}</p>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{t("home.proSub")}</p>
                 </div>
                 <ChevronRight size={16} color="rgba(234,179,8,0.6)" />
               </div>
@@ -509,8 +512,8 @@ export default function Home() {
                 <Camera size={18} color="#000" />
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", marginBottom: 2 }}>Importar resultado do dia</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Tire um print e registre em 10 segundos</p>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", marginBottom: 2 }}>{t("home.importDay")}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{t("home.importDaySub")}</p>
               </div>
               <ChevronRight size={16} color="rgba(0,255,136,0.55)" />
             </div>
