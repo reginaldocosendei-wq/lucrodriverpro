@@ -4,95 +4,66 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
 import {
-  Camera, Upload, CheckCircle, ChevronLeft, Edit3, Lock,
-  Zap, Star, AlertCircle, X, Clock, MapPin, Navigation
+  Camera, Upload, CheckCircle, ChevronLeft, Lock,
+  AlertCircle, X, Clock, Navigation, Star, RotateCcw,
 } from "lucide-react";
 import { analyzeScreenshot, confirmImport, type ExtractedData } from "@/services/importService";
+import { formatBRL } from "@/lib/utils";
 
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const PLATFORMS = ["Uber", "99", "InDrive", "Outro"];
-
-type Step = "entry" | "instructions" | "upload" | "processing" | "result" | "confirm" | "success" | "locked";
 
 const PROCESSING_MESSAGES = [
   "Lendo seus ganhos...",
   "Identificando corridas...",
   "Buscando km e horas...",
-  "Verificando avaliação...",
   "Quase pronto...",
 ];
 
-const FEATURES = [
-  "✓ Importe resultados em 10 segundos",
-  "✓ Leitura inteligente de screenshots",
-  "✓ Extrai ganhos, km, horas e avaliação",
-  "✓ Suporte a Uber, 99 e InDrive",
-  "✓ Histórico completo de importações",
-  "✓ Relatórios de lucro real",
-];
+type Step = "locked" | "upload" | "processing" | "result" | "confirm" | "success";
 
-function platformColor(p: string | null) {
-  if (!p) return "#6b7280";
-  const lower = p.toLowerCase();
-  if (lower.includes("uber")) return "#00b4d8";
-  if (lower.includes("99")) return "#fbbf24";
-  if (lower.includes("indriver")) return "#22c55e";
+function platformColor(p: string) {
+  const l = p.toLowerCase();
+  if (l.includes("uber")) return "#1dbeff";
+  if (l.includes("99")) return "#fbbf24";
+  if (l.includes("indriver")) return "#22c55e";
   return "#a78bfa";
 }
 
-function inputStyle(focused?: boolean): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "12px 16px",
-    background: "#111",
-    border: `1px solid ${focused ? "rgba(0,255,136,0.5)" : "rgba(255,255,255,0.1)"}`,
-    borderRadius: 12,
-    color: "#f9fafb",
-    fontSize: 16,
-    outline: "none",
-    boxSizing: "border-box" as const,
-    transition: "border-color 0.2s",
-  };
-}
-
-function Field({
-  label,
-  icon,
-  value,
-  onChange,
-  placeholder,
-  type = "number",
-  optional,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  type?: string;
-  optional?: boolean;
-}) {
-  const [focused, setFocused] = useState(false);
+// ─── SCAN ANIMATION ───────────────────────────────────────────────────────────
+function ScanPreview({ src }: { src: string }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ color: "#9ca3af", fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-        {icon}
-        {label}
-        {optional && <span style={{ color: "#4b5563", fontSize: 11 }}>(opcional)</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={inputStyle(focused)}
-        placeholder={placeholder}
-        step="any"
+    <div style={{ position: "relative", borderRadius: 20, overflow: "hidden", border: "2px solid rgba(0,255,136,0.25)", boxShadow: "0 0 40px rgba(0,255,136,0.12)" }}>
+      <img src={src} alt="screenshot" style={{ width: "100%", display: "block", maxHeight: 320, objectFit: "cover" }} />
+
+      {/* dark overlay */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)" }} />
+
+      {/* scan line */}
+      <motion.div
+        animate={{ top: ["0%", "100%"] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: "absolute", left: 0, right: 0, height: 3,
+          background: "linear-gradient(90deg, transparent 0%, #00ff88 40%, #00ff88 60%, transparent 100%)",
+          boxShadow: "0 0 18px 4px rgba(0,255,136,0.55)",
+        }}
       />
+
+      {/* corner brackets */}
+      {[
+        { top: 12, left: 12, borderTop: "2px solid #00ff88", borderLeft: "2px solid #00ff88" },
+        { top: 12, right: 12, borderTop: "2px solid #00ff88", borderRight: "2px solid #00ff88" },
+        { bottom: 12, left: 12, borderBottom: "2px solid #00ff88", borderLeft: "2px solid #00ff88" },
+        { bottom: 12, right: 12, borderBottom: "2px solid #00ff88", borderRight: "2px solid #00ff88" },
+      ].map((s, i) => (
+        <div key={i} style={{ position: "absolute", width: 20, height: 20, borderRadius: 2, ...s }} />
+      ))}
     </div>
   );
 }
 
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ImportPage() {
   const [, navigate] = useLocation();
   const { data: me } = useGetMe();
@@ -100,49 +71,45 @@ export default function ImportPage() {
   const isPro = me?.plan === "pro";
 
   const [step, setStep] = useState<Step>("locked");
-
   useEffect(() => {
-    if (isPro && step === "locked") setStep("entry");
+    if (isPro && step === "locked") setStep("upload");
   }, [isPro, step]);
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [extracted, setExtracted] = useState<ExtractedData>({
-    earnings: null, trips: null, platform: null,
-    km: null, hours: null, rating: null,
-  });
-
-  const [editEarnings, setEditEarnings] = useState("");
-  const [editTrips, setEditTrips] = useState("");
-  const [editPlatform, setEditPlatform] = useState("Uber");
-  const [editKm, setEditKm] = useState("");
-  const [editHours, setEditHours] = useState("");
-  const [editRating, setEditRating] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
+  const [dragOver, setDragOver]       = useState(false);
+  const [error, setError]             = useState<string | null>(null);
   const [processingMsg, setProcessingMsg] = useState(0);
-  const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const msgIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Extracted + editable fields
+  const [editEarnings, setEditEarnings] = useState("");
+  const [editTrips, setEditTrips]       = useState("");
+  const [editPlatform, setEditPlatform] = useState("Uber");
+  const [editKm, setEditKm]             = useState("");
+  const [editHours, setEditHours]       = useState("");
+  const [editRating, setEditRating]     = useState("");
+  const [showExtras, setShowExtras]     = useState(false);
+
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const msgIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function applyExtracted(data: ExtractedData) {
-    setExtracted(data);
     setEditEarnings(data.earnings?.toFixed(2) ?? "");
     setEditTrips(data.trips?.toString() ?? "");
     setEditPlatform(data.platform || "Uber");
     setEditKm(data.km?.toFixed(1) ?? "");
     setEditHours(data.hours?.toFixed(1) ?? "");
     setEditRating(data.rating?.toFixed(1) ?? "");
+    setShowExtras(!!(data.km || data.hours || data.rating));
   }
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
-    if (!selectedFile.type.startsWith("image/")) {
+  const handleFileSelect = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
       setError("Por favor, envie uma imagem (JPG, PNG, WebP)");
       return;
     }
-    setPreviewUrl(URL.createObjectURL(selectedFile));
+    setPreviewUrl(URL.createObjectURL(file));
     setError(null);
     setStep("processing");
-
     setProcessingMsg(0);
     let idx = 0;
     msgIntervalRef.current = setInterval(() => {
@@ -150,7 +117,7 @@ export default function ImportPage() {
       setProcessingMsg(idx);
     }, 900);
 
-    analyzeScreenshot(selectedFile)
+    analyzeScreenshot(file)
       .then((data) => {
         if (msgIntervalRef.current) clearInterval(msgIntervalRef.current);
         applyExtracted(data);
@@ -175,7 +142,6 @@ export default function ImportPage() {
         hours: editHours ? parseFloat(editHours) : null,
         rating: editRating ? parseFloat(editRating) : null,
       });
-
       await queryClient.invalidateQueries({ queryKey: ["/api/daily-summaries"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       setStep("success");
@@ -185,387 +151,623 @@ export default function ImportPage() {
     }
   };
 
+  function reset() {
+    setPreviewUrl(null);
+    setEditEarnings(""); setEditTrips(""); setEditKm(""); setEditHours(""); setEditRating("");
+    setError(null);
+    setStep("upload");
+  }
+
+  // ── Shared slide animation ─────────────────────────────────────────────────
   const slide = {
-    initial: { opacity: 0, x: 30 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -30 },
-    transition: { duration: 0.25, ease: "easeOut" },
+    initial: { opacity: 0, y: 22 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -14 },
+    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#0a0a0a", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
+    <div style={{ minHeight: "100dvh", background: "#080808", display: "flex", flexDirection: "column" }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{
         padding: "16px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        position: "sticky",
-        top: 0,
-        background: "#0a0a0a",
-        zIndex: 10,
+        display: "flex", alignItems: "center", gap: 12,
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        background: "#080808", position: "sticky", top: 0, zIndex: 10,
       }}>
         <button
           onClick={() => navigate("/")}
-          style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", display: "flex", alignItems: "center" }}
+          style={{
+            width: 36, height: 36, borderRadius: 11, background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center",
+            justifyContent: "center", cursor: "pointer",
+          }}
         >
-          <ChevronLeft size={22} />
+          <ChevronLeft size={20} color="rgba(255,255,255,0.6)" />
         </button>
-        <span style={{ color: "#f9fafb", fontWeight: 600, fontSize: 17 }}>Importar resultados do dia</span>
+        <span style={{ color: "#f9fafb", fontWeight: 700, fontSize: 16 }}>Importar meu dia</span>
       </div>
 
+      {/* ── Content ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px 100px" }}>
         <AnimatePresence mode="wait">
           <motion.div key={step} {...slide}>
 
-          {/* ── LOCKED ─────────────────────────────────────────────────────── */}
-          {step === "locked" && <LockedView onUpgrade={() => navigate("/upgrade")} />}
+            {/* ══════════════════════════════════════════════════════════════
+                LOCKED
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "locked" && <LockedView onUpgrade={() => navigate("/upgrade")} />}
 
-          {/* ── ENTRY ──────────────────────────────────────────────────────── */}
-          {step === "entry" && <EntryView onStart={() => setStep("instructions")} />}
-
-          {/* ── INSTRUCTIONS ───────────────────────────────────────────────── */}
-          {step === "instructions" && <InstructionsView onUpload={() => setStep("upload")} />}
-
-          {/* ── UPLOAD ─────────────────────────────────────────────────────── */}
-          {step === "upload" && (
-            <div>
-              <h2 style={{ color: "#f9fafb", fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Enviar screenshot</h2>
-              <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 24 }}>
-                Selecione o resumo de ganhos do seu aplicativo. Nossa IA extrai ganhos, corridas, km, horas e avaliação automaticamente.
-              </p>
-
-              {error && (
-                <div style={{
-                  background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center",
-                  gap: 10, marginBottom: 16, color: "#f87171", fontSize: 14,
-                }}>
-                  <AlertCircle size={16} /> {error}
-                  <button onClick={() => setError(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: "#f87171", cursor: "pointer" }}>
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  const f = e.dataTransfer.files[0];
-                  if (f) handleFileSelect(f);
-                }}
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: `2px dashed ${dragOver ? "#00ff88" : "rgba(255,255,255,0.12)"}`,
-                  borderRadius: 20, padding: "48px 24px", textAlign: "center", cursor: "pointer",
-                  background: dragOver ? "rgba(0,255,136,0.04)" : "rgba(255,255,255,0.02)",
-                  transition: "all 0.2s",
-                }}
-              >
-                <div style={{
-                  width: 64, height: 64, borderRadius: "50%",
-                  background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 20px",
-                }}>
-                  <Upload size={28} color="#0a0a0a" />
-                </div>
-                <p style={{ color: "#f9fafb", fontWeight: 600, fontSize: 16, marginBottom: 6 }}>Toque para selecionar</p>
-                <p style={{ color: "#6b7280", fontSize: 13 }}>ou arraste sua screenshot aqui</p>
-                <p style={{ color: "#4b5563", fontSize: 12, marginTop: 12 }}>JPG, PNG, WebP • máx 10MB</p>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFileSelect(f);
-                }}
-              />
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  width: "100%", marginTop: 20, padding: "16px", borderRadius: 16, border: "none",
-                  background: "linear-gradient(135deg,#00ff88,#00cc6a)", color: "#0a0a0a",
-                  fontWeight: 700, fontSize: 16, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                }}
-              >
-                <Camera size={20} /> Enviar screenshot
-              </button>
-            </div>
-          )}
-
-          {/* ── PROCESSING ─────────────────────────────────────────────────── */}
-          {step === "processing" && (
-            <div style={{ textAlign: "center", paddingTop: 40 }}>
-              {previewUrl && (
-                <div style={{
-                  width: 160, height: 120, borderRadius: 16, overflow: "hidden",
-                  margin: "0 auto 32px", border: "2px solid rgba(0,255,136,0.2)",
-                }}>
-                  <img src={previewUrl} alt="screenshot" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-              )}
-              <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 24px" }}>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                  style={{
-                    width: 80, height: 80, borderRadius: "50%",
-                    border: "3px solid rgba(0,255,136,0.15)",
-                    borderTopColor: "#00ff88",
-                    position: "absolute",
-                  }}
-                />
-                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Zap size={24} color="#00ff88" />
-                </div>
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={processingMsg}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3 }}
-                  style={{ color: "#f9fafb", fontSize: 18, fontWeight: 600 }}
-                >
-                  {PROCESSING_MESSAGES[processingMsg]}
-                </motion.p>
-              </AnimatePresence>
-              <p style={{ color: "#6b7280", fontSize: 14, marginTop: 8 }}>Nossa IA está analisando sua screenshot</p>
-              <div style={{ marginTop: 32, display: "flex", gap: 6, justifyContent: "center" }}>
-                {PROCESSING_MESSAGES.map((_, i) => (
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 1 — UPLOAD
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "upload" && (
+              <div>
+                {/* Error banner */}
+                {error && (
                   <motion.div
-                    key={i}
-                    animate={{ opacity: i <= processingMsg ? 1 : 0.2, scale: i === processingMsg ? 1.2 : 1 }}
-                    style={{ width: 8, height: 8, borderRadius: "50%", background: i <= processingMsg ? "#00ff88" : "#374151" }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, marginBottom: 20,
+                      padding: "13px 16px", borderRadius: 14,
+                      background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                    }}
+                  >
+                    <AlertCircle size={15} color="#f87171" style={{ flexShrink: 0 }} />
+                    <p style={{ fontSize: 13, color: "#fca5a5", flex: 1, lineHeight: 1.5 }}>{error}</p>
+                    <button onClick={() => setError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", padding: 0 }}>
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                )}
 
-          {/* ── RESULT ─────────────────────────────────────────────────────── */}
-          {step === "result" && (
-            <div>
-              <div style={{
-                background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.2)",
-                borderRadius: 4, padding: "4px 10px", display: "inline-block", marginBottom: 16,
-              }}>
-                <span style={{ color: "#00ff88", fontSize: 12, fontWeight: 600 }}>✓ DADOS EXTRAÍDOS DA SCREENSHOT</span>
-              </div>
-              <h2 style={{ color: "#f9fafb", fontWeight: 700, fontSize: 22, marginBottom: 6 }}>Confira os dados</h2>
-              <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 24 }}>
-                Complete ou corrija os campos que a IA não conseguiu identificar.
-              </p>
+                {/* Hero upload zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); }}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    borderRadius: 28, padding: "52px 24px",
+                    textAlign: "center", cursor: "pointer",
+                    border: `2px dashed ${dragOver ? "#00ff88" : "rgba(255,255,255,0.09)"}`,
+                    background: dragOver ? "rgba(0,255,136,0.04)" : "rgba(255,255,255,0.015)",
+                    transition: "all 0.2s ease",
+                    position: "relative", overflow: "hidden",
+                  }}
+                >
+                  {/* Ambient glow */}
+                  <div style={{
+                    position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)",
+                    width: 300, height: 200, pointerEvents: "none",
+                    background: "radial-gradient(ellipse, rgba(0,255,136,0.09) 0%, transparent 70%)",
+                  }} />
 
-              {error && (
-                <div style={{
-                  background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 12, padding: "12px 16px", marginBottom: 16,
-                  color: "#f87171", fontSize: 14, display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <AlertCircle size={16} /> {error}
-                </div>
-              )}
-
-              {/* Platform selector */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ color: "#9ca3af", fontSize: 13, display: "block", marginBottom: 8 }}>Plataforma</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {PLATFORMS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setEditPlatform(p)}
+                  {/* Camera icon with pulse */}
+                  <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 24px" }}>
+                    <motion.div
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.25, 0.1, 0.25] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                       style={{
-                        padding: "8px 16px", borderRadius: 10, border: "1px solid",
-                        borderColor: editPlatform === p ? "#00ff88" : "rgba(255,255,255,0.1)",
-                        background: editPlatform === p ? "rgba(0,255,136,0.1)" : "transparent",
-                        color: editPlatform === p ? "#00ff88" : "#9ca3af",
-                        cursor: "pointer", fontSize: 14, fontWeight: 500,
+                        position: "absolute", inset: -10, borderRadius: "50%",
+                        background: "rgba(0,255,136,0.15)",
+                      }}
+                    />
+                    <div style={{
+                      width: 80, height: 80, borderRadius: "50%",
+                      background: "linear-gradient(135deg, #00ff88, #00cc6a)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 12px 36px rgba(0,255,136,0.3)",
+                      position: "relative",
+                    }}>
+                      <Camera size={34} color="#000" strokeWidth={1.8} />
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: 20, fontWeight: 800, color: "#f9fafb", marginBottom: 8, letterSpacing: "-0.01em" }}>
+                    Selecionar screenshot
+                  </p>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.5, maxWidth: 240, margin: "0 auto" }}>
+                    do Uber, 99 ou InDrive com o resumo do seu dia
+                  </p>
+
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 20 }}>
+                    JPG, PNG, WebP · toque ou arraste
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                />
+
+                {/* CTA button */}
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: "100%", height: 58, marginTop: 16, borderRadius: 18, border: "none",
+                    background: "#00ff88", color: "#000",
+                    fontWeight: 900, fontSize: 17, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    boxShadow: "0 10px 32px rgba(0,255,136,0.32)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <Upload size={20} strokeWidth={2.5} />
+                  Enviar screenshot
+                </motion.button>
+
+                {/* Tip */}
+                <div style={{
+                  marginTop: 20, borderRadius: 16,
+                  background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)",
+                  padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10,
+                }}>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                    Abra o Uber, 99 ou InDrive, vá até o <strong style={{ color: "rgba(255,255,255,0.5)" }}>resumo de ganhos do dia</strong> e tire uma captura de tela.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 2 — PROCESSING
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "processing" && (
+              <div style={{ paddingTop: 12 }}>
+                {/* Screenshot with scan animation */}
+                {previewUrl && (
+                  <div style={{ marginBottom: 32 }}>
+                    <ScanPreview src={previewUrl} />
+                  </div>
+                )}
+
+                {/* Spinner + message */}
+                <div style={{ textAlign: "center" }}>
+                  {/* Orbital spinner */}
+                  <div style={{ position: "relative", width: 64, height: 64, margin: "0 auto 24px" }}>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+                      style={{
+                        position: "absolute", inset: 0, borderRadius: "50%",
+                        border: "2.5px solid rgba(0,255,136,0.12)",
+                        borderTopColor: "#00ff88",
+                      }}
+                    />
+                    <motion.div
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      style={{
+                        position: "absolute", inset: 8, borderRadius: "50%",
+                        border: "2px solid rgba(0,255,136,0.07)",
+                        borderBottomColor: "rgba(0,255,136,0.5)",
+                      }}
+                    />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 20 }}>🔍</span>
+                    </div>
+                  </div>
+
+                  {/* Cycling message */}
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={processingMsg}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35 }}
+                      style={{ fontSize: 20, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.01em", marginBottom: 6 }}
+                    >
+                      {PROCESSING_MESSAGES[processingMsg]}
+                    </motion.p>
+                  </AnimatePresence>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 28 }}>
+                    Nossa IA está analisando sua screenshot
+                  </p>
+
+                  {/* Progress dots */}
+                  <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                    {PROCESSING_MESSAGES.map((_, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{
+                          opacity: i <= processingMsg ? 1 : 0.2,
+                          scale: i === processingMsg ? 1.25 : 1,
+                          background: i <= processingMsg ? "#00ff88" : "#374151",
+                        }}
+                        transition={{ duration: 0.3 }}
+                        style={{ width: 8, height: 8, borderRadius: "50%", background: "#374151" }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 3 — RESULT
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "result" && (
+              <div>
+                {/* Error banner */}
+                {error && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10, marginBottom: 16,
+                    padding: "13px 16px", borderRadius: 14,
+                    background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                  }}>
+                    <AlertCircle size={15} color="#f87171" />
+                    <p style={{ fontSize: 13, color: "#fca5a5", flex: 1 }}>{error}</p>
+                  </div>
+                )}
+
+                {/* Success chip */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22, gap: 8 }}
+                >
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.22)",
+                    borderRadius: 20, padding: "6px 14px",
+                  }}>
+                    <CheckCircle size={13} color="#00ff88" />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#00ff88", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      Leitura concluída
+                    </span>
+                  </div>
+                </motion.div>
+
+                {/* Platform selector */}
+                <div style={{ marginBottom: 18 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", marginBottom: 10 }}>
+                    Plataforma
+                  </p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {PLATFORMS.map((p) => {
+                      const active = editPlatform === p;
+                      const c = platformColor(p);
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setEditPlatform(p)}
+                          style={{
+                            flex: 1, padding: "9px 6px", borderRadius: 12, border: "1px solid",
+                            borderColor: active ? c : "rgba(255,255,255,0.08)",
+                            background: active ? `${c}15` : "rgba(255,255,255,0.02)",
+                            color: active ? c : "rgba(255,255,255,0.35)",
+                            cursor: "pointer", fontSize: 12, fontWeight: 700,
+                            transition: "all 0.18s ease", fontFamily: "inherit",
+                          }}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── RESULT CARD ──────────────────────────────────────── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  style={{
+                    background: "#0e0e0e",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 24, overflow: "hidden",
+                    marginBottom: 16, position: "relative",
+                  }}
+                >
+                  {/* Top glow */}
+                  <div style={{
+                    position: "absolute", top: -40, left: "50%", transform: "translateX(-50%)",
+                    width: 260, height: 120, pointerEvents: "none",
+                    background: "radial-gradient(ellipse, rgba(0,255,136,0.1) 0%, transparent 70%)",
+                  }} />
+
+                  {/* Screenshot thumbnail strip */}
+                  {previewUrl && (
+                    <div style={{ height: 72, overflow: "hidden", position: "relative" }}>
+                      <img src={previewUrl} alt="screenshot" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,14,14,0) 0%, #0e0e0e 100%)" }} />
+                    </div>
+                  )}
+
+                  <div style={{ padding: "20px 20px 24px", position: "relative", zIndex: 2 }}>
+                    {/* Two main stats side by side */}
+                    <div style={{ display: "flex", gap: 14, marginBottom: 20 }}>
+
+                      {/* Earnings */}
+                      <div style={{
+                        flex: 1, background: "rgba(0,255,136,0.05)",
+                        border: "1px solid rgba(0,255,136,0.15)",
+                        borderRadius: 18, padding: "18px 16px",
+                        position: "relative",
+                      }}>
+                        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", marginBottom: 6 }}>
+                          Ganhos
+                        </p>
+                        {editEarnings ? (
+                          <p style={{ fontSize: 30, fontWeight: 900, color: "#00ff88", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", textShadow: "0 0 24px rgba(0,255,136,0.4)" }}>
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(parseFloat(editEarnings))}
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>Não detectado</p>
+                        )}
+                        {/* Inline edit */}
+                        <input
+                          type="number"
+                          value={editEarnings}
+                          onChange={(e) => setEditEarnings(e.target.value)}
+                          step="0.01"
+                          placeholder="0.00"
+                          style={{
+                            marginTop: 10, width: "100%", padding: "7px 10px", borderRadius: 9,
+                            background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)",
+                            color: "rgba(255,255,255,0.6)", fontSize: 12, outline: "none",
+                            boxSizing: "border-box" as const, fontFamily: "inherit",
+                          }}
+                        />
+                      </div>
+
+                      {/* Trips */}
+                      <div style={{
+                        flex: 1, background: "rgba(96,165,250,0.05)",
+                        border: "1px solid rgba(96,165,250,0.15)",
+                        borderRadius: 18, padding: "18px 16px",
+                      }}>
+                        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", marginBottom: 6 }}>
+                          Corridas
+                        </p>
+                        {editTrips ? (
+                          <p style={{ fontSize: 30, fontWeight: 900, color: "#60a5fa", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em" }}>
+                            {editTrips}
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>Não detectado</p>
+                        )}
+                        <input
+                          type="number"
+                          value={editTrips}
+                          onChange={(e) => setEditTrips(e.target.value)}
+                          placeholder="0"
+                          style={{
+                            marginTop: 10, width: "100%", padding: "7px 10px", borderRadius: 9,
+                            background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)",
+                            color: "rgba(255,255,255,0.6)", fontSize: 12, outline: "none",
+                            boxSizing: "border-box" as const, fontFamily: "inherit",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* R$/corrida derived stat */}
+                    {editEarnings && editTrips && parseFloat(editTrips) > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "10px 14px",
+                          border: "1px solid rgba(255,255,255,0.06)", marginBottom: 16,
+                        }}
+                      >
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Média por corrida</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>
+                          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(parseFloat(editEarnings) / parseFloat(editTrips))}
+                        </span>
+                      </motion.div>
+                    )}
+
+                    {/* Optional fields toggle */}
+                    <button
+                      onClick={() => setShowExtras((v) => !v)}
+                      style={{
+                        width: "100%", padding: "10px 0", background: "transparent", border: "none",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                        gap: 6, color: "rgba(255,255,255,0.3)", fontSize: 12, fontWeight: 600,
+                        fontFamily: "inherit",
                       }}
                     >
-                      {p}
+                      <span>{showExtras ? "▲" : "▼"}</span>
+                      {showExtras ? "Ocultar" : "Editar"} km · horas · avaliação
                     </button>
-                  ))}
+
+                    <AnimatePresence>
+                      {showExtras && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <div style={{ paddingTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+                            {[
+                              { label: "Km rodados", icon: <Navigation size={13} />, value: editKm, set: setEditKm, placeholder: "0.0" },
+                              { label: "Horas trabalhadas", icon: <Clock size={13} />, value: editHours, set: setEditHours, placeholder: "0.0" },
+                              { label: "Avaliação (0–5)", icon: <Star size={13} color="#eab308" />, value: editRating, set: setEditRating, placeholder: "0.0" },
+                            ].map(({ label, icon, value, set, placeholder }) => (
+                              <div key={label}>
+                                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600, marginBottom: 6 }}>
+                                  {icon}{label} <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)" }}>opcional</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  value={value}
+                                  onChange={(e) => set(e.target.value)}
+                                  placeholder={placeholder}
+                                  step="0.1"
+                                  style={{
+                                    width: "100%", padding: "10px 14px", borderRadius: 11,
+                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)",
+                                    color: "#f9fafb", fontSize: 14, outline: "none",
+                                    boxSizing: "border-box" as const, fontFamily: "inherit",
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+
+                {/* Action buttons */}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={reset}
+                    style={{
+                      width: 52, height: 52, borderRadius: 16, border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(255,255,255,0.03)", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <RotateCcw size={18} color="rgba(255,255,255,0.4)" />
+                  </button>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleConfirm}
+                    disabled={!editEarnings || !editTrips}
+                    style={{
+                      flex: 1, height: 52, borderRadius: 16, border: "none",
+                      background: (!editEarnings || !editTrips) ? "rgba(255,255,255,0.06)" : "#00ff88",
+                      color: (!editEarnings || !editTrips) ? "rgba(255,255,255,0.3)" : "#000",
+                      fontWeight: 900, fontSize: 16, cursor: (!editEarnings || !editTrips) ? "not-allowed" : "pointer",
+                      boxShadow: (!editEarnings || !editTrips) ? "none" : "0 8px 28px rgba(0,255,136,0.3)",
+                      transition: "all 0.2s ease",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Confirmar
+                  </motion.button>
                 </div>
+
+                {(!editEarnings || !editTrips) && (
+                  <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 10 }}>
+                    Preencha ganhos e corridas para confirmar
+                  </p>
+                )}
               </div>
+            )}
 
-              {/* Fields */}
-              <div style={{ background: "#1a1a1a", borderRadius: 20, padding: 20, border: "1px solid rgba(255,255,255,0.06)", marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <p style={{ color: "#f9fafb", fontWeight: 600, fontSize: 15 }}>Dados do dia</p>
-                  <div style={{
-                    background: platformColor(editPlatform),
-                    borderRadius: 6, padding: "3px 10px",
-                    color: "#fff", fontSize: 12, fontWeight: 600,
-                  }}>{editPlatform}</div>
-                </div>
-
-                <Field
-                  label="Ganhos totais (R$)"
-                  icon={<span style={{ fontSize: 14 }}>💰</span>}
-                  value={editEarnings}
-                  onChange={setEditEarnings}
-                  placeholder="0,00"
-                />
-                <Field
-                  label="Número de corridas"
-                  icon={<span style={{ fontSize: 14 }}>🚗</span>}
-                  value={editTrips}
-                  onChange={setEditTrips}
-                  placeholder="0"
-                />
-                <Field
-                  label="Km rodados"
-                  icon={<Navigation size={14} color="#9ca3af" />}
-                  value={editKm}
-                  onChange={setEditKm}
-                  placeholder="0.0"
-                  optional
-                />
-                <Field
-                  label="Horas trabalhadas"
-                  icon={<Clock size={14} color="#9ca3af" />}
-                  value={editHours}
-                  onChange={setEditHours}
-                  placeholder="0.0"
-                  optional
-                />
-                <div style={{ marginBottom: 0 }}>
-                  <label style={{ color: "#9ca3af", fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                    <Star size={14} color="#eab308" />
-                    Avaliação média
-                    <span style={{ color: "#4b5563", fontSize: 11 }}>(opcional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={editRating}
-                    onChange={(e) => setEditRating(e.target.value)}
-                    style={inputStyle()}
-                    placeholder="0.0 a 5.0"
-                    step="0.1"
-                    min="0"
-                    max="5"
+            {/* ══════════════════════════════════════════════════════════════
+                CONFIRM (saving)
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "confirm" && (
+              <div style={{ textAlign: "center", paddingTop: 60, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+                <div style={{ position: "relative", width: 64, height: 64 }}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+                    style={{
+                      position: "absolute", inset: 0, borderRadius: "50%",
+                      border: "3px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88",
+                    }}
                   />
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 22 }}>💾</span>
+                  </div>
+                </div>
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", marginBottom: 4 }}>Salvando resumo...</p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Aguarde um momento</p>
                 </div>
               </div>
+            )}
 
-              {previewUrl && (
-                <div style={{ marginBottom: 20, borderRadius: 12, overflow: "hidden", maxHeight: 100, border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <img src={previewUrl} alt="screenshot" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  onClick={() => { setStep("upload"); setError(null); }}
-                  style={{
-                    flex: 1, padding: "14px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)",
-                    background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 15, cursor: "pointer",
-                  }}
-                >
-                  Refazer
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!editEarnings || !editTrips}
-                  style={{
-                    flex: 2, padding: "14px", borderRadius: 14, border: "none",
-                    background: (!editEarnings || !editTrips) ? "#374151" : "linear-gradient(135deg,#00ff88,#00cc6a)",
-                    color: (!editEarnings || !editTrips) ? "#6b7280" : "#0a0a0a",
-                    fontWeight: 700, fontSize: 15, cursor: (!editEarnings || !editTrips) ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Salvar resumo do dia
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── CONFIRM (saving) ─────────────────────────────────────────────── */}
-          {step === "confirm" && (
-            <div style={{ textAlign: "center", paddingTop: 60 }}>
+            {/* ══════════════════════════════════════════════════════════════
+                SUCCESS
+            ══════════════════════════════════════════════════════════════ */}
+            {step === "success" && (
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                style={{
-                  width: 64, height: 64, borderRadius: "50%",
-                  border: "3px solid rgba(0,255,136,0.15)",
-                  borderTopColor: "#00ff88",
-                  margin: "0 auto 24px",
-                }}
-              />
-              <p style={{ color: "#f9fafb", fontSize: 18, fontWeight: 600 }}>Salvando resumo do dia...</p>
-            </div>
-          )}
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                style={{ textAlign: "center", paddingTop: 32 }}
+              >
+                {/* Success icon */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: "spring", damping: 12, stiffness: 200 }}
+                  style={{
+                    width: 88, height: 88, borderRadius: "50%",
+                    background: "linear-gradient(135deg, #00ff88, #00cc6a)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 28px",
+                    boxShadow: "0 0 60px rgba(0,255,136,0.4)",
+                  }}
+                >
+                  <CheckCircle size={44} color="#000" strokeWidth={2} />
+                </motion.div>
 
-          {/* ── SUCCESS ─────────────────────────────────────────────────────── */}
-          {step === "success" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              style={{ textAlign: "center", paddingTop: 40 }}
-            >
-              <div style={{
-                width: 80, height: 80, borderRadius: "50%",
-                background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 24px",
-                boxShadow: "0 0 40px rgba(0,255,136,0.4)",
-              }}>
-                <CheckCircle size={40} color="#0a0a0a" />
-              </div>
-              <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 24, marginBottom: 8 }}>Resumo salvo!</h2>
-              <p style={{ color: "#9ca3af", fontSize: 15, marginBottom: 12 }}>
-                Seus dados do dia foram importados com sucesso.
-              </p>
-              {editKm && (
-                <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 4 }}>
-                  📍 {parseFloat(editKm).toFixed(1)} km rodados
+                <p style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", marginBottom: 8, letterSpacing: "-0.02em" }}>
+                  Resumo salvo!
                 </p>
-              )}
-              {editHours && (
-                <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 4 }}>
-                  ⏱ {parseFloat(editHours).toFixed(1)} horas trabalhadas
+                <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginBottom: 32, lineHeight: 1.55 }}>
+                  Seus dados do dia foram importados com sucesso.
                 </p>
-              )}
-              {editRating && (
-                <p style={{ color: "#eab308", fontSize: 13, marginBottom: 4 }}>
-                  ⭐ Avaliação: {parseFloat(editRating).toFixed(1)}
-                </p>
-              )}
-              <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
-                <button
-                  onClick={() => { setStep("entry"); setPreviewUrl(null); setEditEarnings(""); setEditTrips(""); setEditKm(""); setEditHours(""); setEditRating(""); }}
-                  style={{
-                    flex: 1, padding: "14px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)",
-                    background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 15, cursor: "pointer",
-                  }}
-                >
-                  Importar outro
-                </button>
-                <button
-                  onClick={() => navigate("/")}
-                  style={{
-                    flex: 2, padding: "14px", borderRadius: 14, border: "none",
-                    background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-                    color: "#0a0a0a", fontWeight: 700, fontSize: 15, cursor: "pointer",
-                  }}
-                >
-                  Ver painel
-                </button>
-              </div>
-            </motion.div>
-          )}
+
+                {/* Mini recap */}
+                <div style={{
+                  background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 20, padding: "18px 20px", marginBottom: 28,
+                  display: "flex", justifyContent: "center", gap: 32,
+                }}>
+                  <div>
+                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>Ganhos</p>
+                    <p style={{ fontSize: 22, fontWeight: 900, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>
+                      {editEarnings ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(parseFloat(editEarnings)) : "—"}
+                    </p>
+                  </div>
+                  <div style={{ width: 1, background: "rgba(255,255,255,0.07)" }} />
+                  <div>
+                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>Corridas</p>
+                    <p style={{ fontSize: 22, fontWeight: 900, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>
+                      {editTrips || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={reset}
+                    style={{
+                      flex: 1, height: 52, borderRadius: 16, border: "1px solid rgba(255,255,255,0.09)",
+                      background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.55)",
+                      fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+                    }}
+                  >
+                    Importar outro
+                  </button>
+                  <button
+                    onClick={() => navigate("/")}
+                    style={{
+                      flex: 2, height: 52, borderRadius: 16, border: "none",
+                      background: "#00ff88", color: "#000",
+                      fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "inherit",
+                      boxShadow: "0 8px 24px rgba(0,255,136,0.28)",
+                    }}
+                  >
+                    Ver painel
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
           </motion.div>
         </AnimatePresence>
@@ -574,138 +776,62 @@ export default function ImportPage() {
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ─── LOCKED VIEW ──────────────────────────────────────────────────────────────
+const FEATURES = [
+  "Importe resultados em 10 segundos",
+  "IA extrai ganhos, km, horas e avaliação",
+  "Suporte a Uber, 99 e InDrive",
+  "Histórico completo de importações",
+];
 
 function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
   return (
-    <div style={{ textAlign: "center", paddingTop: 20 }}>
+    <div style={{ textAlign: "center", paddingTop: 16 }}>
       <div style={{
-        width: 80, height: 80, borderRadius: "50%",
-        background: "rgba(234,179,8,0.1)", border: "2px solid rgba(234,179,8,0.3)",
+        width: 72, height: 72, borderRadius: 22,
+        background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        margin: "0 auto 24px",
+        margin: "0 auto 24px", boxShadow: "0 0 32px rgba(234,179,8,0.12)",
       }}>
-        <Lock size={32} color="#eab308" />
+        <Lock size={30} color="#eab308" />
       </div>
-      <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 24, marginBottom: 8 }}>Recurso PRO</h2>
-      <p style={{ color: "#9ca3af", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
-        Importe seus resultados por screenshot e calcule automaticamente R$/km, R$/hora e sua avaliação.
+
+      <p style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", marginBottom: 8, letterSpacing: "-0.01em" }}>
+        Recurso PRO
       </p>
-      <div style={{ background: "#1a1a1a", borderRadius: 20, padding: 24, marginBottom: 32, textAlign: "left" }}>
-        {FEATURES.map((f) => (
-          <div key={f} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#eab308", flexShrink: 0 }} />
-            <p style={{ color: "#d1d5db", fontSize: 14 }}>{f}</p>
+      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, marginBottom: 28, maxWidth: 280, margin: "0 auto 28px" }}>
+        Importe screenshots do Uber, 99 e InDrive. Nossa IA extrai todos os dados automaticamente.
+      </p>
+
+      <div style={{
+        background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 20, padding: "20px 20px", marginBottom: 24, textAlign: "left",
+      }}>
+        {FEATURES.map((f, i) => (
+          <div key={f} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < FEATURES.length - 1 ? 14 : 0 }}>
+            <div style={{ width: 22, height: 22, borderRadius: 7, background: "rgba(234,179,8,0.12)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 11 }}>✓</span>
+            </div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>{f}</p>
           </div>
         ))}
       </div>
+
       <button
         onClick={onUpgrade}
         style={{
-          width: "100%", padding: "16px", borderRadius: 16, border: "none",
-          background: "linear-gradient(135deg,#eab308,#ca8a04)",
-          color: "#0a0a0a", fontWeight: 700, fontSize: 16, cursor: "pointer",
+          width: "100%", height: 56, borderRadius: 18, border: "none",
+          background: "linear-gradient(135deg, #eab308, #ca8a04)",
+          color: "#000", fontWeight: 900, fontSize: 16, cursor: "pointer",
+          boxShadow: "0 10px 32px rgba(234,179,8,0.28)", fontFamily: "inherit",
         }}
       >
         ✦ Fazer upgrade para PRO
       </button>
-    </div>
-  );
-}
 
-function EntryView({ onStart }: { onStart: () => void }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{
-        width: 80, height: 80, borderRadius: "50%",
-        background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        margin: "0 auto 24px",
-        boxShadow: "0 0 40px rgba(0,255,136,0.3)",
-      }}>
-        <Camera size={36} color="#0a0a0a" />
-      </div>
-      <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 26, marginBottom: 8 }}>Importar resultado do dia</h2>
-      <p style={{ color: "#9ca3af", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
-        Tire uma screenshot do seu app (Uber, 99 ou InDrive) e nossa IA extrai ganhos, km, horas e avaliação automaticamente.
+      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 14 }}>
+        7 dias grátis · Cancele quando quiser
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 32 }}>
-        {[
-          { icon: "💰", label: "Ganhos" },
-          { icon: "🗺️", label: "Km" },
-          { icon: "⏱", label: "Horas" },
-          { icon: "🚗", label: "Corridas" },
-          { icon: "⭐", label: "Avaliação" },
-          { icon: "📊", label: "Métricas" },
-        ].map((item) => (
-          <div key={item.label} style={{
-            background: "#1a1a1a", borderRadius: 14, padding: "16px 12px",
-            border: "1px solid rgba(255,255,255,0.05)", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{item.icon}</div>
-            <p style={{ color: "#9ca3af", fontSize: 12, fontWeight: 500 }}>{item.label}</p>
-          </div>
-        ))}
-      </div>
-      <button
-        onClick={onStart}
-        style={{
-          width: "100%", padding: "16px", borderRadius: 16, border: "none",
-          background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-          color: "#0a0a0a", fontWeight: 700, fontSize: 16, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        }}
-      >
-        <Camera size={20} /> Começar importação
-      </button>
-    </div>
-  );
-}
-
-function InstructionsView({ onUpload }: { onUpload: () => void }) {
-  const steps = [
-    { n: "1", title: "Abra seu app", desc: "Uber, 99, InDrive — vá até a tela de resumo de ganhos do dia." },
-    { n: "2", title: "Tire o print", desc: "Capture a tela com total de ganhos, corridas, km e horas rodados." },
-    { n: "3", title: "Envie aqui", desc: "Nossa IA lê todos os dados automaticamente. O que faltar você preenche." },
-  ];
-  return (
-    <div>
-      <h2 style={{ color: "#f9fafb", fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Como funciona</h2>
-      <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 28 }}>3 passos simples para importar seu dia.</p>
-      {steps.map((s) => (
-        <div key={s.n} style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#0a0a0a", fontWeight: 800, fontSize: 16,
-          }}>{s.n}</div>
-          <div>
-            <p style={{ color: "#f9fafb", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{s.title}</p>
-            <p style={{ color: "#9ca3af", fontSize: 14, lineHeight: 1.5 }}>{s.desc}</p>
-          </div>
-        </div>
-      ))}
-      <div style={{
-        background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.15)",
-        borderRadius: 16, padding: 16, marginBottom: 28,
-      }}>
-        <p style={{ color: "#00ff88", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💡 Dica</p>
-        <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
-          Prints com mais informações visíveis (km, horas, avaliação) geram métricas mais completas. Mas ganhos e corridas são o mínimo necessário.
-        </p>
-      </div>
-      <button
-        onClick={onUpload}
-        style={{
-          width: "100%", padding: "16px", borderRadius: 16, border: "none",
-          background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-          color: "#0a0a0a", fontWeight: 700, fontSize: 16, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        }}
-      >
-        <Upload size={20} /> Selecionar screenshot
-      </button>
     </div>
   );
 }
