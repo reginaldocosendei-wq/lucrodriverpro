@@ -3,80 +3,142 @@ import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { formatBRL } from "@/lib/utils";
 import { Card } from "@/components/ui";
 import {
-  TrendingUp, Car, MapPin, AlertCircle, Target, Award,
-  Zap, Lock, Plus, ChevronRight, Camera, Clock, Navigation, Star
+  TrendingUp, Car, AlertCircle, Target, Award,
+  Zap, Lock, Plus, ChevronRight, Camera, Clock, Navigation, Star,
+  TrendingDown, Gauge,
 } from "lucide-react";
-import { InsightsPanel } from "@/components/InsightsPanel";
-import { motion, animate } from "framer-motion";
+import { motion, animate, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
-// Animated number counter
-function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
+// ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
+function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
   const [display, setDisplay] = useState(0);
   const prevRef = useRef(0);
 
   useEffect(() => {
     const from = prevRef.current;
     prevRef.current = value;
-    const controls = animate(from, value, {
-      duration: 1.2,
+    const ctrl = animate(from, value, {
+      duration: 1.4,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => setDisplay(v),
     });
-    return () => controls.stop();
+    return () => ctrl.stop();
   }, [value]);
 
-  const formatted = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-  }).format(display);
-
-  return <span>{prefix}{suffix ? `${formatted}${suffix}` : formatted}</span>;
+  return (
+    <>
+      {new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(display)}
+    </>
+  );
 }
 
-// Circular progress ring
-function RingProgress({ pct, color, size = 96, stroke = 8 }: { pct: number; color: string; size?: number; stroke?: number }) {
+// ─── RING PROGRESS ───────────────────────────────────────────────────────────
+function Ring({ pct, color, size = 84, stroke = 7 }: { pct: number; color: string; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (Math.min(100, pct) / 100) * circ;
 
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
       <motion.circle
         cx={size / 2} cy={size / 2} r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={stroke}
-        strokeLinecap="round"
+        fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={circ}
         initial={{ strokeDashoffset: circ }}
         animate={{ strokeDashoffset: offset }}
-        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
       />
     </svg>
   );
 }
 
-// Fake weekly chart data for FREE blurred version
-const fakeWeekData = [
-  { day: "Seg", v: 180 }, { day: "Ter", v: 240 }, { day: "Qua", v: 160 },
-  { day: "Qui", v: 310 }, { day: "Sex", v: 280 }, { day: "Sáb", v: 390 }, { day: "Dom", v: 210 },
-];
+// ─── METRIC CARD ─────────────────────────────────────────────────────────────
+function MetricCard({
+  label, value, sub, accent, icon: Icon, loading,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  accent: string;
+  icon: React.ElementType;
+  loading?: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderLeft: `3px solid ${accent}`,
+        borderRadius: 18,
+        padding: "18px 16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        minHeight: 100,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: `${accent}18`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Icon size={14} color={accent} />
+        </div>
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+          textTransform: "uppercase" as const, color: "rgba(255,255,255,0.35)",
+        }}>
+          {label}
+        </span>
+      </div>
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-const item = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.5 } },
-};
+      <div>
+        {loading ? (
+          <div style={{ height: 28, width: 80, borderRadius: 6, background: "rgba(255,255,255,0.06)" }} />
+        ) : (
+          <p style={{ fontSize: 22, fontWeight: 800, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+            {value}
+          </p>
+        )}
+        {sub && (
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4, fontWeight: 500 }}>{sub}</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
+// ─── PROGRESS BAR ────────────────────────────────────────────────────────────
+function ProgressBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  return (
+    <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
+      <motion.div
+        style={{ height: "100%", borderRadius: 999, background: color, boxShadow: `0 0 10px ${color}60` }}
+        initial={{ width: 0 }}
+        animate={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+        transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1], delay }}
+      />
+    </div>
+  );
+}
+
+// ─── PLATFORM META ───────────────────────────────────────────────────────────
 const platformMeta: Record<string, { label: string; pronoun: string }> = {
   uber: { label: "Uber", pronoun: "nele" },
   "99": { label: "99", pronoun: "nela" },
@@ -84,141 +146,99 @@ const platformMeta: Record<string, { label: string; pronoun: string }> = {
   outro: { label: "Outro", pronoun: "nele" },
 };
 
-// ─── DAILY ANALYSIS CARD ───────────────────────────────────────────────────
-function DailyAnalysisCard({ summary }: { summary: any }) {
-  if (!summary) return null;
+// ─── DAILY ANALYSIS ───────────────────────────────────────────────────────────
+function DailyAnalysis({ summary }: { summary: any }) {
+  if (!summary?.earningsToday || summary.earningsToday <= 0) return null;
 
-  const {
-    earningsToday, costsToday, realProfitToday,
-    ridesCountToday, earningsPerRideToday, avgPerRide,
-  } = summary;
+  const { earningsToday, costsToday, realProfitToday, ridesCountToday, avgPerRide } = summary;
+  const earningsPerRideToday = summary.earningsPerTripToday;
+  const marginPct = earningsToday > 0 ? (realProfitToday / earningsToday) * 100 : 0;
+  const costRatioPct = earningsToday > 0 ? (costsToday / earningsToday) * 100 : 0;
 
-  if (!earningsToday || earningsToday <= 0) return null;
-
-  const profitMarginPct = earningsToday > 0 ? (realProfitToday / earningsToday) * 100 : 0;
-  const costRatioPct    = earningsToday > 0 ? (costsToday / earningsToday) * 100 : 0;
-
-  type Status = "great" | "good" | "weak" | "negative";
-  let status: Status;
-  if (realProfitToday <= 0)         status = "negative";
-  else if (profitMarginPct >= 50)   status = "great";
-  else if (profitMarginPct >= 25)   status = "good";
-  else                              status = "weak";
+  type S = "great" | "good" | "weak" | "negative";
+  const status: S =
+    realProfitToday <= 0 ? "negative"
+    : marginPct >= 50 ? "great"
+    : marginPct >= 25 ? "good"
+    : "weak";
 
   const cfg = {
-    great: {
-      label: "Ótimo dia! 🔥",
-      color: "#00ff88",
-      bg: "from-emerald-500/15",
-      border: "border-emerald-500/30",
-      message: "Excelente performance! Você manteve uma ótima margem de lucro hoje.",
-      suggestions: [
-        "Replique a estratégia de hoje amanhã",
-        "Seus custos estão controlados — continue assim",
-        "Registre o que funcionou para repetir",
-      ],
-    },
-    good: {
-      label: "Bom dia 👍",
-      color: "#4ade80",
-      bg: "from-green-500/10",
-      border: "border-green-500/20",
-      message: "Dia consistente. Você lucrou de forma sólida com os ganhos de hoje.",
-      suggestions: [
-        "Trabalhe nos horários de pico para aumentar ainda mais",
-        "Prefira corridas mais longas quando possível",
-        "Analise quais horas renderam mais hoje",
-      ],
-    },
-    weak: {
-      label: "Dia fraco ⚠️",
-      color: "#eab308",
-      bg: "from-yellow-500/10",
-      border: "border-yellow-500/20",
-      message: "Você trabalhou, mas o lucro foi baixo. Vale rever seus custos e horários.",
-      suggestions: [
-        "Foque nos horários de maior demanda",
-        "Evite corridas curtas de baixo valor",
-        "Controle os gastos com combustível",
-      ],
-    },
-    negative: {
-      label: "Dia no prejuízo ❌",
-      color: "#ef4444",
-      bg: "from-red-500/10",
-      border: "border-red-500/20",
-      message: "Você trabalhou mas não lucrou hoje. Seus custos superaram os ganhos.",
-      suggestions: [
-        "Reduza seus custos fixos com urgência",
-        "Evite trabalhar em horários de baixa demanda",
-        "Priorize regiões e horários com mais corridas",
-      ],
-    },
+    great:    { label: "Ótimo dia 🔥", color: "#00ff88", border: "rgba(0,255,136,0.2)",    bg: "rgba(0,255,136,0.05)",    message: "Margem excelente. Você está maximizando cada real ganho.", suggestions: ["Replique a estratégia de hoje", "Custos sob controle — continue assim"] },
+    good:     { label: "Bom dia 👍",   color: "#4ade80", border: "rgba(74,222,128,0.2)",   bg: "rgba(74,222,128,0.04)",   message: "Dia sólido. Você lucrou de forma consistente.", suggestions: ["Trabalhe nos horários de pico", "Prefira corridas mais longas"] },
+    weak:     { label: "Dia fraco ⚠️", color: "#eab308", border: "rgba(234,179,8,0.25)",  bg: "rgba(234,179,8,0.05)",    message: "Lucro baixo. Vale rever custos e horários.", suggestions: ["Foque nos horários de alta demanda", "Controle gastos com combustível"] },
+    negative: { label: "Prejuízo ❌",  color: "#ef4444", border: "rgba(239,68,68,0.25)",  bg: "rgba(239,68,68,0.05)",    message: "Custos superaram os ganhos hoje.", suggestions: ["Reduza custos fixos com urgência", "Evite horários de baixa demanda"] },
   }[status];
 
-  const insights: string[] = [];
+  const secondary: string[] = [];
   if (costRatioPct > 40 && costsToday > 0)
-    insights.push(`Custos representaram ${Math.round(costRatioPct)}% dos seus ganhos hoje — acima do ideal de 40%.`);
-  if (avgPerRide > 0 && earningsPerRideToday > 0 && earningsPerRideToday < avgPerRide * 0.8)
-    insights.push(`Corridas renderam ${formatBRL(earningsPerRideToday)} cada — abaixo da sua média de ${formatBRL(avgPerRide)}.`);
+    secondary.push(`Custos representaram ${Math.round(costRatioPct)}% dos ganhos — acima de 40%.`);
+  if (avgPerRide > 0 && earningsPerRideToday && earningsPerRideToday < avgPerRide * 0.8)
+    secondary.push(`Corridas renderam ${formatBRL(earningsPerRideToday)} cada — abaixo da média de ${formatBRL(avgPerRide)}.`);
   if (ridesCountToday > 0 && realProfitToday > 0)
-    insights.push(`Lucro médio por corrida hoje: ${formatBRL(realProfitToday / ridesCountToday)}.`);
+    secondary.push(`Lucro médio por corrida: ${formatBRL(realProfitToday / ridesCountToday)}.`);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`rounded-3xl border ${cfg.border} bg-gradient-to-br ${cfg.bg} to-transparent p-5 space-y-4`}
+      transition={{ duration: 0.45 }}
+      style={{
+        background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        borderRadius: 22,
+        padding: 20,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
     >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-3">
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-1">Análise do dia</p>
-          <p className="text-xl font-display font-extrabold text-white">{cfg.label}</p>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 4 }}>
+            Análise do dia
+          </p>
+          <p style={{ fontSize: 20, fontWeight: 800, color: "#f9fafb" }}>{cfg.label}</p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-[10px] text-white/40 font-medium mb-1">Lucro hoje</p>
-          <p className="text-2xl font-display font-extrabold tabular-nums" style={{ color: cfg.color }}>
+        <div style={{ textAlign: "right" }}>
+          <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 2 }}>LUCRO HOJE</p>
+          <p style={{ fontSize: 26, fontWeight: 800, color: cfg.color, fontVariantNumeric: "tabular-nums" }}>
             {formatBRL(realProfitToday)}
           </p>
         </div>
       </div>
 
-      {/* Profit margin bar */}
+      {/* Margin bar */}
       <div>
-        <div className="flex justify-between text-[10px] text-white/40 font-bold mb-1.5">
-          <span>Ganhos: {formatBRL(earningsToday)}</span>
-          <span>Custos: {formatBRL(costsToday)}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, marginBottom: 6 }}>
+          <span>Ganhos {formatBRL(earningsToday)}</span>
+          <span>Custos {formatBRL(costsToday)}</span>
         </div>
-        <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+        <div style={{ height: 8, background: "rgba(0,0,0,0.5)", borderRadius: 999, overflow: "hidden" }}>
           <motion.div
-            className="h-full rounded-full"
-            style={{ background: cfg.color, boxShadow: `0 0 10px ${cfg.color}50` }}
+            style={{ height: "100%", background: cfg.color, boxShadow: `0 0 12px ${cfg.color}60`, borderRadius: 999 }}
             initial={{ width: 0 }}
-            animate={{ width: `${Math.max(2, Math.min(100, Math.abs(profitMarginPct)))}%` }}
-            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+            animate={{ width: `${Math.max(2, Math.min(100, Math.abs(marginPct)))}%` }}
+            transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
           />
         </div>
-        <p className="text-[10px] text-white/30 mt-1 font-medium">
-          {realProfitToday > 0
-            ? `${Math.round(profitMarginPct)}% de margem de lucro`
-            : "Margem negativa — gastos acima dos ganhos"}
+        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 5, fontWeight: 500 }}>
+          {realProfitToday > 0 ? `${Math.round(marginPct)}% de margem de lucro` : "Margem negativa"}
         </p>
       </div>
 
-      {/* Main message */}
-      <div className="rounded-2xl bg-black/20 px-4 py-3">
-        <p className="text-sm text-white/70 leading-relaxed">{cfg.message}</p>
+      {/* Message */}
+      <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: "12px 14px" }}>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{cfg.message}</p>
       </div>
 
       {/* Secondary insights */}
-      {insights.length > 0 && (
-        <div className="space-y-2">
-          {insights.map((insight) => (
-            <div key={insight} className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: cfg.color }} />
-              <p className="text-xs text-white/50 leading-relaxed">{insight}</p>
+      {secondary.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {secondary.map((s) => (
+            <div key={s} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: cfg.color, marginTop: 5, flexShrink: 0 }} />
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{s}</p>
             </div>
           ))}
         </div>
@@ -226,12 +246,14 @@ function DailyAnalysisCard({ summary }: { summary: any }) {
 
       {/* Suggestions */}
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/30 mb-2.5">💡 Como melhorar</p>
-        <div className="space-y-2">
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+          💡 Como melhorar
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {cfg.suggestions.map((s, i) => (
-            <div key={s} className="flex items-start gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2.5">
-              <span className="text-xs font-extrabold shrink-0" style={{ color: cfg.color }}>{i + 1}.</span>
-              <p className="text-xs text-white/60 leading-relaxed">{s}</p>
+            <div key={s} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "10px 12px" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, flexShrink: 0 }}>{i + 1}.</span>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>{s}</p>
             </div>
           ))}
         </div>
@@ -240,16 +262,37 @@ function DailyAnalysisCard({ summary }: { summary: any }) {
   );
 }
 
+// ─── FAKE WEEK DATA ───────────────────────────────────────────────────────────
+const fakeWeekData = [
+  { day: "Seg", v: 178 }, { day: "Ter", v: 243 }, { day: "Qua", v: 159 },
+  { day: "Qui", v: 312 }, { day: "Sex", v: 276 }, { day: "Sáb", v: 391 }, { day: "Dom", v: 208 },
+];
+
+// ─── STAGGER VARIANTS ─────────────────────────────────────────────────────────
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.45 } },
+};
+
+// ─── HOME PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: user } = useGetMe();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          <p className="text-sm text-muted-foreground font-medium">Carregando seu painel...</p>
+      <div style={{ display: "flex", minHeight: "60vh", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: "50%",
+            border: "2px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88",
+            animation: "spin 1s linear infinite",
+          }} />
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Carregando seu painel...</p>
         </div>
       </div>
     );
@@ -257,154 +300,199 @@ export default function Home() {
 
   if (!summary) return null;
 
-  const currentHour = new Date().getHours();
-  const isAfterNoon = currentHour >= 12;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const isFree = user?.plan !== "pro";
+  const isAfterNoon = hour >= 12;
 
   const pctToday = Math.min(100, summary.goalDailyPct || 0);
-  const isProfitPositive = (summary.realProfitToday ?? summary.realProfitMonth) >= 0;
-  const isProfitMonthPositive = summary.realProfitMonth >= 0;
-  const profitMargin = summary.earningsMonth > 0
-    ? (summary.realProfitMonth / summary.earningsMonth) * 100
-    : 0;
+  const profit = summary.realProfitToday ?? 0;
+  const profitPositive = profit >= 0;
+  const profitMonth = summary.realProfitMonth ?? 0;
+  const profitMonthPositive = profitMonth >= 0;
+  const marginMonth = summary.earningsMonth > 0 ? (profitMonth / summary.earningsMonth) * 100 : 0;
 
-  // Goal ring color
   let ringColor = "#00ff88";
   if (isAfterNoon && pctToday < 40) ringColor = "#ef4444";
   else if (isAfterNoon && pctToday < 80) ringColor = "#eab308";
 
-  // Insights
-  const alerts: { id: string; icon: React.ReactNode; border: string; bg: string; title: string; text: string }[] = [];
-
+  // Simple alerts
+  const alerts: { id: string; color: string; icon: React.ReactNode; title: string; text: string }[] = [];
   if (pctToday < 100 && summary.goalDailyPct > 0) {
     const dailyGoal = summary.earningsToday / (pctToday / 100);
     const remaining = dailyGoal - summary.earningsToday;
     if (remaining > 0 && isFinite(remaining)) {
-      const almostThere = pctToday >= 80;
       alerts.push({
-        id: "meta",
-        icon: <Zap size={16} />,
-        border: "border-yellow-500/60",
-        bg: "from-yellow-500/10",
-        title: almostThere ? "Quase lá! 🎯" : "Abaixo da meta hoje",
-        text: almostThere
-          ? `Faltam apenas ${formatBRL(remaining)} para bater sua meta diária.`
-          : `Você ainda precisa de ${formatBRL(remaining)} para atingir sua meta.`,
+        id: "meta", color: pctToday >= 80 ? "#00ff88" : "#eab308",
+        icon: <Zap size={15} />,
+        title: pctToday >= 80 ? "Quase lá! 🎯" : "Abaixo da meta",
+        text: `Faltam ${formatBRL(remaining)} para bater sua meta diária.`,
       });
     }
   }
-
+  if (summary.bestPlatform && summary.bestPlatform !== "-") {
+    const meta = platformMeta[summary.bestPlatform.toLowerCase()] ?? { label: summary.bestPlatform, pronoun: "nele" };
+    alerts.push({
+      id: "platform", color: "#eab308",
+      icon: <Award size={15} />,
+      title: `${meta.label} em destaque 🏆`,
+      text: `Sua plataforma mais rentável agora. Concentre-se ${meta.pronoun}.`,
+    });
+  }
+  if (summary.earningsToday > 0) {
+    const remaining = 30 - new Date().getDate();
+    const projected = summary.earningsMonth + summary.earningsToday * remaining;
+    if (projected > summary.earningsMonth) {
+      alerts.push({
+        id: "proj", color: "#60a5fa",
+        icon: <TrendingUp size={15} />,
+        title: "Projeção do mês 📈",
+        text: `No ritmo de hoje, você vai faturar ${formatBRL(projected)} este mês.`,
+      });
+    }
+  }
   if (summary.avgPerKm > 0 && summary.avgPerKm < 1.5) {
     alerts.push({
-      id: "rentabilidade",
-      icon: <AlertCircle size={16} />,
-      border: "border-red-500/60",
-      bg: "from-red-500/10",
-      title: "Rentabilidade baixa ⚠️",
-      text: `Você está ganhando ${formatBRL(summary.avgPerKm)}/km, abaixo do ideal. Priorize corridas mais longas.`,
-    });
-  }
-
-  if (summary.bestPlatform && summary.bestPlatform !== "-") {
-    const meta = platformMeta[summary.bestPlatform] ?? { label: summary.bestPlatform, pronoun: "nele" };
-    alerts.push({
-      id: "destaque",
-      icon: <Award size={16} />,
-      border: "border-primary/60",
-      bg: "from-primary/10",
-      title: `${meta.label} em destaque 🏆`,
-      text: `O ${meta.label} está rendendo mais agora. Concentre-se ${meta.pronoun}.`,
-    });
-  }
-
-  const remainingDays = 30 - new Date().getDate();
-  const projectedEarnings = summary.earningsMonth + summary.earningsToday * remainingDays;
-  if (projectedEarnings > summary.earningsMonth && summary.earningsToday > 0) {
-    alerts.push({
-      id: "projecao",
-      icon: <TrendingUp size={16} />,
-      border: "border-blue-500/60",
-      bg: "from-blue-500/10",
-      title: "Projeção do mês 📈",
-      text: `No ritmo de hoje, você vai faturar ${formatBRL(projectedEarnings)} até o fim do mês.`,
+      id: "km", color: "#ef4444",
+      icon: <AlertCircle size={15} />,
+      title: "Rentabilidade por km baixa",
+      text: `${formatBRL(summary.avgPerKm)}/km — abaixo do ideal. Prefira corridas mais longas.`,
     });
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-5 pb-28">
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 112 }}
+    >
 
-      {/* ─── HERO HEADLINE ─── */}
-      <motion.div variants={item} className="text-center pt-2 pb-1">
-        <h1 className="text-3xl md:text-4xl font-display font-extrabold text-white leading-tight tracking-tight">
-          Faturamento engana.
-        </h1>
-        <p className="text-sm text-white/40 mt-2 font-medium">
-          Descubra quanto realmente sobra no seu bolso.
-        </p>
+      {/* ─── GREETING HEADER ─────────────────────────────────────────────── */}
+      <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
+        <div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+            {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+          </p>
+          <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb" }}>Seu painel financeiro</p>
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.2)",
+          borderRadius: 20, padding: "5px 12px",
+        }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#00ff88", letterSpacing: "0.06em" }}>AO VIVO</span>
+        </div>
       </motion.div>
 
-      {/* ─── HERO: PROFIT CARD ─── */}
+      {/* ─── HERO: REAL PROFIT CARD ──────────────────────────────────────── */}
       <motion.div variants={item}>
-        <div className="relative rounded-3xl overflow-hidden">
-          {/* Green glow background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#003322] via-[#001a11] to-[#0a0a0a]" />
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+        <div style={{ position: "relative", borderRadius: 28, overflow: "hidden" }}>
+          {/* Backgrounds */}
+          <div style={{ position: "absolute", inset: 0, background: "#0d0d0d" }} />
+          {/* Grid texture */}
+          <div style={{
+            position: "absolute", inset: 0, opacity: 0.07,
+            backgroundImage: "linear-gradient(rgba(0,255,136,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,0.6) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }} />
+          {/* Top glow */}
+          <div style={{
+            position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)",
+            width: 320, height: 200,
+            background: profitPositive ? "radial-gradient(ellipse, rgba(0,255,136,0.25) 0%, transparent 70%)" : "radial-gradient(ellipse, rgba(239,68,68,0.2) 0%, transparent 70%)",
+          }} />
 
-          <div className="relative z-10 p-6">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 text-primary rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest mb-5">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              Lucro real hoje
-            </div>
-
-            {/* Big profit number */}
-            <div className="mb-2">
-              <div className={`text-6xl md:text-7xl font-display font-extrabold tracking-tight tabular-nums leading-none ${isProfitPositive ? "text-primary drop-shadow-[0_0_24px_rgba(0,255,136,0.4)]" : "text-red-400"}`}>
-                <AnimatedNumber value={summary.realProfitToday ?? summary.realProfitMonth} />
-              </div>
-            </div>
-
-            {/* Revenue comparison sentence */}
-            <p className="text-sm text-white/60 font-medium mt-3 leading-relaxed">
-              Você faturou{" "}
-              <span className="text-white font-bold">{formatBRL(summary.earningsToday)}</span>
-              {" "}hoje, mas seu lucro real é{" "}
-              <span className={`font-bold ${isProfitPositive ? "text-primary" : "text-red-400"}`}>
-                {formatBRL(summary.realProfitToday ?? (summary.earningsToday - (summary.costsMonth / 30)))}
+          <div style={{ position: "relative", zIndex: 2, padding: "28px 24px 24px" }}>
+            {/* Label */}
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 20, padding: "5px 12px", marginBottom: 20,
+            }}>
+              <Gauge size={12} color="rgba(255,255,255,0.4)" />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase" }}>
+                Lucro real hoje
               </span>
+            </div>
+
+            {/* BIG NUMBER */}
+            <div style={{ marginBottom: 6 }}>
+              <p style={{
+                fontSize: 68, fontWeight: 900, lineHeight: 1,
+                color: profitPositive ? "#00ff88" : "#ef4444",
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "-0.02em",
+                textShadow: profitPositive ? "0 0 40px rgba(0,255,136,0.5)" : "0 0 40px rgba(239,68,68,0.4)",
+              }}>
+                <Counter value={profit} />
+              </p>
+            </div>
+
+            {/* Subtitle */}
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", fontWeight: 400, marginBottom: 24, lineHeight: 1.5 }}>
+              Faturou{" "}
+              <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(summary.earningsToday)}</span>
+              {" "}· custou{" "}
+              <span style={{ color: "rgba(239,68,68,0.9)", fontWeight: 600 }}>{formatBRL(summary.costsToday)}</span>
             </p>
 
-            {/* Goal progress ring + bar */}
+            {/* Divider */}
+            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 20 }} />
+
+            {/* Stats row */}
+            <div style={{ display: "flex", gap: 24 }}>
+              <div>
+                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                  Corridas hoje
+                </p>
+                <p style={{ fontSize: 24, fontWeight: 800, color: "#f9fafb" }}>
+                  {summary.ridesCountToday ?? 0}
+                </p>
+              </div>
+              <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
+              <div>
+                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                  Faturamento
+                </p>
+                <p style={{ fontSize: 24, fontWeight: 800, color: "#f9fafb" }}>
+                  {formatBRL(summary.earningsToday)}
+                </p>
+              </div>
+              {summary.hoursToday != null && (
+                <>
+                  <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
+                  <div>
+                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                      Horas
+                    </p>
+                    <p style={{ fontSize: 24, fontWeight: 800, color: "#f9fafb" }}>
+                      {summary.hoursToday.toFixed(1)}h
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Goal ring */}
             {summary.goalDailyPct > 0 && (
-              <div className="mt-6 flex items-center gap-5">
-                <div className="relative shrink-0">
-                  <RingProgress pct={pctToday} color={ringColor} size={72} stroke={7} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-display font-extrabold" style={{ color: ringColor }}>
-                      {Math.round(pctToday)}%
-                    </span>
+              <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 16, background: "rgba(0,0,0,0.3)", borderRadius: 16, padding: "14px 16px" }}>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <Ring pct={pctToday} color={ringColor} size={64} stroke={6} />
+                  <div style={{
+                    position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: ringColor }}>{Math.round(pctToday)}%</span>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white/50 font-medium mb-1.5">Sua meta diária de ganhos</p>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: ringColor, boxShadow: `0 0 12px ${ringColor}60` }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pctToday}%` }}
-                      transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-white/40 mt-1.5 font-medium">
-                    {pctToday >= 100
-                      ? "✓ Meta batida! Parabéns!"
-                      : pctToday >= 80
-                      ? "Quase lá — continue rodando!"
-                      : isAfterNoon && pctToday < 50
-                      ? "Você está abaixo da média hoje"
-                      : "Continue, você está indo bem!"}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginBottom: 5 }}>
+                    Meta diária de ganhos
+                  </p>
+                  <ProgressBar pct={pctToday} color={ringColor} />
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 5 }}>
+                    {pctToday >= 100 ? "✓ Meta batida! Parabéns!" : pctToday >= 80 ? "Quase lá!" : isAfterNoon && pctToday < 50 ? "Abaixo da média hoje" : "Você está indo bem!"}
                   </p>
                 </div>
               </div>
@@ -413,384 +501,388 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* ─── DAILY ANALYSIS ─── */}
+      {/* ─── 5 METRIC CARDS ─────────────────────────────────────────────────── */}
       <motion.div variants={item}>
-        <DailyAnalysisCard summary={summary} />
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 12 }}>
+          Indicadores do dia
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {/* Corridas */}
+          <MetricCard
+            label="Corridas hoje"
+            value={summary.ridesCountToday ?? 0}
+            accent="#60a5fa"
+            icon={Car}
+          />
+
+          {/* Faturamento */}
+          <MetricCard
+            label="Faturamento"
+            value={formatBRL(summary.earningsToday)}
+            sub="bruto hoje"
+            accent="#a78bfa"
+            icon={TrendingUp}
+          />
+
+          {/* R$/corrida */}
+          <MetricCard
+            label="R$/corrida"
+            value={
+              summary.earningsPerTripToday != null
+                ? formatBRL(summary.earningsPerTripToday)
+                : summary.avgPerRide > 0
+                ? formatBRL(summary.avgPerRide)
+                : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>Sem dados</span>
+            }
+            sub={summary.earningsPerTripToday != null ? "hoje" : summary.avgPerRide > 0 ? "média geral" : undefined}
+            accent="#00ff88"
+            icon={Target}
+          />
+
+          {/* R$/km */}
+          <MetricCard
+            label="R$/km"
+            value={
+              summary.earningsPerKmToday != null
+                ? formatBRL(summary.earningsPerKmToday)
+                : summary.avgPerKm > 0
+                ? formatBRL(summary.avgPerKm)
+                : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>Informe km</span>
+            }
+            sub={summary.kmToday != null ? `${summary.kmToday.toFixed(1)} km hoje` : undefined}
+            accent="#f97316"
+            icon={Navigation}
+          />
+
+          {/* R$/hora */}
+          <MetricCard
+            label="R$/hora"
+            value={
+              summary.earningsPerHourToday != null
+                ? formatBRL(summary.earningsPerHourToday)
+                : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>Informe horas</span>
+            }
+            sub={summary.hoursToday != null ? `${summary.hoursToday.toFixed(1)}h hoje` : undefined}
+            accent="#c084fc"
+            icon={Clock}
+          />
+
+          {/* Avaliação */}
+          <MetricCard
+            label="Avaliação"
+            value={
+              (summary.ratingToday ?? summary.ratingAll) != null
+                ? <span style={{ color: "#fbbf24" }}>{(summary.ratingToday ?? summary.ratingAll)!.toFixed(2)} <span style={{ fontSize: 14 }}>★</span></span>
+                : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>Sem dados</span>
+            }
+            sub="média dos passageiros"
+            accent="#eab308"
+            icon={Star}
+          />
+        </div>
       </motion.div>
 
-      {/* ─── REVENUE + MONTH PROFIT ─── */}
-      <motion.div variants={item} className="grid grid-cols-2 gap-3">
-        {/* Revenue today */}
-        <Card className="p-5 bg-white/[0.03] border-white/[0.05]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">Faturamento hoje</p>
-          <p className="text-2xl font-display font-bold tabular-nums text-white">
-            {formatBRL(summary.earningsToday)}
-          </p>
-          <div className="flex items-center gap-1 mt-2">
-            <Car size={12} className="text-white/30" />
-            <p className="text-[11px] text-white/40 font-medium">{summary.totalRides} corridas</p>
-          </div>
-        </Card>
-
-        {/* Month profit */}
-        <Card className={`p-5 border ${isProfitMonthPositive ? "border-primary/20 bg-primary/5" : "border-red-500/20 bg-red-500/5"}`}>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">Lucro do mês</p>
-          <p className={`text-2xl font-display font-bold tabular-nums ${isProfitMonthPositive ? "text-primary" : "text-red-400"}`}>
-            {formatBRL(summary.realProfitMonth)}
-          </p>
-          <div className="flex items-center gap-1 mt-2">
-            <Target size={12} className={isProfitMonthPositive ? "text-primary/50" : "text-red-400/50"} />
-            <p className="text-[11px] text-white/40 font-medium">{Math.max(0, Math.round(profitMargin))}% de margem</p>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* ─── MONTH BREAKDOWN BAR ─── */}
+      {/* ─── MONTH SUMMARY ──────────────────────────────────────────────────── */}
       <motion.div variants={item}>
-        <Card className="p-5 bg-white/[0.02] border-white/[0.04]">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-bold text-white">Onde vai seu dinheiro</p>
-            <p className="text-xs text-white/40 font-medium">Este mês</p>
+        <div style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+          borderRadius: 22, padding: "20px 20px 18px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 3 }}>
+                Resumo do mês
+              </p>
+              <p style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb" }}>Onde vai seu dinheiro</p>
+            </div>
+            <div style={{
+              background: profitMonthPositive ? "rgba(0,255,136,0.08)" : "rgba(239,68,68,0.08)",
+              border: `1px solid ${profitMonthPositive ? "rgba(0,255,136,0.2)" : "rgba(239,68,68,0.2)"}`,
+              borderRadius: 10, padding: "6px 12px",
+              textAlign: "right",
+            }}>
+              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 1 }}>LUCRO MÊS</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: profitMonthPositive ? "#00ff88" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>
+                {formatBRL(profitMonth)}
+              </p>
+            </div>
           </div>
-          <div className="h-3 bg-black/60 rounded-full overflow-hidden flex gap-px mb-3">
+
+          {/* Stacked bars */}
+          <div style={{ height: 10, borderRadius: 999, background: "rgba(0,0,0,0.5)", overflow: "hidden", display: "flex", marginBottom: 12 }}>
             <motion.div
-              className="h-full bg-red-500/80 rounded-l-full"
+              style={{ height: "100%", background: "rgba(239,68,68,0.7)", borderRadius: "999px 0 0 999px" }}
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (summary.costsMonth / (summary.earningsMonth || 1)) * 100)}%` }}
               transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
             />
             <motion.div
-              className="h-full bg-primary rounded-r-full"
-              style={{ boxShadow: "0 0 8px rgba(0,255,136,0.4)" }}
+              style={{ height: "100%", background: "#00ff88", boxShadow: "0 0 10px rgba(0,255,136,0.5)", borderRadius: "0 999px 999px 0" }}
               initial={{ width: 0 }}
-              animate={{ width: `${Math.max(0, profitMargin)}%` }}
+              animate={{ width: `${Math.max(0, marginMonth)}%` }}
               transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
             />
           </div>
-          <div className="flex items-center justify-between text-xs font-medium text-white/50">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500/80 inline-block" />
-              Gastos {formatBRL(summary.costsMonth)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-              Lucro {formatBRL(Math.max(0, summary.realProfitMonth))}
-            </span>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(239,68,68,0.7)" }} />
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>Gastos {formatBRL(summary.costsMonth)}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#00ff88" }} />
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>Lucro {formatBRL(Math.max(0, profitMonth))}</span>
+            </div>
           </div>
-        </Card>
-      </motion.div>
-
-      {/* ─── METRICS GRID ─── */}
-      <motion.div variants={item}>
-        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Métricas do dia</p>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Trips today */}
-          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-2">
-              <Car size={14} className="text-primary" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Corridas hoje</p>
-            </div>
-            <p className="text-2xl font-display font-bold tabular-nums text-white">
-              {summary.ridesCountToday ?? 0}
-            </p>
-          </Card>
-
-          {/* Earnings per trip */}
-          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={14} className="text-primary" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/corrida</p>
-            </div>
-            <p className="text-2xl font-display font-bold tabular-nums text-white">
-              {summary.earningsPerTripToday != null
-                ? formatBRL(summary.earningsPerTripToday)
-                : summary.avgPerRide > 0 ? formatBRL(summary.avgPerRide) : <span className="text-base text-white/30">Sem dados</span>}
-            </p>
-          </Card>
-
-          {/* Earnings per km */}
-          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-2">
-              <Navigation size={14} className="text-primary" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/km</p>
-            </div>
-            {summary.earningsPerKmToday != null ? (
-              <>
-                <p className="text-2xl font-display font-bold tabular-nums text-white">
-                  {formatBRL(summary.earningsPerKmToday)}
-                </p>
-                {summary.kmToday != null && (
-                  <p className="text-[10px] text-white/30 mt-1">{summary.kmToday.toFixed(1)} km hoje</p>
-                )}
-              </>
-            ) : summary.avgPerKm > 0 ? (
-              <p className="text-2xl font-display font-bold tabular-nums text-white">{formatBRL(summary.avgPerKm)}</p>
-            ) : (
-              <p className="text-base text-white/30 mt-1 font-medium">Informe km</p>
-            )}
-          </Card>
-
-          {/* Earnings per hour */}
-          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={14} className="text-primary" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">R$/hora</p>
-            </div>
-            {summary.earningsPerHourToday != null ? (
-              <>
-                <p className="text-2xl font-display font-bold tabular-nums text-white">
-                  {formatBRL(summary.earningsPerHourToday)}
-                </p>
-                {summary.hoursToday != null && (
-                  <p className="text-[10px] text-white/30 mt-1">{summary.hoursToday.toFixed(1)}h trabalhadas</p>
-                )}
-              </>
-            ) : (
-              <p className="text-base text-white/30 mt-1 font-medium">Informe horas</p>
-            )}
-          </Card>
-
-          {/* Rating */}
-          <Card className={`p-4 ${(summary.ratingToday ?? summary.ratingAll) ? "bg-yellow-500/5 border-yellow-500/15" : "bg-white/[0.02] border-white/[0.04]"}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Star size={14} className="text-yellow-400" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Avaliação</p>
-            </div>
-            {(summary.ratingToday ?? summary.ratingAll) != null ? (
-              <div className="flex items-baseline gap-1">
-                <p className="text-2xl font-display font-bold tabular-nums text-yellow-400">
-                  {(summary.ratingToday ?? summary.ratingAll)!.toFixed(1)}
-                </p>
-                <p className="text-sm text-yellow-400/60">/ 5</p>
-              </div>
-            ) : (
-              <p className="text-base text-white/30 mt-1 font-medium">Sem dados</p>
-            )}
-          </Card>
-
-          {/* Best platform */}
-          <Card className="p-4 bg-white/[0.02] border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-2">
-              <Award size={14} className="text-yellow-500" />
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-wide">Melhor plat.</p>
-            </div>
-            <p className="text-xl font-display font-bold text-white">
-              {summary.bestPlatform && summary.bestPlatform !== "-"
-                ? (platformMeta[summary.bestPlatform]?.label ?? summary.bestPlatform)
-                : "—"}
-            </p>
-          </Card>
         </div>
       </motion.div>
 
-      {/* ─── FINANCIAL INTELLIGENCE ─── */}
+      {/* ─── DAILY ANALYSIS ─────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <DailyAnalysis summary={summary} />
+      </motion.div>
+
+      {/* ─── FINANCIAL INTELLIGENCE ──────────────────────────────────────────── */}
       <motion.div variants={item}>
         <InsightsPanel />
       </motion.div>
 
-      {/* ─── WEEKLY CHART ─── */}
+      {/* ─── WEEKLY CHART ────────────────────────────────────────────────────── */}
       <motion.div variants={item}>
-        <Card className="p-5 bg-white/[0.02] border-white/[0.04] relative overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
+        <div style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+          borderRadius: 22, padding: "20px 20px 16px",
+          position: "relative", overflow: "hidden",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
-              <p className="text-sm font-bold text-white">Evolução da semana</p>
-              <p className="text-[11px] text-white/40 mt-0.5">Faturamento dos últimos 7 dias</p>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 3 }}>
+                Evolução
+              </p>
+              <p style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb" }}>Faturamento da semana</p>
             </div>
             {isFree && (
-              <span className="text-[10px] font-extrabold bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2.5 py-1 rounded-full tracking-wider">
-                ✦ PRO
-              </span>
+              <span style={{
+                fontSize: 10, fontWeight: 800,
+                background: "linear-gradient(135deg, #eab308, #d97706)",
+                color: "#000", padding: "4px 10px", borderRadius: 999,
+                letterSpacing: "0.06em",
+              }}>✦ PRO</span>
             )}
           </div>
 
-          <div className="h-[140px] w-full relative">
+          <div style={{ height: 140, position: "relative" }}>
             {isFree && (
               <>
-                {/* Blurred fake chart */}
-                <div className="absolute inset-0 blur-[3px] opacity-30 pointer-events-none select-none">
+                <div style={{ position: "absolute", inset: 0, filter: "blur(3px)", opacity: 0.25, pointerEvents: "none" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={fakeWeekData} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="fakeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="fakeG" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#00ff88" stopOpacity={0.3} />
                           <stop offset="95%" stopColor="#00ff88" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <Area type="monotone" dataKey="v" stroke="#00ff88" strokeWidth={2} fill="url(#fakeGrad)" dot={false} />
+                      <Area type="monotone" dataKey="v" stroke="#00ff88" strokeWidth={2} fill="url(#fakeG)" dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                {/* Lock overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
                   <Link href="/reports">
-                    <div className="flex flex-col items-center gap-2 cursor-pointer group">
-                      <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/30 group-hover:scale-105 transition-transform">
-                        <Lock size={18} className="text-black" />
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 14,
+                        background: "linear-gradient(135deg, #eab308, #d97706)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 8px 24px rgba(234,179,8,0.35)",
+                      }}>
+                        <Lock size={19} color="#000" />
                       </div>
-                      <p className="text-xs font-bold text-white">Desbloqueie com PRO</p>
-                      <p className="text-[10px] text-white/50">Ver histórico completo</p>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#f9fafb" }}>Desbloqueie com PRO</p>
                     </div>
                   </Link>
                 </div>
               </>
             )}
-
             {!isFree && (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={fakeWeekData} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="proGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00ff88" stopOpacity={0.25} />
+                    <linearGradient id="proG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00ff88" stopOpacity={0.22} />
                       <stop offset="95%" stopColor="#00ff88" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} dy={8} />
+                  <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fill: "#555", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} dy={8} />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                    contentStyle={{ background: "#161616", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                     itemStyle={{ color: "#00ff88", fontWeight: 700 }}
                     formatter={(v: number) => [formatBRL(v), "Faturamento"]}
-                    cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }}
+                    cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
                   />
-                  <Area type="monotone" dataKey="v" stroke="#00ff88" strokeWidth={2.5} fill="url(#proGrad)" dot={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="v" stroke="#00ff88" strokeWidth={2.5} fill="url(#proG)" dot={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
-        </Card>
+        </div>
       </motion.div>
 
-      {/* ─── ALERTS ─── */}
+      {/* ─── SMART ALERTS ────────────────────────────────────────────────────── */}
       {alerts.length > 0 && (
-        <motion.div variants={item} className="space-y-3">
-          <p className="text-xs font-bold text-white/40 uppercase tracking-widest px-1">Alertas inteligentes</p>
-          {alerts.slice(0, 3).map((alert) => (
+        <motion.div variants={item} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>
+            Alertas
+          </p>
+          {alerts.slice(0, 3).map((a) => (
             <motion.div
-              key={alert.id}
+              key={a.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className={`flex items-start gap-3 p-4 rounded-2xl border ${alert.border} bg-gradient-to-r ${alert.bg} to-transparent`}
+              style={{
+                display: "flex", alignItems: "flex-start", gap: 12,
+                padding: "14px 16px", borderRadius: 18,
+                border: `1px solid ${a.color}30`,
+                background: `${a.color}08`,
+              }}
             >
-              <div className="mt-0.5 text-white/60 shrink-0">{alert.icon}</div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-white mb-0.5">{alert.title}</p>
-                <p className="text-xs text-white/50 leading-relaxed">{alert.text}</p>
+              <div style={{ color: a.color, marginTop: 1, flexShrink: 0 }}>{a.icon}</div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#f9fafb", marginBottom: 3 }}>{a.title}</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{a.text}</p>
               </div>
             </motion.div>
           ))}
         </motion.div>
       )}
 
-      {/* ─── PRO UPGRADE CARD ─── */}
+      {/* ─── GOAL PROGRESS ───────────────────────────────────────────────────── */}
+      {(summary.goalWeekly > 0 || summary.goalMonthly > 0) && (
+        <motion.div variants={item}>
+          <div style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.05)",
+            borderRadius: 22, padding: 20,
+          }}>
+            <p style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", marginBottom: 20 }}>Metas de ganhos</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {summary.goalWeekly > 0 && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Esta semana</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", marginLeft: 10 }}>{formatBRL(summary.earningsWeek)}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#00ff88" }}>{Math.round(summary.goalWeeklyPct || 0)}%</span>
+                  </div>
+                  <ProgressBar pct={summary.goalWeeklyPct || 0} color="#00ff88" delay={0.2} />
+                </div>
+              )}
+              {summary.goalMonthly > 0 && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Este mês</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", marginLeft: 10 }}>{formatBRL(summary.earningsMonth)}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#00ff88" }}>{Math.round(summary.goalMonthlyPct || 0)}%</span>
+                  </div>
+                  <ProgressBar pct={summary.goalMonthlyPct || 0} color="#00ff88" delay={0.4} />
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ─── PRO UPSELL ──────────────────────────────────────────────────────── */}
       {isFree && (
         <motion.div variants={item}>
-          <Link href="/reports">
-            <div className="relative rounded-3xl overflow-hidden cursor-pointer group">
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-yellow-600/10 to-transparent" />
-              <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-              <div className="relative z-10 p-5 border border-yellow-500/20 rounded-3xl flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-xl shadow-yellow-500/30 shrink-0">
-                  <Lock size={24} className="text-black" />
+          <Link href="/upgrade">
+            <div style={{
+              position: "relative", borderRadius: 22, overflow: "hidden", cursor: "pointer",
+            }}>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(234,179,8,0.15), rgba(217,119,6,0.08))" }} />
+              <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, background: "rgba(234,179,8,0.15)", borderRadius: "50%", filter: "blur(40px)" }} />
+              <div style={{
+                position: "relative", zIndex: 2, padding: 18,
+                border: "1px solid rgba(234,179,8,0.2)", borderRadius: 22,
+                display: "flex", alignItems: "center", gap: 16,
+              }}>
+                <div style={{
+                  width: 52, height: 52, flexShrink: 0,
+                  background: "linear-gradient(135deg, #eab308, #d97706)",
+                  borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 8px 24px rgba(234,179,8,0.3)",
+                }}>
+                  <Lock size={22} color="#000" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-extrabold text-white mb-1">Desbloqueie seu lucro real ✦</p>
-                  <p className="text-xs text-white/50 leading-relaxed">
-                    Descubra quanto realmente sobra no seu bolso após todos os custos.
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: "#f9fafb", marginBottom: 3 }}>Ative o PRO ✦</p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>
+                    Desbloqueie relatórios, simulador e histórico completo.
                   </p>
                 </div>
-                <ChevronRight size={20} className="text-yellow-500 shrink-0 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight size={18} color="rgba(234,179,8,0.7)" style={{ flexShrink: 0 }} />
               </div>
             </div>
           </Link>
         </motion.div>
       )}
 
-      {/* ─── IMPORT BUTTON ─── */}
+      {/* ─── IMPORT CTA ──────────────────────────────────────────────────────── */}
       <motion.div variants={item}>
         <Link href="/import">
-          <motion.div
-            whileTap={{ scale: 0.97 }}
-            className="relative rounded-3xl overflow-hidden cursor-pointer group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/8 to-transparent" />
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-            <div className="relative z-10 p-5 border border-primary/20 rounded-3xl flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-primary to-emerald-500 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 shrink-0">
-                <Camera size={24} className="text-black" />
+          <motion.div whileTap={{ scale: 0.97 }} style={{
+            position: "relative", borderRadius: 22, overflow: "hidden", cursor: "pointer",
+          }}>
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(0,255,136,0.12), rgba(0,204,106,0.06))" }} />
+            <div style={{
+              position: "relative", zIndex: 2, padding: 18,
+              border: "1px solid rgba(0,255,136,0.15)", borderRadius: 22,
+              display: "flex", alignItems: "center", gap: 16,
+            }}>
+              <div style={{
+                width: 52, height: 52, flexShrink: 0,
+                background: "linear-gradient(135deg, #00ff88, #00cc6a)",
+                borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 8px 24px rgba(0,255,136,0.3)",
+              }}>
+                <Camera size={22} color="#000" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-white mb-1">Importar resultados do dia</p>
-                <p className="text-xs text-white/50 leading-relaxed">
-                  Tire uma screenshot e registre seus ganhos em 10 segundos
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#f9fafb", marginBottom: 3 }}>Importar resultados do dia</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.4 }}>
+                  Tire um print e registre em 10 segundos
                 </p>
               </div>
-              <ChevronRight size={20} className="text-primary shrink-0 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight size={18} color="rgba(0,255,136,0.6)" style={{ flexShrink: 0 }} />
             </div>
           </motion.div>
         </Link>
       </motion.div>
 
-      {/* ─── GOAL PROGRESS ─── */}
-      <motion.div variants={item}>
-        <Card className="p-5 bg-white/[0.02] border-white/[0.04]">
-          <p className="text-sm font-bold text-white mb-5">Suas metas de ganhos</p>
-
-          <div className="space-y-5">
-            {/* Weekly */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <div>
-                  <span className="text-xs font-bold text-white/40 uppercase tracking-wide">Esta semana</span>
-                  <span className="text-sm font-display font-bold text-white ml-2">{formatBRL(summary.earningsWeek)}</span>
-                </div>
-                <span className="text-sm font-bold text-primary">{Math.round(summary.goalWeeklyPct || 0)}%</span>
-              </div>
-              <div className="h-2.5 bg-black/60 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full"
-                  style={{ boxShadow: "0 0 8px rgba(0,255,136,0.3)" }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, summary.goalWeeklyPct || 0)}%` }}
-                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-                />
-              </div>
-            </div>
-
-            {/* Monthly */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <div>
-                  <span className="text-xs font-bold text-white/40 uppercase tracking-wide">Este mês</span>
-                  <span className="text-sm font-display font-bold text-white ml-2">{formatBRL(summary.earningsMonth)}</span>
-                </div>
-                <span className="text-sm font-bold text-primary">{Math.round(summary.goalMonthlyPct || 0)}%</span>
-              </div>
-              <div className="h-2.5 bg-black/60 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full"
-                  style={{ boxShadow: "0 0 8px rgba(0,255,136,0.3)" }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, summary.goalMonthlyPct || 0)}%` }}
-                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* ─── FLOATING ACTION BUTTON ─── */}
+      {/* ─── FLOATING ACTION BUTTON ──────────────────────────────────────────── */}
       <Link href="/rides">
         <motion.div
-          className="fixed bottom-24 right-5 z-40 md:bottom-6 md:right-6"
+          style={{ position: "fixed", bottom: 88, right: 20, zIndex: 40 }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.8, type: "spring", damping: 15, stiffness: 200 }}
+          transition={{ delay: 0.9, type: "spring", damping: 15, stiffness: 200 }}
           whileTap={{ scale: 0.92 }}
         >
-          <div className="flex items-center gap-2.5 bg-primary text-black font-bold text-sm pl-4 pr-5 h-14 rounded-full shadow-2xl shadow-primary/40 glow-primary hover:bg-primary/90 transition-colors">
-            <Plus size={20} strokeWidth={2.5} />
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "#00ff88", color: "#000",
+            fontWeight: 800, fontSize: 13,
+            paddingLeft: 18, paddingRight: 20, height: 52, borderRadius: 999,
+            boxShadow: "0 8px 32px rgba(0,255,136,0.45)",
+          }}>
+            <Plus size={19} strokeWidth={2.5} />
             <span>Nova corrida</span>
           </div>
         </motion.div>
