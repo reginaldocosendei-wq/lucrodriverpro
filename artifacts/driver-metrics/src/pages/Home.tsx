@@ -169,32 +169,33 @@ export default function Home() {
               : "radial-gradient(ellipse,rgba(239,68,68,0.17) 0%,transparent 70%)",
           }} />
 
-          <div style={{ position: "relative", zIndex: 2, padding: "32px 24px 28px" }}>
+          <div style={{ position: "relative", zIndex: 2, padding: "28px 24px 26px" }}>
             {/* Label */}
             <p style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 14,
+              fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.42)", textTransform: "uppercase", marginBottom: 10,
             }}>
               Seu lucro real hoje
             </p>
 
             {/* Big number */}
             {isLoading ? (
-              <Skeleton h={56} w={200} r={12} />
+              <Skeleton h={44} w={180} r={10} />
             ) : (
               <motion.p
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontSize: "clamp(42px, 11vw, 60px)",
+                  fontSize: "clamp(34px, 8.5vw, 48px)",
                   fontWeight: 900,
-                  lineHeight: 1.05,
+                  lineHeight: 1.0,
                   color: pColor,
                   fontVariantNumeric: "tabular-nums",
-                  letterSpacing: "-0.025em",
-                  textShadow: `0 0 48px ${pColor}45`,
-                  marginBottom: 12,
+                  fontFeatureSettings: '"tnum" 1',
+                  letterSpacing: "-0.02em",
+                  textShadow: `0 0 40px ${pColor}38`,
+                  marginBottom: 10,
                   wordBreak: "break-word",
                 }}
               >
@@ -204,7 +205,7 @@ export default function Home() {
 
             {/* Earnings · costs */}
             {!isLoading && (
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.38)", fontWeight: 400, marginBottom: 22 }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400, marginBottom: 20 }}>
                 Ganhou{" "}
                 <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(earnings)}</span>
                 <span style={{ color: "rgba(255,255,255,0.2)" }}> · gastou </span>
