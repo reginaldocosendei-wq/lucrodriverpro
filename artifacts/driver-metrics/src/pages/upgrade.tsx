@@ -1,288 +1,483 @@
 import { useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Lock, Zap, TrendingUp, BarChart2, Target, ChevronRight, ArrowLeft, Shield, Clock, AlertTriangle } from "lucide-react";
+import {
+  Check, ArrowLeft, Shield, Zap, AlertTriangle,
+  Clock, ChevronRight, TrendingUp, MapPin, Timer, Award,
+} from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui";
 import { Capacitor } from "@capacitor/core";
 import { getApiBase } from "@/lib/api";
 
 const BASE = getApiBase();
 
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const BENEFITS = [
+  { icon: TrendingUp, text: "Descubra seu lucro real", sub: "Não o faturamento — o que fica no seu bolso" },
+  { icon: MapPin,     text: "Evite corridas ruins",    sub: "Saiba quais horários e regiões valem a pena" },
+  { icon: Timer,      text: "Saiba quando parar",      sub: "Seu tempo vale dinheiro. Não desperdice." },
+  { icon: Award,      text: "Ganhe mais trabalhando menos", sub: "Métricas reais para decisões mais inteligentes" },
+];
+
+const TRUST = [
+  { icon: "🔒", label: "Cancelamento fácil", sub: "A qualquer momento" },
+  { icon: "🤝", label: "Sem compromisso",    sub: "Sem fidelidade" },
+  { icon: "⚡", label: "Acesso imediato",    sub: "Na hora do pagamento" },
+];
+
+// ─── PLAN CONFIG ──────────────────────────────────────────────────────────────
 const PLANS = [
-  {
-    id: "monthly",
-    label: "Mensal",
-    price: "R$\u00a019,90",
-    period: "/mês",
-    badge: null,
-    highlight: false,
-  },
-  {
-    id: "yearly",
-    label: "Anual",
-    price: "R$\u00a0149,90",
-    period: "/ano",
-    badge: "Economize 37%",
-    highlight: true,
-  },
+  { id: "monthly", label: "Mensal",  price: "R$\u00a019,90", period: "/mês",  sub: "Menos que uma corrida",  badge: null,           perMonth: 19.90 },
+  { id: "yearly",  label: "Anual",   price: "R$\u00a0149,90", period: "/ano", sub: "R$\u00a012,49 por mês",  badge: "Economize 37%", perMonth: 12.49 },
 ];
 
-const FEATURES = [
-  { icon: <TrendingUp size={18} />, text: "Seu lucro real em tempo real" },
-  { icon: <BarChart2 size={18} />, text: "Relatórios e análise de desempenho" },
-  { icon: <Target size={18} />, text: "Metas avançadas com projeções" },
-  { icon: <Zap size={18} />, text: "Insights inteligentes personalizados" },
-  { icon: <BarChart2 size={18} />, text: "Simulador de ganhos PRO" },
-  { icon: <Shield size={18} />, text: "Histórico completo e exportação" },
-];
+// ─── STAGGER ANIMATION ────────────────────────────────────────────────────────
+const stagger = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.45 } },
+};
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// UPGRADE PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function Upgrade() {
-  const { data: user } = useGetMe();
-  const [, navigate] = useLocation();
-  const [selected, setSelected] = useState<"monthly" | "yearly">("yearly");
+  const { data: user }   = useGetMe();
+  const [, navigate]     = useLocation();
+  const [selected, setSelected] = useState<"monthly" | "yearly">("monthly");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
 
   const u = user as any;
-  const trialExpired = u?.trialExpired === true;
-  const isExpiredSearch = typeof window !== "undefined" && window.location.search.includes("expired=1");
-  const showExpiredState = trialExpired || isExpiredSearch;
+  const trialExpired   = u?.trialExpired === true;
+  const trialActive    = u?.trialActive  === true;
+  const trialDaysLeft  = u?.trialDaysLeft ?? 7;
+  const isExpiredParam = typeof window !== "undefined" && window.location.search.includes("expired=1");
+  const showExpired    = trialExpired || isExpiredParam;
 
+  // ── Stripe checkout ─────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const productsRes = await fetch(`${BASE}/api/stripe/products-with-prices`, {
-        credentials: "include",
-      });
+      const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
       const productsData = await productsRes.json();
-
-      if (!productsData.data || productsData.data.length === 0) {
+      if (!productsData.data?.length) {
         setError("Planos não disponíveis no momento. Tente novamente em breve.");
-        setIsLoading(false);
         return;
       }
-
-      const product = productsData.data[0];
+      const product  = productsData.data[0];
       const interval = selected === "monthly" ? "month" : "year";
-      const price = product.prices?.find(
-        (p: any) => p.recurring?.interval === interval,
-      );
+      const price    = product.prices?.find((p: any) => p.recurring?.interval === interval);
+      if (!price) { setError("Plano não encontrado. Tente novamente."); return; }
 
-      if (!price) {
-        setError("Plano não encontrado. Tente novamente.");
-        setIsLoading(false);
-        return;
-      }
-
-      const origin = window.location.origin;
+      const origin      = window.location.origin;
       const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          priceId: price.id,
+          priceId:    price.id,
           successUrl: `${origin}${BASE}/checkout/success`,
           cancelUrl:  `${origin}${BASE}/checkout/cancel`,
         }),
       });
       const checkoutData = await checkoutRes.json();
-
       if (!checkoutRes.ok || !checkoutData.url) {
         setError("Não foi possível iniciar o pagamento. Tente novamente.");
-        setIsLoading(false);
         return;
       }
-
       if (Capacitor.isNativePlatform()) {
-        // On Android/iOS, open Stripe in the system browser.
-        // The user will return to the app after payment; the resume listener
-        // in App.tsx will refresh their plan automatically.
         window.open(checkoutData.url, "_system");
-        setIsLoading(false);
       } else {
         window.location.href = checkoutData.url;
       }
-    } catch (err) {
-      console.error("Stripe checkout error:", err);
-      setError("Não foi possível iniciar o pagamento. Verifique sua conexão e tente novamente.");
+    } catch {
+      setError("Não foi possível iniciar o pagamento. Verifique sua conexão.");
+    } finally {
       setIsLoading(false);
     }
   };
 
+  // ── Already PRO ─────────────────────────────────────────────────────────────
   if (u?.plan === "pro" && !u?.trialActive && !trialExpired) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 gap-6"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", textAlign: "center", gap: 24, padding: "0 24px" }}
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center shadow-xl shadow-yellow-500/30">
-          <Check size={36} className="text-black" />
+        <div style={{ width: 80, height: 80, borderRadius: 24, background: "linear-gradient(135deg,#eab308,#ca8a04)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(234,179,8,0.3)" }}>
+          <Check size={38} color="#000" strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-2xl font-display font-bold text-white mb-2">Você já é PRO! ✦</h2>
-          <p className="text-white/50 text-sm">Todos os recursos estão desbloqueados para você.</p>
+          <p style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", marginBottom: 6 }}>Você já é PRO ✦</p>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>Todos os recursos estão desbloqueados.</p>
         </div>
         <Link href="/">
-          <Button className="gap-2">
-            <ArrowLeft size={18} /> Voltar ao painel
-          </Button>
+          <button style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 20px", color: "#f9fafb", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            <ArrowLeft size={16} /> Voltar ao painel
+          </button>
         </Link>
       </motion.div>
     );
   }
 
+  const activePlan = PLANS.find((p) => p.id === selected)!;
+
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="pb-20 space-y-0"
+      variants={stagger} initial="hidden" animate="show"
+      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40 }}
     >
-      {/* Header — expired state vs. regular */}
-      <div className="relative overflow-hidden rounded-3xl mb-6">
-        {showExpiredState ? (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-orange-900/15 to-transparent" />
-            <div className="absolute top-0 right-0 w-72 h-72 bg-red-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-            <div className="relative z-10 p-6 pt-8 text-center">
-              <div className="inline-flex items-center gap-2 bg-red-500/15 border border-red-500/30 text-red-400 rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest mb-5">
-                <AlertTriangle size={12} />
-                Teste gratuito encerrado
-              </div>
-              <h1 className="text-2xl md:text-3xl font-display font-extrabold text-white leading-tight mb-3">
-                Não perca acesso ao<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-orange-400">seu lucro real</span>
-              </h1>
-              <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto">
-                Você já viu o poder do Lucro Driver PRO. Continue tendo acesso a todos os recursos que fazem você ganhar mais.
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-yellow-600/10 to-transparent" />
-            <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-500/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-            <div className="relative z-10 p-6 pt-8 text-center">
-              <div className="inline-flex items-center gap-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest mb-5">
-                <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                {u?.trialActive ? `Teste ativo — ${u?.trialDaysLeft} dias restantes` : "Lucro Driver PRO"}
-              </div>
-              {u?.trialActive && (
-                <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-300 rounded-full px-3 py-1 text-xs font-semibold mb-4">
-                  <Clock size={11} />
-                  {u?.trialDaysLeft <= 1
-                    ? "Último dia! Não perca seus recursos PRO."
-                    : u?.trialDaysLeft <= 3
-                    ? `Teste terminando em ${u?.trialDaysLeft} dias. Faça upgrade agora.`
-                    : `Aproveite enquanto dura — ${u?.trialDaysLeft} dias restantes`}
-                </div>
-              )}
-              <h1 className="text-2xl md:text-3xl font-display font-extrabold text-white leading-tight mb-3">
-                {u?.trialActive
-                  ? "Mantenha seu PRO ativo"
-                  : <>Você está vendo apenas<br /><span className="text-yellow-400">seu faturamento.</span></>
-                }
-              </h1>
-              <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto">
-                {u?.trialActive
-                  ? "Escolha um plano para não perder acesso ao seu lucro real, relatórios e insights."
-                  : "Desbloqueie seu lucro real e saiba exatamente quanto sobra no seu bolso após todos os custos."
-                }
-              </p>
-            </div>
-          </>
-        )}
-      </div>
 
-      {/* Plan Toggle */}
-      <div className="flex gap-3 mb-6">
-        {PLANS.map((plan) => (
-          <button
-            key={plan.id}
-            onClick={() => setSelected(plan.id as "monthly" | "yearly")}
-            className={`flex-1 relative p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
-              selected === plan.id
-                ? showExpiredState
-                  ? "border-red-500/60 bg-red-500/10"
-                  : "border-yellow-500 bg-yellow-500/10"
-                : "border-white/10 bg-white/[0.02] hover:border-white/20"
-            }`}
-          >
-            {plan.badge && (
-              <span className="absolute -top-2 right-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                {plan.badge}
-              </span>
-            )}
-            <p className="text-xs font-bold text-white/50 uppercase tracking-wide mb-1">{plan.label}</p>
-            <p className="text-xl font-display font-extrabold text-white">{plan.price}</p>
-            <p className="text-xs text-white/40">{plan.period}</p>
-          </button>
-        ))}
-      </div>
+      {/* ── Back button ───────────────────────────────────────────────────────── */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontFamily: "inherit", padding: 0, fontSize: 14, fontWeight: 600 }}
+        >
+          <ArrowLeft size={16} /> Voltar
+        </button>
+      </motion.div>
 
-      {/* Features */}
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6 space-y-4">
-        <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2">O que você vai desbloquear</p>
-        {FEATURES.map((f, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
-              {f.icon}
-            </div>
-            <span className="text-sm font-medium text-white">{f.text}</span>
-            <Check size={16} className="text-primary ml-auto shrink-0" />
+      {/* ══════════════════════════════════════════════════════════════
+          HERO HEADER
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 28, position: "relative" }}>
+
+        {/* Expired alert */}
+        {showExpired && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
+            <AlertTriangle size={14} color="#f87171" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#f87171" }}>Seu teste gratuito encerrou</span>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Payment note */}
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 mb-6">
-        <p className="text-xs text-white/40 text-center leading-relaxed">
-          Pagamento via cartão de crédito · Cancele quando quiser · Suporte a PIX em breve
+        {/* Trial urgency */}
+        {trialActive && !showExpired && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.18)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
+            <Clock size={14} color="#eab308" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#eab308" }}>
+              {trialDaysLeft <= 1 ? "Último dia de teste!" : `Teste termina em ${trialDaysLeft} dias`}
+            </span>
+          </div>
+        )}
+
+        {/* PRO badge */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", borderRadius: 20, padding: "6px 14px" }}>
+            <motion.div
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity }}
+              style={{ width: 6, height: 6, borderRadius: "50%", background: "#eab308" }}
+            />
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#eab308", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              ✦ Lucro Driver PRO
+            </span>
+          </div>
+        </div>
+
+        {/* Headline */}
+        <h1 style={{
+          fontSize: 30, fontWeight: 900, lineHeight: 1.2,
+          color: "#f9fafb", letterSpacing: "-0.025em",
+          marginBottom: 12,
+        }}>
+          {showExpired
+            ? <>Não perca acesso ao<br /><span style={{ color: "#00ff88" }}>seu lucro real</span></>
+            : <>Você já trabalhou hoje.<br /><span style={{ color: "#00ff88" }}>Agora veja quanto</span><br />realmente lucrou.</>
+          }
+        </h1>
+
+        {/* Sub */}
+        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.6, maxWidth: 300 }}>
+          {showExpired
+            ? "Você já viu o poder do PRO. Continue tendo acesso a tudo que faz você ganhar mais."
+            : "Pare de confundir faturamento com lucro."
+          }
         </p>
-      </div>
+      </motion.div>
 
-      {/* Error */}
+      {/* ══════════════════════════════════════════════════════════════
+          PLAN SELECTOR
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
+          Escolha seu plano
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          {PLANS.map((plan) => {
+            const active = selected === plan.id;
+            return (
+              <button
+                key={plan.id}
+                onClick={() => setSelected(plan.id as "monthly" | "yearly")}
+                style={{
+                  flex: 1, position: "relative",
+                  padding: "16px 14px", borderRadius: 18,
+                  border: `2px solid ${active ? "#00ff88" : "rgba(255,255,255,0.08)"}`,
+                  background: active ? "rgba(0,255,136,0.06)" : "rgba(255,255,255,0.02)",
+                  textAlign: "left", cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  fontFamily: "inherit",
+                }}
+              >
+                {/* Best value badge */}
+                {plan.badge && (
+                  <div style={{
+                    position: "absolute", top: -9, right: 12,
+                    background: "linear-gradient(135deg,#eab308,#ca8a04)",
+                    color: "#000", fontSize: 9, fontWeight: 800,
+                    padding: "3px 8px", borderRadius: 999, letterSpacing: "0.04em",
+                  }}>
+                    {plan.badge}
+                  </div>
+                )}
+
+                {/* Active checkmark */}
+                {active && (
+                  <div style={{
+                    position: "absolute", top: 10, right: 10,
+                    width: 18, height: 18, borderRadius: "50%",
+                    background: "#00ff88", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Check size={10} color="#000" strokeWidth={3} />
+                  </div>
+                )}
+
+                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: active ? "rgba(0,255,136,0.7)" : "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 6 }}>
+                  {plan.label}
+                </p>
+                <p style={{ fontSize: 22, fontWeight: 900, color: active ? "#f9fafb" : "rgba(255,255,255,0.55)", letterSpacing: "-0.02em", marginBottom: 2 }}>
+                  {plan.price}
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.35)" }}>{plan.period}</span>
+                </p>
+                <p style={{ fontSize: 11, color: active ? "rgba(0,255,136,0.65)" : "rgba(255,255,255,0.25)", fontWeight: 500 }}>
+                  {plan.sub}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          PRICE HIGHLIGHT CARD
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <div style={{
+          position: "relative", borderRadius: 24, overflow: "hidden",
+          background: "#0e0e0e",
+          border: "1px solid rgba(0,255,136,0.15)",
+          boxShadow: "0 0 0 1px rgba(0,255,136,0.05) inset, 0 12px 40px rgba(0,0,0,0.4)",
+          padding: "22px 20px",
+        }}>
+          {/* Glow */}
+          <div style={{ position: "absolute", top: -40, right: -20, width: 200, height: 160, background: "radial-gradient(ellipse,rgba(0,255,136,0.12) 0%,transparent 70%)", pointerEvents: "none" }} />
+
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 4 }}>Você paga apenas</p>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={selected}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25 }}
+                    style={{ fontSize: 46, fontWeight: 900, color: "#00ff88", letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums", textShadow: "0 0 40px rgba(0,255,136,0.4)" }}
+                  >
+                    {activePlan.price}
+                    <span style={{ fontSize: 16, fontWeight: 600, color: "rgba(0,255,136,0.55)" }}>{activePlan.period}</span>
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>por dia</p>
+                <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>
+                  R${(activePlan.perMonth / 30).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            {/* Value anchor */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.12)", borderRadius: 12, padding: "10px 14px" }}>
+              <span style={{ fontSize: 16 }}>🚗</span>
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>Menos que uma corrida</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>O retorno é de centenas de reais por mês</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          BENEFITS
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 24 }}>
+        <div style={{
+          background: "#0e0e0e",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 22,
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.04) inset",
+        }}>
+          {BENEFITS.map(({ icon: Icon, text, sub }, i) => (
+            <motion.div
+              key={text}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.15 + i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "16px 18px",
+                borderBottom: i < BENEFITS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+              }}
+            >
+              {/* Icon container */}
+              <div style={{
+                width: 40, height: 40, borderRadius: 13, flexShrink: 0,
+                background: "rgba(0,255,136,0.08)",
+                border: "1px solid rgba(0,255,136,0.14)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Icon size={18} color="#00ff88" strokeWidth={2} />
+              </div>
+
+              {/* Text */}
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#f9fafb", marginBottom: 2 }}>{text}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>{sub}</p>
+              </div>
+
+              {/* Check */}
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Check size={10} color="#00ff88" strokeWidth={3} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          ERROR
+      ══════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {error && (
           <motion.div
-            key="upgrade-error"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 mb-4 text-sm text-red-400 text-center"
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#f87171", textAlign: "center" }}
           >
             {error}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* CTA */}
-      <button
-        onClick={handleUpgrade}
-        disabled={isLoading}
-        className={`w-full h-14 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
-          showExpiredState
-            ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-red-500/20 hover:from-red-400 hover:to-orange-400"
-            : "bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-yellow-500/30 hover:from-yellow-300 hover:to-yellow-500"
-        }`}
-      >
-        {isLoading ? (
-          <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-        ) : (
-          <>
-            {showExpiredState ? <Zap size={20} /> : <Lock size={20} />}
-            {showExpiredState ? "Fazer upgrade agora" : "Fazer upgrade para PRO"}
-            <ChevronRight size={20} className="ml-auto" />
-          </>
-        )}
-      </button>
+      {/* ══════════════════════════════════════════════════════════════
+          MAIN CTA
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 14 }}>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={handleUpgrade}
+          disabled={isLoading}
+          style={{
+            width: "100%", height: 62, borderRadius: 20, border: "none",
+            background: isLoading ? "rgba(0,255,136,0.5)" : "#00ff88",
+            color: "#000", fontWeight: 900, fontSize: 18,
+            cursor: isLoading ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            boxShadow: "0 12px 40px rgba(0,255,136,0.35), 0 4px 12px rgba(0,0,0,0.3)",
+            fontFamily: "inherit", letterSpacing: "-0.01em",
+            position: "relative", overflow: "hidden",
+          }}
+        >
+          {/* Shine sweep on hover */}
+          <motion.div
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 1.5 }}
+            style={{
+              position: "absolute", top: 0, bottom: 0, width: "40%",
+              background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)",
+              pointerEvents: "none",
+            }}
+          />
 
-      <p className="text-center text-xs text-white/30 mt-3">
-        Cancele quando quiser · Pagamento seguro via Stripe
-      </p>
+          {isLoading ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000" }}
+            />
+          ) : (
+            <>
+              <Zap size={20} strokeWidth={2.5} />
+              Começar agora
+              <ChevronRight size={20} strokeWidth={2.5} style={{ marginLeft: "auto" }} />
+            </>
+          )}
+        </motion.button>
+      </motion.div>
+
+      {/* ── Pix option ─────────────────────────────────────────────────────── */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
+        <button
+          style={{
+            width: "100%", height: 50, borderRadius: 16,
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 18 }}>🔑</span>
+          Prefere Pix? Pague em segundos
+        </button>
+        <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>
+          Pix disponível em breve
+        </p>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          TRUST BADGES
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+          {TRUST.map(({ icon, label, sub }) => (
+            <div
+              key={label}
+              style={{
+                background: "#0e0e0e",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 18,
+                padding: "14px 10px",
+                textAlign: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              }}
+            >
+              <p style={{ fontSize: 22, marginBottom: 6 }}>{icon}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", lineHeight: 1.3, marginBottom: 3 }}>{label}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", lineHeight: 1.3 }}>{sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Security line */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 0" }}>
+          <Shield size={13} color="rgba(255,255,255,0.2)" />
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+            Pagamento seguro via Stripe · Seus dados estão protegidos
+          </p>
+        </div>
+      </motion.div>
+
     </motion.div>
   );
 }
