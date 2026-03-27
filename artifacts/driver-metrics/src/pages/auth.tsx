@@ -260,7 +260,7 @@ export default function AuthScreen() {
             <motion.h1
               initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.06, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 18 }}
+              style={{ fontSize: "clamp(36px, 12vw, 52px)", fontWeight: 900, lineHeight: 1.06, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 18, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
             >
               {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
               <span style={{ color: "#00ff88", textShadow: "0 0 32px rgba(0,255,136,0.4)" }}>

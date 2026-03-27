@@ -1,0 +1,236 @@
+Upgrade the Home and Dashboard pages of my app "Lucro Driver" to a premium fintech/banking-app level UI.
+
+IMPORTANT:
+Do not redesign the app from scratch.
+Preserve the current identity:
+- dark theme
+- green highlights
+- premium/gold accents
+- clean modern style
+
+GOAL:
+Make the Home and Dashboard feel like a polished banking/fintech product:
+- elegant
+- trustworthy
+- stable
+- readable
+- highly premium on mobile and desktop
+
+======================================
+1. HOME PAGE — BANKING APP QUALITY
+======================================
+
+Create a refined hero section with perfect visual hierarchy.
+
+REQUIREMENTS:
+
+- Keep headline:
+  "Faturamento engana."
+
+- Keep subtext:
+  "Veja seu lucro real em segundos."
+
+- Add perfect spacing between:
+  logo
+  headline
+  subtitle
+  primary CTA
+  secondary CTA
+
+- Use a centered container with:
+  max-width around 420–480px
+  margin: 0 auto
+  balanced vertical padding
+
+- Improve typography:
+  headline large and strong but not oversized
+  subtitle smaller, softer, readable
+
+- Ensure buttons look premium:
+  large
+  rounded
+  soft shadow/glow
+  strong hover/focus states on desktop
+  touch-friendly on mobile
+
+Primary CTA:
+- "Importar meu dia"
+
+Secondary CTA:
+- "Já tenho conta — Entrar"
+
+- Keep background premium but subtle:
+  grid/glow effects must stay behind content
+  never interfere with readability or clickability
+  decorative layers must use pointer-events: none
+
+- The page must feel calm, premium, and expensive.
+
+======================================
+2. DASHBOARD — BANKING APP QUALITY
+======================================
+
+Create a dashboard that feels like a modern fintech account overview.
+
+--------------------------------------
+A. MAIN PROFIT CARD
+--------------------------------------
+
+Card title:
+"Seu lucro real hoje"
+
+Requirements:
+- Main value must remain the visual priority
+- Reduce the number size slightly if needed so big values fit perfectly
+- Support values like:
+  R$ 1.250,90
+  R$ 12.450,75
+
+- Add clean spacing:
+  title
+  value
+  supporting subtitle
+
+- Use premium card design:
+  rounded corners
+  subtle gradient or glow
+  strong but elegant contrast
+  no overcrowding
+
+- The card should feel like the “account balance” section of a banking app.
+
+--------------------------------------
+B. METRICS SECTION
+--------------------------------------
+
+Display the secondary metrics in a clean grid:
+- Corridas
+- R$/hora
+- R$/km
+- Nota / rating (if available)
+
+Requirements:
+- Equal card height
+- Consistent spacing
+- Clean labels
+- Numbers readable but smaller than the main profit card
+
+Desktop:
+- balanced centered layout
+
+Mobile:
+- 2-column responsive grid with perfect spacing
+
+--------------------------------------
+C. INSIGHTS CARD
+--------------------------------------
+
+Create a premium “analysis/insight” card.
+
+Requirements:
+- Status badge (good / average / bad)
+- Short message
+- Helpful suggestion
+
+Visual style:
+- subtle tone
+- premium dark card
+- colored accent depending on status
+- no long messy text
+- everything aligned and readable
+
+This card should feel like an intelligent assistant, not a warning box.
+
+--------------------------------------
+D. GOAL SECTION
+--------------------------------------
+
+Improve goal progress UI:
+- clean progress bar
+- premium track/fill
+- message like:
+  "Faltam R$ X para sua meta"
+
+Requirements:
+- aligned
+- elegant
+- no oversized text
+- visually integrated with the dashboard
+
+======================================
+3. VISUAL POLISH
+======================================
+
+Apply premium polish to both Home and Dashboard:
+
+- refined spacing system
+- consistent border radius
+- consistent card padding
+- consistent typography scale
+- elegant shadow usage
+- premium dark surfaces
+- no clutter
+- no overlapping
+- no oversized text
+
+Typography:
+- improve line-height
+- improve readability
+- improve balance between headings, labels, and numbers
+
+Interactions:
+- smooth transitions
+- polished hover/focus states on desktop
+- subtle press feedback on mobile
+
+======================================
+4. RESPONSIVE QUALITY
+======================================
+
+Ensure both pages look premium on:
+
+- Android mobile
+- desktop browser
+- tablet
+
+Rules:
+- no cropped text
+- no hidden buttons
+- no broken spacing
+- no stretched cards
+- no click issues
+
+======================================
+5. LAYOUT SAFETY
+======================================
+
+Review and fix:
+- z-index
+- pointer-events
+- overflow
+- max-width
+- min-height
+- flex/grid wrappers
+- shared card components
+- shared container styles
+
+Avoid:
+- invisible layers covering content
+- fixed widths that break responsiveness
+- absolute positioning for core layout
+
+======================================
+6. FINAL RESULT
+======================================
+
+The final Home and Dashboard must feel like:
+- a polished banking app
+- premium fintech quality
+- visually stable
+- beautiful on first impression
+- ready for paid users
+
+Also return a summary of:
+- which files were changed
+- what visual improvements were made
+- what layout issues were fixed

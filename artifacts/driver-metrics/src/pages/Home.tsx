@@ -190,7 +190,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontSize: "clamp(34px, 8.5vw, 48px)",
+                  fontSize: "clamp(32px, 7vw, 44px)",
                   fontWeight: 900,
                   lineHeight: 1.0,
                   color: pColor,
@@ -200,6 +200,7 @@ export default function Home() {
                   textShadow: `0 0 40px ${pColor}38`,
                   marginBottom: 10,
                   wordBreak: "break-word",
+                  overflowWrap: "break-word",
                 }}
               >
                 <Counter value={profit} />
@@ -273,7 +274,7 @@ export default function Home() {
           {t("home.indicators")}
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {/* Corridas */}
           <MetricTile
             icon={<Car size={15} color="#60a5fa" />}
@@ -384,16 +385,16 @@ export default function Home() {
               }} />
 
               {/* Header row */}
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16, position: "relative" }}>
-                <div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, position: "relative" }}>
+                <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
                   <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 4 }}>
                     {t("home.earnedToday")}
                   </p>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                    <span style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em", wordBreak: "break-word", overflowWrap: "break-word" }}>
                       {formatBRL(earnings)}
                     </span>
-                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
                       {t("home.of")} {formatBRL(goalDaily)}
                     </span>
                   </div>
@@ -611,7 +612,7 @@ function MetricTile({
       </div>
 
       {/* Value */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 2, minWidth: 0, maxWidth: "100%", flexWrap: "wrap" }}>
         {loading
           ? <Skeleton h={30} w={60} r={8} />
           : value

@@ -123,12 +123,14 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
 
         {/* ── Message ────────────────────────────────────────────────────── */}
         <p style={{
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: 600,
           color: "rgba(255,255,255,0.82)",
           lineHeight: 1.6,
           marginBottom: 16,
           letterSpacing: "-0.005em",
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
         }}>
           {message}
         </p>
@@ -157,6 +159,8 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
             fontWeight: 500,
             color: "rgba(255,255,255,0.42)",
             lineHeight: 1.6,
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
           }}>
             {suggestion}
           </p>
