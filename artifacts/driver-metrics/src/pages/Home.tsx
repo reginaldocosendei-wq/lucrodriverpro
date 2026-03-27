@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { formatBRL } from "@/lib/utils";
 import { Car, Clock, Navigation, Plus, Camera, ChevronRight, Lock, Zap } from "lucide-react";
-import { motion, animate, AnimatePresence } from "framer-motion";
+import { motion, animate } from "framer-motion";
 import { Link } from "wouter";
+import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -95,23 +96,24 @@ export default function Home() {
   // ── Goal color ─────────────────────────────────────────────────────────────
   const gColor = goalPct >= 100 ? "#00ff88" : goalPct >= 70 ? "#4ade80" : goalPct >= 40 ? "#eab308" : "#ef4444";
 
-  // ── Daily analysis status ──────────────────────────────────────────────────
-  type Status = "great" | "good" | "weak" | "negative" | "idle";
-  const status: Status =
+  // ── Smart insight ─────────────────────────────────────────────────────────
+  const insightStatus: InsightStatus =
     earnings <= 0 ? "idle"
-    : profit <= 0 ? "negative"
-    : marginPct >= 50 ? "great"
-    : marginPct >= 25 ? "good"
-    : "weak";
+    : profit <= 0 || marginPct < 15 ? "bad"
+    : marginPct < 40 ? "average"
+    : "good";
 
-  const statusCfg: Record<Status, { emoji: string; label: string; color: string; bg: string; border: string; message: string; tip: string }> = {
-    great:    { emoji: "🔥", label: "Ótimo dia",    color: "#00ff88", bg: "rgba(0,255,136,0.05)",  border: "rgba(0,255,136,0.15)",  message: `Margem de ${Math.round(marginPct)}% — você está maximizando cada real ganho.`, tip: "Replique a estratégia de hoje nos próximos dias." },
-    good:     { emoji: "👍", label: "Bom dia",      color: "#4ade80", bg: "rgba(74,222,128,0.04)", border: "rgba(74,222,128,0.14)", message: `Lucro sólido com ${Math.round(marginPct)}% de margem.`,                              tip: "Prefira corridas mais longas para aumentar o R$/km." },
-    weak:     { emoji: "⚠️", label: "Dia fraco",    color: "#eab308", bg: "rgba(234,179,8,0.04)",  border: "rgba(234,179,8,0.18)",  message: `Margem de apenas ${Math.round(marginPct)}% hoje.`,                                  tip: "Foque nos horários de alta demanda para recuperar." },
-    negative: { emoji: "❌", label: "Prejuízo",     color: "#ef4444", bg: "rgba(239,68,68,0.04)",  border: "rgba(239,68,68,0.18)",  message: "Seus custos superaram os ganhos hoje.",                                              tip: "Reduza gastos com combustível com urgência." },
-    idle:     { emoji: "🌙", label: "Sem dados",    color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.07)", message: "Nenhum ganho registrado hoje.",                         tip: "Importe seu resultado via screenshot do app." },
-  };
-  const sc = statusCfg[status];
+  const insightMessage =
+    insightStatus === "good"    ? `Margem de ${Math.round(marginPct)}% hoje — você está maximizando cada real ganho.`
+    : insightStatus === "average" ? `Margem de ${Math.round(marginPct)}% — ainda há espaço para melhorar.`
+    : insightStatus === "bad"     ? profit <= 0 ? "Seus custos superaram os ganhos hoje." : `Margem baixa de ${Math.round(marginPct)}% — dia difícil.`
+    : "Nenhum ganho registrado ainda hoje.";
+
+  const insightSuggestion =
+    insightStatus === "good"    ? "Replique a estratégia de hoje nos próximos dias."
+    : insightStatus === "average" ? "Prefira corridas mais longas para aumentar o R$/km."
+    : insightStatus === "bad"     ? "Foque nos horários de alta demanda para recuperar."
+    : "Importe seu resultado via screenshot do app.";
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -322,7 +324,7 @@ export default function Home() {
 
 
       {/* ╔══════════════════════════════════════════════════════════════════
-          ║  3. INSIGHTS — Daily analysis
+          ║  3. INSIGHTS — Smart analysis
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
         <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
@@ -332,72 +334,16 @@ export default function Home() {
         {isLoading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <Skeleton h={20} w="60%" r={8} />
-            <Skeleton h={40} r={10} />
-            <Skeleton h={16} w="80%" r={8} />
+            <Skeleton h={18} r={8} />
+            <Skeleton h={18} w="85%" r={8} />
+            <Skeleton h={14} w="70%" r={8} />
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              background: sc.bg,
-              border: `1px solid ${sc.border}`,
-              borderRadius: 22,
-              padding: "20px 18px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Accent glow */}
-            <div style={{
-              position: "absolute", top: -30, right: -20, width: 120, height: 100,
-              background: `radial-gradient(ellipse, ${sc.color}20 0%, transparent 70%)`,
-              pointerEvents: "none",
-            }} />
-
-            {/* Status chip */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 7,
-                background: `${sc.color}12`, border: `1px solid ${sc.color}28`,
-                borderRadius: 20, padding: "5px 12px",
-              }}>
-                <span style={{ fontSize: 13 }}>{sc.emoji}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: sc.color, letterSpacing: "0.05em" }}>
-                  {sc.label}
-                </span>
-              </div>
-
-              {earnings > 0 && (
-                <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                  <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
-                    Lucro hoje
-                  </p>
-                  <p style={{ fontSize: 18, fontWeight: 900, color: sc.color, fontVariantNumeric: "tabular-nums" }}>
-                    {formatBRL(profit)}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Message */}
-            <p style={{
-              fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.75)",
-              lineHeight: 1.55, marginBottom: 14,
-            }}>
-              {sc.message}
-            </p>
-
-            {/* Divider */}
-            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 12 }} />
-
-            {/* Tip */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-              <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.55 }}>{sc.tip}</p>
-            </div>
-          </motion.div>
+          <SmartInsightCard
+            status={insightStatus}
+            message={insightMessage}
+            suggestion={insightSuggestion}
+          />
         )}
       </motion.div>
 
