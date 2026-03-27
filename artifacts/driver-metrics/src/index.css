@@ -174,8 +174,31 @@
   }
 }
 
+/* ─── KEYFRAMES ──────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(0,255,136,0.25); }
+  50%       { box-shadow: 0 0 28px rgba(0,255,136,0.5); }
+}
+
 /* ─── UTILITY CLASSES ────────────────────────────────────── */
 @layer utilities {
+  /* ── Text gradient ─── */
   .text-gradient {
     background: linear-gradient(135deg, #fff 0%, #00ff88 100%);
     -webkit-background-clip: text;
@@ -183,52 +206,105 @@
     background-clip: text;
   }
 
+  /* ── Glow helpers ─── */
   .glow-primary {
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
   }
-
   .glow-primary-hover:hover {
     box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
   }
-
   .glow-gold {
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
   }
+  .glow-pulse {
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
 
+  /* ── Glass ─── */
   .glass-panel {
-    background: rgba(10, 10, 10, 0.85);
-    backdrop-filter: blur(20px) saturate(1.5);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    background: rgba(8, 8, 8, 0.88);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
   }
 
-  /* Safe area padding helpers */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 8px);
+  /* ── Premium card ─── */
+  .card-premium {
+    background: #0e0e0e;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 22px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 12px 40px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
   }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .pl-safe {
-    padding-left: env(safe-area-inset-left, 0px);
-  }
-  .pr-safe {
-    padding-right: env(safe-area-inset-right, 0px);
+  .card-premium:hover {
+    border-color: rgba(255, 255, 255, 0.11);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.05) inset,
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.35);
   }
 
-  /* Full-height that adapts to mobile browsers */
-  .h-screen-safe {
-    height: 100dvh;
+  /* ── Shimmer skeleton ─── */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.04) 0%,
+      rgba(255,255,255,0.09) 50%,
+      rgba(255,255,255,0.04) 100%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
   }
-  .min-h-screen-safe {
-    min-height: 100dvh;
+
+  /* ── Entrance animations ─── */
+  .animate-fade-up {
+    animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Stagger delays */
+  .delay-50  { animation-delay: 50ms; }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+
+  /* ── Interactive states ─── */
+  .press-scale {
+    transition: transform 0.1s ease;
+  }
+  .press-scale:active {
+    transform: scale(0.96);
+  }
+
+  /* ── Safe areas ─── */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 8px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+
+  .h-screen-safe   { height: 100dvh; }
+  .min-h-screen-safe { min-height: 100dvh; }
 
   .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
 
-  /* Disable animation for reduced motion preference */
+  /* ── Number styling ─── */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Reduced motion ─── */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;

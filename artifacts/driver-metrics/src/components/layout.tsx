@@ -1,11 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
-import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
+// ─── TYPES ────────────────────────────────────────────────────────────────────
 type TrialUser = {
   trialActive?: boolean;
   trialExpired?: boolean;
@@ -15,180 +15,186 @@ type TrialUser = {
   name?: string;
 };
 
-interface TrialBannerProps {
-  days: number;
-  onUpgrade: () => void;
-  onDismiss: () => void;
-}
-
-function TrialBannerContent({ days, onUpgrade, onDismiss }: TrialBannerProps) {
+// ─── TRIAL BANNER ─────────────────────────────────────────────────────────────
+function TrialBanner({ days, onUpgrade, onDismiss }: { days: number; onUpgrade: () => void; onDismiss: () => void }) {
   const isLastDay = days <= 1;
-  const isUrgent = days <= 3;
+  const isUrgent  = days <= 3;
 
-  const config = isLastDay
-    ? {
-        bg: "bg-gradient-to-r from-red-950/80 to-red-900/60",
-        border: "border-red-500/40",
-        icon: <Flame size={15} className="text-red-400 shrink-0" />,
-        badge: "bg-red-500/20 text-red-300 border-red-500/30",
-        badgeText: "🚨 Último dia!",
-        message: "Última chance! Mantenha seus recursos PRO ativos.",
-        cta: "Fazer upgrade agora",
-        ctaClass: "bg-red-500 hover:bg-red-400 text-white",
-        showDismiss: false,
-      }
-    : isUrgent
-    ? {
-        bg: "bg-gradient-to-r from-orange-950/80 to-amber-900/60",
-        border: "border-orange-500/40",
-        icon: <AlertTriangle size={15} className="text-orange-400 shrink-0" />,
-        badge: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-        badgeText: `⚠️ ${days} dias restantes`,
-        message: "Teste terminando. Não perca seu lucro real.",
-        cta: "Manter PRO",
-        ctaClass: "bg-orange-500 hover:bg-orange-400 text-white",
-        showDismiss: false,
-      }
-    : {
-        bg: "bg-gradient-to-r from-yellow-950/60 to-amber-950/40",
-        border: "border-yellow-500/20",
-        icon: <Clock size={15} className="text-yellow-400 shrink-0" />,
-        badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-        badgeText: `Teste PRO — ${days} dias restantes`,
-        message: null,
-        cta: "Fazer upgrade",
-        ctaClass: "bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/30",
-        showDismiss: true,
-      };
+  const cfg = isLastDay ? {
+    bg: "rgba(127,29,29,0.7)", border: "rgba(239,68,68,0.3)",
+    icon: <Flame size={13} color="#f87171" />,
+    badge: { bg: "rgba(239,68,68,0.15)", color: "#f87171", border: "rgba(239,68,68,0.25)" },
+    text: "🚨 Último dia!", cta: "Fazer upgrade agora", ctaColor: "#ef4444", dismiss: false,
+  } : isUrgent ? {
+    bg: "rgba(120,53,15,0.7)", border: "rgba(251,146,60,0.25)",
+    icon: <AlertTriangle size={13} color="#fb923c" />,
+    badge: { bg: "rgba(251,146,60,0.12)", color: "#fb923c", border: "rgba(251,146,60,0.22)" },
+    text: `⚠️ ${days} dias restantes`, cta: "Manter PRO", ctaColor: "#f97316", dismiss: false,
+  } : {
+    bg: "rgba(66,32,6,0.6)", border: "rgba(234,179,8,0.15)",
+    icon: <Clock size={13} color="#eab308" />,
+    badge: { bg: "rgba(234,179,8,0.08)", color: "#ca8a04", border: "rgba(234,179,8,0.18)" },
+    text: `Teste PRO — ${days} dias`, cta: "Fazer upgrade", ctaColor: "#eab308", dismiss: true,
+  };
 
   return (
-    <div className={`${config.bg} border-b ${config.border}`}>
-      <div className="px-4 py-2.5 flex items-center gap-3 max-w-4xl mx-auto">
-        {config.icon}
-        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className={`text-[10px] font-extrabold border rounded-full px-2.5 py-0.5 tracking-wide whitespace-nowrap ${config.badge}`}>
-            {config.badgeText}
-          </span>
-          {config.message && (
-            <span className="text-xs text-white/50 leading-tight hidden sm:block">{config.message}</span>
-          )}
-        </div>
-        <button
-          onClick={onUpgrade}
-          className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 transition-colors ${config.ctaClass}`}
-        >
-          {config.cta}
-        </button>
-        {config.showDismiss && (
-          <button
-            onClick={onDismiss}
-            className="text-white/30 hover:text-white/60 transition-colors shrink-0 p-1"
-          >
-            <X size={13} />
-          </button>
-        )}
+    <div style={{
+      background: cfg.bg, borderBottom: `1px solid ${cfg.border}`,
+      backdropFilter: "blur(12px)",
+      padding: "8px 16px",
+      display: "flex", alignItems: "center", gap: 10,
+    }}>
+      {cfg.icon}
+      <div style={{
+        display: "inline-flex", alignItems: "center",
+        background: cfg.badge.bg, border: `1px solid ${cfg.badge.border}`,
+        borderRadius: 999, padding: "3px 10px",
+        fontSize: 10, fontWeight: 700, color: cfg.badge.color, letterSpacing: "0.05em",
+        flexShrink: 0,
+      }}>
+        {cfg.text}
       </div>
+      <div style={{ flex: 1 }} />
+      <button
+        onClick={onUpgrade}
+        style={{
+          background: `${cfg.ctaColor}18`, border: `1px solid ${cfg.ctaColor}40`,
+          borderRadius: 999, padding: "5px 12px",
+          fontSize: 11, fontWeight: 700, color: cfg.ctaColor,
+          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+        }}
+      >
+        {cfg.cta}
+      </button>
+      {cfg.dismiss && (
+        <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 4 }}>
+          <X size={12} />
+        </button>
+      )}
     </div>
   );
 }
 
+// ─── NAV ITEMS ────────────────────────────────────────────────────────────────
+const NAV = [
+  { path: "/",        Icon: Home,     label: "Início" },
+  { path: "/rides",   Icon: Car,      label: "Corridas" },
+  { path: "/costs",   Icon: Wallet,   label: "Custos" },
+  { path: "/goals",   Icon: Target,   label: "Metas" },
+  { path: "/reports", Icon: BarChart2, label: "Relatórios", isPro: true },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════════
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
-  const { data: user } = useGetMe();
-  const logout = useLogout();
-  const queryClient = useQueryClient();
-
+  const { data: user }       = useGetMe();
+  const logout               = useLogout();
+  const queryClient          = useQueryClient();
   const u = user as TrialUser | undefined;
-  const trialActive = u?.trialActive === true;
+
+  const trialActive  = u?.trialActive === true;
   const trialExpired = u?.trialExpired === true;
   const trialDaysLeft = u?.trialDaysLeft ?? 7;
-
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showBanner = trialActive && !bannerDismissed;
 
+  useEffect(() => { setBannerDismissed(false); }, [trialDaysLeft]);
   useEffect(() => {
-    setBannerDismissed(false);
-  }, [trialDaysLeft]);
-
-  useEffect(() => {
-    if (
-      trialExpired &&
-      !location.startsWith("/upgrade") &&
-      !location.startsWith("/checkout")
-    ) {
+    if (trialExpired && !location.startsWith("/upgrade") && !location.startsWith("/checkout")) {
       navigate("/upgrade?expired=1");
     }
   }, [trialExpired, location]);
 
   const handleLogout = () => {
     logout.mutate(undefined, {
-      onSuccess: () => {
-        queryClient.setQueryData(["/api/auth/me"], null);
-        queryClient.clear();
-      },
+      onSuccess: () => { queryClient.setQueryData(["/api/auth/me"], null); queryClient.clear(); },
     });
   };
 
-  const navItems = [
-    { path: "/", icon: Home, label: "Início" },
-    { path: "/rides", icon: Car, label: "Corridas" },
-    { path: "/costs", icon: Wallet, label: "Custos" },
-    { path: "/goals", icon: Target, label: "Metas" },
-    { path: "/reports", icon: BarChart2, label: "Relatórios", isPro: true },
-  ];
-
-  const currentHour = new Date().getHours();
-  const greeting = currentHour < 12 ? "Bom dia" : currentHour < 18 ? "Boa tarde" : "Boa noite";
-  const currentPage = navItems.find((i) => i.path === location);
-  const pageTitle = currentPage?.label || "Lucro Driver";
-  const getGreetingName = () => u?.name?.split(" ")[0] || "";
-  const activeIndex = navItems.findIndex((i) => i.path === location);
-
-  const showBanner = trialActive && !bannerDismissed;
+  const activeIdx = NAV.findIndex((n) => n.path === location);
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-24 md:pb-0 md:pl-24">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-primary/20 shadow-[0_4px_30px_rgba(0,255,136,0.05)]">
-        <div className="px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-display font-bold text-2xl leading-none text-white tracking-tight">
-              {pageTitle}
-            </h1>
-            {user && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {greeting},{" "}
-                  <span className="text-foreground">{getGreetingName()}</span>
-                </span>
-                {u?.plan === "pro" && (
-                  <span className="text-[10px] font-extrabold bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-0.5 rounded-sm shadow-[0_0_10px_rgba(255,215,0,0.3)] tracking-wider">
-                    {trialActive ? "⏳ TESTE" : "✦ PRO"}
-                  </span>
-                )}
-              </div>
-            )}
+    <div style={{ minHeight: "100dvh", background: "#080808", display: "flex", flexDirection: "column" }}>
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 40,
+        background: "rgba(8,8,8,0.9)",
+        backdropFilter: "blur(24px) saturate(1.8)",
+        WebkitBackdropFilter: "blur(24px) saturate(1.8)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.03), 0 4px 32px rgba(0,0,0,0.5)",
+      }}>
+        <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Wordmark */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: "linear-gradient(135deg, #00ff88, #00cc6a)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(0,255,136,0.3)",
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 16 }}>💰</span>
+            </div>
+            <div>
+              <span style={{ fontSize: 16, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em" }}>
+                Lucro{" "}
+                <span style={{ color: "#00ff88" }}>Driver</span>
+              </span>
+              {u?.plan === "pro" && (
+                <div style={{
+                  display: "inline-block", marginLeft: 8,
+                  background: "linear-gradient(135deg, #eab308, #ca8a04)",
+                  color: "#000", fontSize: 8, fontWeight: 800,
+                  padding: "2px 6px", borderRadius: 4, letterSpacing: "0.08em",
+                  verticalAlign: "middle",
+                }}>
+                  {trialActive ? "TESTE" : "PRO"}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {u?.plan !== "pro" && !trialExpired && (
               <Link href="/upgrade">
-                <button className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-400/20 to-yellow-600/10 hover:from-yellow-400/30 border border-yellow-500/30 text-yellow-400 text-[11px] font-extrabold px-3 py-1.5 rounded-full tracking-wider transition-all">
-                  <Sparkles size={12} />
-                  PRO
-                </button>
+                <motion.div
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    background: "rgba(234,179,8,0.1)",
+                    border: "1px solid rgba(234,179,8,0.28)",
+                    borderRadius: 20, padding: "6px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Sparkles size={11} color="#eab308" />
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#eab308", letterSpacing: "0.06em" }}>PRO</span>
+                </motion.div>
               </Link>
             )}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={handleLogout}
-              className="p-2.5 rounded-full text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
+              style={{
+                width: 36, height: 36, borderRadius: 12,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+              }}
               title="Sair"
             >
-              <LogOut size={20} />
-            </button>
+              <LogOut size={16} color="rgba(255,255,255,0.45)" />
+            </motion.button>
           </div>
         </div>
 
-        {/* Trial countdown banner — single motion.div as direct child of AnimatePresence */}
+        {/* Trial banner */}
         <AnimatePresence initial={false}>
           {showBanner && (
             <motion.div
@@ -196,10 +202,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
               style={{ overflow: "hidden" }}
             >
-              <TrialBannerContent
+              <TrialBanner
                 days={trialDaysLeft}
                 onUpgrade={() => navigate("/upgrade")}
                 onDismiss={() => setBannerDismissed(true)}
@@ -209,76 +215,125 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </header>
 
-      {/* Main Content — extra bottom padding for safe area + nav bar */}
-      <main
-        className="max-w-4xl mx-auto p-4 md:p-8"
-        style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
-      >
+      {/* ── Page content ────────────────────────────────────────────────────── */}
+      <main style={{
+        flex: 1,
+        maxWidth: 480, width: "100%", margin: "0 auto",
+        padding: "20px 16px",
+        paddingBottom: "calc(92px + env(safe-area-inset-bottom, 0px))",
+      }}>
         {children}
       </main>
 
-      {/* Bottom Navigation (Mobile) / Side Navigation (Desktop) */}
-      <nav
-        className="fixed bottom-0 inset-x-0 z-50 glass-panel border-t border-white/10 md:border-t-0 md:border-r md:top-0 md:w-24 md:flex-col md:justify-center shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="flex md:flex-col items-center justify-between md:justify-center md:gap-10 h-20 md:h-full px-4 relative max-w-md mx-auto md:max-w-none">
-          {navItems.map((item) => {
-            const isActive = location === item.path;
-            const Icon = item.icon;
+      {/* ── Bottom tab bar ──────────────────────────────────────────────────── */}
+      <nav style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: "rgba(8,8,8,0.92)",
+        backdropFilter: "blur(28px) saturate(1.8)",
+        WebkitBackdropFilter: "blur(28px) saturate(1.8)",
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        boxShadow: "0 -1px 0 rgba(255,255,255,0.03), 0 -8px 32px rgba(0,0,0,0.6)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}>
+        <div style={{
+          maxWidth: 480, margin: "0 auto",
+          height: 64,
+          display: "flex", alignItems: "stretch",
+          padding: "0 8px",
+          position: "relative",
+        }}>
+          {NAV.map((nav, idx) => {
+            const isActive = location === nav.path;
+            const { Icon } = nav;
+
             return (
-              <Link
-                key={item.path}
-                href={item.path}
-                className="relative flex-1 md:w-full h-full md:h-16 flex items-center justify-center z-10 group"
-              >
-                <div
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 transition-all duration-300",
-                    isActive
-                      ? "text-primary -translate-y-1"
-                      : "text-muted-foreground group-hover:text-white group-hover:-translate-y-0.5"
-                  )}
+              <Link key={nav.path} href={nav.path} style={{ flex: 1, textDecoration: "none" }}>
+                <motion.div
+                  whileTap={{ scale: 0.88 }}
+                  style={{
+                    height: "100%",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    gap: 4, position: "relative",
+                    cursor: "pointer",
+                  }}
                 >
-                  <div className="relative">
-                    <Icon
-                      size={24}
-                      strokeWidth={isActive ? 2.5 : 2}
-                      className={isActive ? "drop-shadow-[0_0_8px_rgba(0,255,136,0.5)]" : ""}
+                  {/* Active background pill */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="tab-active-bg"
+                      style={{
+                        position: "absolute",
+                        top: 10, left: "50%",
+                        x: "-50%",
+                        width: 48, height: 32,
+                        borderRadius: 12,
+                        background: "rgba(0,255,136,0.1)",
+                        border: "1px solid rgba(0,255,136,0.15)",
+                      }}
+                      transition={{ type: "spring", damping: 22, stiffness: 300 }}
                     />
-                    {item.isPro && u?.plan !== "pro" && (
-                      <div className="absolute -top-1.5 -right-2 h-3.5 w-3.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full border-2 border-background shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
+                  )}
+
+                  {/* Icon */}
+                  <div style={{ position: "relative", zIndex: 1 }}>
+                    <motion.div
+                      animate={{ color: isActive ? "#00ff88" : "rgba(255,255,255,0.35)" }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Icon
+                        size={20}
+                        strokeWidth={isActive ? 2.5 : 2}
+                        color={isActive ? "#00ff88" : "rgba(255,255,255,0.35)"}
+                        style={{
+                          filter: isActive ? "drop-shadow(0 0 6px rgba(0,255,136,0.5))" : "none",
+                          transition: "filter 0.2s ease, color 0.2s ease",
+                        }}
+                      />
+                    </motion.div>
+
+                    {/* PRO dot */}
+                    {nav.isPro && u?.plan !== "pro" && (
+                      <div style={{
+                        position: "absolute", top: -3, right: -5,
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#eab308",
+                        boxShadow: "0 0 6px rgba(234,179,8,0.6)",
+                        border: "1.5px solid #080808",
+                      }} />
                     )}
                   </div>
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold tracking-wide transition-all duration-300",
-                      isActive ? "opacity-100" : "opacity-0 md:opacity-70 group-hover:opacity-100"
-                    )}
+
+                  {/* Label */}
+                  <motion.span
+                    animate={{ opacity: isActive ? 1 : 0.35, color: isActive ? "#00ff88" : "#fff" }}
+                    transition={{ duration: 0.2 }}
+                    style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", lineHeight: 1, position: "relative", zIndex: 1 }}
                   >
-                    {item.label}
-                  </span>
-                </div>
+                    {nav.label}
+                  </motion.span>
+
+                  {/* Active underline dot */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="tab-dot"
+                      style={{
+                        width: 4, height: 4, borderRadius: "50%",
+                        background: "#00ff88",
+                        boxShadow: "0 0 8px rgba(0,255,136,0.7)",
+                        position: "absolute",
+                        bottom: 6,
+                      }}
+                      transition={{ type: "spring", damping: 22, stiffness: 300 }}
+                    />
+                  )}
+                </motion.div>
               </Link>
             );
           })}
-
-          {/* Sliding active pill */}
-          {activeIndex !== -1 && (
-            <div className="absolute md:hidden top-2 bottom-2 left-4 right-4 z-0 pointer-events-none">
-              <div className="relative w-full h-full">
-                <div
-                  className="absolute h-full bg-white/5 rounded-2xl transition-all duration-300 ease-out border border-white/5"
-                  style={{
-                    width: `${100 / navItems.length}%`,
-                    transform: `translateX(${activeIndex * 100}%)`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
         </div>
       </nav>
+
     </div>
   );
 }
