@@ -1,13 +1,13 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import pt from "../locales/pt.json";
 import en from "../locales/en.json";
 import es from "../locales/es.json";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type Lang = "pt" | "en" | "es";
+export type Lang     = "pt" | "en" | "es";
+export type Currency = "BRL" | "USD";
 
 const TRANSLATIONS: Record<Lang, Record<string, any>> = { pt, en, es };
-
 const STORAGE_KEY = "lucro_driver_lang";
 
 // ─── Auto-detect language from browser ────────────────────────────────────────
@@ -19,6 +19,12 @@ function detectLang(): Lang {
   if (nav.startsWith("pt")) return "pt";
   if (nav.startsWith("es")) return "es";
   return "en";
+}
+
+// ─── Derive currency from language ────────────────────────────────────────────
+// Brazilian users (pt) → BRL; everyone else → USD
+export function langToCurrency(lang: Lang): Currency {
+  return lang === "pt" ? "BRL" : "USD";
 }
 
 // ─── Get nested value from a translation object ───────────────────────────────
@@ -40,15 +46,17 @@ function interpolate(template: string, params?: Record<string, string | number>)
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 interface I18nCtx {
-  lang: Lang;
-  setLang: (l: Lang) => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  lang:     Lang;
+  currency: Currency;
+  setLang:  (l: Lang) => void;
+  t:        (key: string, params?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nCtx>({
-  lang: "pt",
-  setLang: () => {},
-  t: (key) => key,
+  lang:     "pt",
+  currency: "BRL",
+  setLang:  () => {},
+  t:        (key) => key,
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -64,6 +72,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLangState(l);
   }, []);
 
+  const currency = useMemo(() => langToCurrency(lang), [lang]);
+
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
       const translations = TRANSLATIONS[lang];
@@ -77,7 +87,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <I18nContext.Provider value={{ lang, setLang, t }}>
+    <I18nContext.Provider value={{ lang, currency, setLang, t }}>
       {children}
     </I18nContext.Provider>
   );

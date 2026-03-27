@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,30 +8,11 @@ import {
 import { Link, useLocation } from "wouter";
 import { Capacitor } from "@capacitor/core";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 const BASE = getApiBase();
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const BENEFITS = [
-  { icon: TrendingUp, text: "Descubra seu lucro real", sub: "Não o faturamento — o que fica no seu bolso" },
-  { icon: MapPin,     text: "Evite corridas ruins",    sub: "Saiba quais horários e regiões valem a pena" },
-  { icon: Timer,      text: "Saiba quando parar",      sub: "Seu tempo vale dinheiro. Não desperdice." },
-  { icon: Award,      text: "Ganhe mais trabalhando menos", sub: "Métricas reais para decisões mais inteligentes" },
-];
-
-const TRUST = [
-  { icon: "🔒", label: "Cancelamento fácil", sub: "A qualquer momento" },
-  { icon: "🤝", label: "Sem compromisso",    sub: "Sem fidelidade" },
-  { icon: "⚡", label: "Acesso imediato",    sub: "Na hora do pagamento" },
-];
-
-// ─── PLAN CONFIG ──────────────────────────────────────────────────────────────
-const PLANS = [
-  { id: "monthly", label: "Mensal",  price: "R$\u00a019,90", period: "/mês",  sub: "Menos que uma corrida",  badge: null,           perMonth: 19.90 },
-  { id: "yearly",  label: "Anual",   price: "R$\u00a0149,90", period: "/ano", sub: "R$\u00a012,49 por mês",  badge: "Economize 37%", perMonth: 12.49 },
-];
-
-// ─── STAGGER ANIMATION ────────────────────────────────────────────────────────
+// ─── Animations ───────────────────────────────────────────────────────────────
 const stagger = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07 } },
@@ -45,20 +26,62 @@ const fadeUp = {
 // UPGRADE PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Upgrade() {
-  const { data: user }   = useGetMe();
-  const [, navigate]     = useLocation();
-  const [selected, setSelected] = useState<"monthly" | "yearly">("monthly");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const { data: user }             = useGetMe();
+  const [, navigate]               = useLocation();
+  const [selected, setSelected]    = useState<"monthly" | "yearly">("monthly");
+  const [isLoading, setIsLoading]  = useState(false);
+  const [error, setError]          = useState<string | null>(null);
+  const { t, currency }            = useT();
 
-  const u = user as any;
+  const isBRL = currency === "BRL";
+
+  const u              = user as any;
   const trialExpired   = u?.trialExpired === true;
   const trialActive    = u?.trialActive  === true;
   const trialDaysLeft  = u?.trialDaysLeft ?? 7;
   const isExpiredParam = typeof window !== "undefined" && window.location.search.includes("expired=1");
   const showExpired    = trialExpired || isExpiredParam;
 
-  // ── Stripe checkout ─────────────────────────────────────────────────────────
+  // ── Dynamic plans by currency ────────────────────────────────────────────────
+  const PLANS = useMemo(() => [
+    {
+      id:       "monthly",
+      label:    t("upgrade.monthly"),
+      price:    isBRL ? "R$\u00a019,90"  : "$3.99",
+      period:   isBRL ? "/mês"           : "/mo",
+      sub:      t("upgrade.anchor"),
+      badge:    null,
+      perMonth: isBRL ? 19.90 : 3.99,
+      stripeCurrency: isBRL ? "brl" : "usd",
+    },
+    {
+      id:       "yearly",
+      label:    t("upgrade.yearly"),
+      price:    isBRL ? "R$\u00a0149,90" : "$29.90",
+      period:   isBRL ? "/ano"           : "/yr",
+      sub:      isBRL ? "R$\u00a012,49/mês" : "$2.49/mo",
+      badge:    isBRL ? t("upgrade.save37") : t("upgrade.save38"),
+      perMonth: isBRL ? 12.49 : 2.49,
+      stripeCurrency: isBRL ? "brl" : "usd",
+    },
+  ], [isBRL, t]);
+
+  // ── Benefits ─────────────────────────────────────────────────────────────────
+  const BENEFITS = useMemo(() => [
+    { icon: TrendingUp, text: t("upgrade.benefit1"), sub: t("upgrade.benefit1sub") },
+    { icon: MapPin,     text: t("upgrade.benefit2"), sub: t("upgrade.benefit2sub") },
+    { icon: Timer,      text: t("upgrade.benefit3"), sub: t("upgrade.benefit3sub") },
+    { icon: Award,      text: t("upgrade.benefit4"), sub: t("upgrade.benefit4sub") },
+  ], [t]);
+
+  // ── Trust badges ─────────────────────────────────────────────────────────────
+  const TRUST = useMemo(() => [
+    { icon: "🔒", label: t("upgrade.trust1"), sub: t("upgrade.trust1sub") },
+    { icon: "🤝", label: t("upgrade.trust2"), sub: t("upgrade.trust2sub") },
+    { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
+  ], [t]);
+
+  // ── Stripe checkout ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
     setIsLoading(true);
     setError(null);
@@ -66,17 +89,24 @@ export default function Upgrade() {
       const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
       const productsData = await productsRes.json();
       if (!productsData.data?.length) {
-        setError("Planos não disponíveis no momento. Tente novamente em breve.");
+        setError(t("upgrade.errorNoPlans"));
         return;
       }
-      const product  = productsData.data[0];
-      const interval = selected === "monthly" ? "month" : "year";
-      const price    = product.prices?.find((p: any) => p.recurring?.interval === interval);
-      if (!price) { setError("Plano não encontrado. Tente novamente."); return; }
+
+      const product      = productsData.data[0];
+      const interval     = selected === "monthly" ? "month" : "year";
+      const targetCurr   = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
+
+      // Try currency-specific price first, then fall back to any matching interval
+      const price =
+        product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
+        product.prices?.find((p: any) => p.recurring?.interval === interval);
+
+      if (!price) { setError(t("upgrade.errorNoPlan")); return; }
 
       const origin      = window.location.origin;
       const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
@@ -87,7 +117,7 @@ export default function Upgrade() {
       });
       const checkoutData = await checkoutRes.json();
       if (!checkoutRes.ok || !checkoutData.url) {
-        setError("Não foi possível iniciar o pagamento. Tente novamente.");
+        setError(t("upgrade.errorGeneral"));
         return;
       }
       if (Capacitor.isNativePlatform()) {
@@ -96,13 +126,13 @@ export default function Upgrade() {
         window.location.href = checkoutData.url;
       }
     } catch {
-      setError("Não foi possível iniciar o pagamento. Verifique sua conexão.");
+      setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Already PRO ─────────────────────────────────────────────────────────────
+  // ── Already PRO ──────────────────────────────────────────────────────────────
   if (u?.plan === "pro" && !u?.trialActive && !trialExpired) {
     return (
       <motion.div
@@ -114,12 +144,12 @@ export default function Upgrade() {
           <Check size={38} color="#000" strokeWidth={2.5} />
         </div>
         <div>
-          <p style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", marginBottom: 6 }}>Você já é PRO ✦</p>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>Todos os recursos estão desbloqueados.</p>
+          <p style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", marginBottom: 6 }}>{t("upgrade.alreadyPro")}</p>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>{t("upgrade.alreadyProSub")}</p>
         </div>
         <Link href="/">
           <button style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 20px", color: "#f9fafb", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            <ArrowLeft size={16} /> Voltar ao painel
+            <ArrowLeft size={16} /> {t("upgrade.backToDashboard")}
           </button>
         </Link>
       </motion.div>
@@ -127,6 +157,8 @@ export default function Upgrade() {
   }
 
   const activePlan = PLANS.find((p) => p.id === selected)!;
+  const perDayAmt  = (activePlan.perMonth / 30).toFixed(2);
+  const perDayFmt  = isBRL ? `R$${perDayAmt}` : `$${perDayAmt}`;
 
   return (
     <motion.div
@@ -134,13 +166,13 @@ export default function Upgrade() {
       style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40 }}
     >
 
-      {/* ── Back button ───────────────────────────────────────────────────────── */}
+      {/* ── Back button ─────────────────────────────────────────────────────── */}
       <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
         <button
           onClick={() => navigate("/")}
           style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontFamily: "inherit", padding: 0, fontSize: 14, fontWeight: 600 }}
         >
-          <ArrowLeft size={16} /> Voltar
+          <ArrowLeft size={16} /> {t("upgrade.back")}
         </button>
       </motion.div>
 
@@ -153,7 +185,7 @@ export default function Upgrade() {
         {showExpired && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
             <AlertTriangle size={14} color="#f87171" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#f87171" }}>Seu teste gratuito encerrou</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#f87171" }}>{t("upgrade.expiredAlert")}</span>
           </div>
         )}
 
@@ -162,7 +194,9 @@ export default function Upgrade() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.18)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
             <Clock size={14} color="#eab308" />
             <span style={{ fontSize: 12, fontWeight: 600, color: "#eab308" }}>
-              {trialDaysLeft <= 1 ? "Último dia de teste!" : `Teste termina em ${trialDaysLeft} dias`}
+              {trialDaysLeft <= 1
+                ? t("upgrade.trialLastDay")
+                : t("upgrade.trialEndsIn", { days: trialDaysLeft })}
             </span>
           </div>
         )}
@@ -182,23 +216,21 @@ export default function Upgrade() {
         </div>
 
         {/* Headline */}
-        <h1 style={{
-          fontSize: 30, fontWeight: 900, lineHeight: 1.2,
-          color: "#f9fafb", letterSpacing: "-0.025em",
-          marginBottom: 12,
-        }}>
+        <h1 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.2, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 12 }}>
           {showExpired
-            ? <>Não perca acesso ao<br /><span style={{ color: "#00ff88" }}>seu lucro real</span></>
-            : <>Você já trabalhou hoje.<br /><span style={{ color: "#00ff88" }}>Agora veja quanto</span><br />realmente lucrou.</>
+            ? <><span style={{ color: "#00ff88" }}>{t("upgrade.headlineExpired")}</span></>
+            : t("upgrade.headline").split(". ").map((part, i, arr) => (
+                <span key={i}>
+                  {i === 1 ? <span style={{ color: "#00ff88" }}>{part}</span> : part}
+                  {i < arr.length - 1 ? ". " : ""}
+                </span>
+              ))
           }
         </h1>
 
         {/* Sub */}
         <p style={{ fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.6, maxWidth: 300 }}>
-          {showExpired
-            ? "Você já viu o poder do PRO. Continue tendo acesso a tudo que faz você ganhar mais."
-            : "Pare de confundir faturamento com lucro."
-          }
+          {showExpired ? t("upgrade.expiredSub") : t("upgrade.headlineSub")}
         </p>
       </motion.div>
 
@@ -207,7 +239,7 @@ export default function Upgrade() {
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
-          Escolha seu plano
+          {t("upgrade.choosePlan")}
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           {PLANS.map((plan) => {
@@ -228,23 +260,14 @@ export default function Upgrade() {
               >
                 {/* Best value badge */}
                 {plan.badge && (
-                  <div style={{
-                    position: "absolute", top: -9, right: 12,
-                    background: "linear-gradient(135deg,#eab308,#ca8a04)",
-                    color: "#000", fontSize: 9, fontWeight: 800,
-                    padding: "3px 8px", borderRadius: 999, letterSpacing: "0.04em",
-                  }}>
+                  <div style={{ position: "absolute", top: -9, right: 12, background: "linear-gradient(135deg,#eab308,#ca8a04)", color: "#000", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 999, letterSpacing: "0.04em" }}>
                     {plan.badge}
                   </div>
                 )}
 
                 {/* Active checkmark */}
                 {active && (
-                  <div style={{
-                    position: "absolute", top: 10, right: 10,
-                    width: 18, height: 18, borderRadius: "50%",
-                    background: "#00ff88", display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
+                  <div style={{ position: "absolute", top: 10, right: 10, width: 18, height: 18, borderRadius: "50%", background: "#00ff88", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Check size={10} color="#000" strokeWidth={3} />
                   </div>
                 )}
@@ -282,7 +305,7 @@ export default function Upgrade() {
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
               <div>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 4 }}>Você paga apenas</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 4 }}>{t("upgrade.youPay")}</p>
                 <AnimatePresence mode="wait">
                   <motion.p
                     key={selected}
@@ -298,9 +321,9 @@ export default function Upgrade() {
                 </AnimatePresence>
               </div>
               <div style={{ textAlign: "right" }}>
-                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>por dia</p>
+                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{t("upgrade.perDay")}</p>
                 <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>
-                  R${(activePlan.perMonth / 30).toFixed(2)}
+                  {perDayFmt}
                 </p>
               </div>
             </div>
@@ -309,8 +332,8 @@ export default function Upgrade() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.12)", borderRadius: 12, padding: "10px 14px" }}>
               <span style={{ fontSize: 16 }}>🚗</span>
               <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>Menos que uma corrida</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>O retorno é de centenas de reais por mês</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{t("upgrade.anchor")}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{t("upgrade.returnEstimate")}</p>
               </div>
             </div>
           </div>
@@ -321,42 +344,22 @@ export default function Upgrade() {
           BENEFITS
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp} style={{ marginBottom: 24 }}>
-        <div style={{
-          background: "#0e0e0e",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 22,
-          overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.04) inset",
-        }}>
+        <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 22, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.04) inset" }}>
           {BENEFITS.map(({ icon: Icon, text, sub }, i) => (
             <motion.div
               key={text}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.15 + i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                display: "flex", alignItems: "center", gap: 14,
-                padding: "16px 18px",
-                borderBottom: i < BENEFITS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
-              }}
+              style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", borderBottom: i < BENEFITS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}
             >
-              {/* Icon container */}
-              <div style={{
-                width: 40, height: 40, borderRadius: 13, flexShrink: 0,
-                background: "rgba(0,255,136,0.08)",
-                border: "1px solid rgba(0,255,136,0.14)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, flexShrink: 0, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.14)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon size={18} color="#00ff88" strokeWidth={2} />
               </div>
-
-              {/* Text */}
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: "#f9fafb", marginBottom: 2 }}>{text}</p>
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>{sub}</p>
               </div>
-
-              {/* Check */}
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Check size={10} color="#00ff88" strokeWidth={3} />
               </div>
@@ -398,15 +401,11 @@ export default function Upgrade() {
             position: "relative", overflow: "hidden",
           }}
         >
-          {/* Shine sweep on hover */}
+          {/* Shine sweep */}
           <motion.div
             animate={{ x: ["-100%", "200%"] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 1.5 }}
-            style={{
-              position: "absolute", top: 0, bottom: 0, width: "40%",
-              background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)",
-              pointerEvents: "none",
-            }}
+            style={{ position: "absolute", top: 0, bottom: 0, width: "40%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)", pointerEvents: "none" }}
           />
 
           {isLoading ? (
@@ -418,32 +417,27 @@ export default function Upgrade() {
           ) : (
             <>
               <Zap size={20} strokeWidth={2.5} />
-              Começar agora
+              {t("upgrade.cta")}
               <ChevronRight size={20} strokeWidth={2.5} style={{ marginLeft: "auto" }} />
             </>
           )}
         </motion.button>
       </motion.div>
 
-      {/* ── Pix option ─────────────────────────────────────────────────────── */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
-        <button
-          style={{
-            width: "100%", height: 50, borderRadius: 16,
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 18 }}>🔑</span>
-          Prefere Pix? Pague em segundos
-        </button>
-        <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>
-          Pix disponível em breve
-        </p>
-      </motion.div>
+      {/* ── Pix option (BRL only) ────────────────────────────────────────────── */}
+      {isBRL && (
+        <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
+          <button
+            style={{ width: "100%", height: 50, borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <span style={{ fontSize: 18 }}>🔑</span>
+            {t("upgrade.ctaPix")}
+          </button>
+          <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>
+            {t("upgrade.pixComingSoon")}
+          </p>
+        </motion.div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           TRUST BADGES
@@ -453,14 +447,7 @@ export default function Upgrade() {
           {TRUST.map(({ icon, label, sub }) => (
             <div
               key={label}
-              style={{
-                background: "#0e0e0e",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 18,
-                padding: "14px 10px",
-                textAlign: "center",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              }}
+              style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
             >
               <p style={{ fontSize: 22, marginBottom: 6 }}>{icon}</p>
               <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", lineHeight: 1.3, marginBottom: 3 }}>{label}</p>
@@ -473,7 +460,7 @@ export default function Upgrade() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 0" }}>
           <Shield size={13} color="rgba(255,255,255,0.2)" />
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
-            Pagamento seguro via Stripe · Seus dados estão protegidos
+            {t("upgrade.security")}
           </p>
         </div>
       </motion.div>
