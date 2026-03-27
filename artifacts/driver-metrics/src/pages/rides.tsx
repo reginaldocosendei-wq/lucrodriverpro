@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, Calendar, Navigation, Clock, Star,
-  Trash2, TrendingUp, AlertCircle, Plus
+  Trash2, TrendingUp, AlertCircle, Plus, CheckCircle,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { getApiBase } from "@/lib/api";
-import { useGetMe } from "@workspace/api-client-react";
 
 const BASE = getApiBase();
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface DailySummary {
   id: number;
   date: string;
@@ -24,56 +24,203 @@ interface DailySummary {
   notes: string | null;
 }
 
+type Filter = "all" | "week" | "today";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function platformColor(p: string | null) {
   if (!p) return "#6b7280";
-  const lower = p.toLowerCase();
-  if (lower.includes("uber")) return "#00b4d8";
-  if (lower.includes("99")) return "#fbbf24";
-  if (lower.includes("indriver")) return "#22c55e";
+  const l = p.toLowerCase();
+  if (l.includes("uber")) return "#00b4d8";
+  if (l.includes("99")) return "#fbbf24";
+  if (l.includes("indriver")) return "#22c55e";
   return "#a78bfa";
 }
 
+function isoToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+function isoWeekAgo() {
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 function MetricPill({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
       <span style={{ color: "#6b7280", display: "flex", alignItems: "center" }}>{icon}</span>
-      <div>
-        <span style={{ color: "#f9fafb", fontSize: 13, fontWeight: 600 }}>{value}</span>
-        <span style={{ color: "#4b5563", fontSize: 11, marginLeft: 3 }}>{label}</span>
-      </div>
+      <span style={{ color: "#f9fafb", fontSize: 13, fontWeight: 600 }}>{value}</span>
+      <span style={{ color: "#4b5563", fontSize: 11 }}>{label}</span>
     </div>
   );
 }
 
+// ── Confirmation modal ────────────────────────────────────────────────────────
+function ConfirmModal({
+  onConfirm, onCancel, isDeleting,
+}: { onConfirm: () => void; onCancel: () => void; isDeleting: boolean }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          padding: "0 0 24px",
+        }}
+        onClick={onCancel}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: "100%", maxWidth: 420,
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 24,
+            padding: "28px 24px 24px",
+            margin: "0 16px",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.7)",
+          }}
+        >
+          {/* Icon */}
+          <div style={{
+            width: 52, height: 52, borderRadius: 16,
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 18px",
+          }}>
+            <Trash2 size={22} color="#ef4444" />
+          </div>
+
+          <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", textAlign: "center", marginBottom: 10 }}>
+            Excluir registro?
+          </p>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 1.6, marginBottom: 28 }}>
+            Tem certeza que deseja excluir este registro? Essa ação não pode ser desfeita.
+          </p>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onCancel}
+              style={{
+                flex: 1, height: 48, borderRadius: 14,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.7)", fontWeight: 700,
+                fontSize: 15, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              style={{
+                flex: 1, height: 48, borderRadius: 14,
+                background: isDeleting ? "rgba(239,68,68,0.4)" : "#ef4444",
+                border: "none",
+                color: "#fff", fontWeight: 800,
+                fontSize: 15, cursor: isDeleting ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+            >
+              {isDeleting ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
+                  style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff" }}
+                />
+              ) : (
+                <>
+                  <Trash2 size={15} strokeWidth={2.5} />
+                  Excluir
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function Toast({ message, type }: { message: string; type: "success" | "error" }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -16, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      style={{
+        position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+        zIndex: 200, maxWidth: 360, width: "calc(100% - 40px)",
+        background: type === "success" ? "rgba(0,255,136,0.12)" : "rgba(239,68,68,0.12)",
+        border: `1px solid ${type === "success" ? "rgba(0,255,136,0.3)" : "rgba(239,68,68,0.3)"}`,
+        borderRadius: 16, padding: "14px 18px",
+        display: "flex", alignItems: "center", gap: 12,
+        backdropFilter: "blur(20px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        pointerEvents: "none",
+      }}
+    >
+      {type === "success"
+        ? <CheckCircle size={18} color="#00ff88" />
+        : <AlertCircle size={18} color="#ef4444" />}
+      <p style={{ fontSize: 14, fontWeight: 700, color: type === "success" ? "#00ff88" : "#f87171" }}>
+        {message}
+      </p>
+    </motion.div>
+  );
+}
+
+// ─── Animation variants ───────────────────────────────────────────────────────
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.05 } },
 };
 const itemAnim = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as any, duration: 0.4 } },
+  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as any, duration: 0.38 } },
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function RidesPage() {
   const queryClient = useQueryClient();
-  const { data: me } = useGetMe();
-  const [summaries, setSummaries] = useState<DailySummary[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [summaries, setSummaries]       = useState<DailySummary[] | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [loadError, setLoadError]       = useState<string | null>(null);
+  const [filter, setFilter]             = useState<Filter>("all");
+  const [confirmId, setConfirmId]       = useState<number | null>(null);
+  const [isDeleting, setIsDeleting]     = useState(false);
+  const [toast, setToast]               = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // ── Load records ─────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      setError(null);
+      setLoadError(null);
       try {
         const res = await fetch(`${BASE}/api/daily-summaries`, { credentials: "include" });
-        if (!res.ok) throw new Error("Erro ao carregar resumos");
+        if (!res.ok) throw new Error("Erro ao carregar registros");
         const data = await res.json();
         if (!cancelled) setSummaries(data);
       } catch (e: any) {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setLoadError(e.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,51 +229,92 @@ export default function RidesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Remover este resumo do dia?")) return;
-    setDeletingId(id);
+  // ── Toast auto-hide ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // ── Filtered list ─────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    if (!summaries) return [];
+    if (filter === "today") {
+      const today = isoToday();
+      return summaries.filter((s) => s.date === today);
+    }
+    if (filter === "week") {
+      const weekAgo = isoWeekAgo();
+      return summaries.filter((s) => s.date >= weekAgo);
+    }
+    return summaries;
+  }, [summaries, filter]);
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const totalEarnings = filtered.reduce((s, r) => s + r.earnings, 0);
+  const totalTrips    = filtered.reduce((s, r) => s + r.trips, 0);
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  const handleDeleteConfirm = async () => {
+    if (confirmId == null) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`${BASE}/api/daily-summaries/${id}`, {
+      const res = await fetch(`${BASE}/api/daily-summaries/${confirmId}`, {
         method: "DELETE",
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Erro ao remover");
-      setSummaries((prev) => prev?.filter((s) => s.id !== id) ?? null);
+      if (!res.ok) throw new Error();
+      setSummaries((prev) => prev?.filter((s) => s.id !== confirmId) ?? null);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-    } catch (e: any) {
-      setError(e.message);
+      setToast({ message: "Registro excluído com sucesso.", type: "success" });
+    } catch {
+      setToast({ message: "Não foi possível excluir este registro.", type: "error" });
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
+      setConfirmId(null);
     }
   };
 
-  const totalEarnings = summaries?.reduce((s, r) => s + r.earnings, 0) ?? 0;
-  const totalTrips = summaries?.reduce((s, r) => s + r.trips, 0) ?? 0;
-
+  // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100dvh", background: "#0a0a0a", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
+
+      {/* ── Toast ─────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} />}
+      </AnimatePresence>
+
+      {/* ── Delete confirmation modal ──────────────────────────────────────── */}
+      {confirmId != null && (
+        <ConfirmModal
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => !isDeleting && setConfirmId(null)}
+          isDeleting={isDeleting}
+        />
+      )}
+
+      {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <div style={{
         padding: "16px 20px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
-        position: "sticky",
-        top: 0,
-        background: "#0a0a0a",
+        position: "sticky", top: 0,
+        background: "rgba(10,10,10,0.92)",
+        backdropFilter: "blur(16px)",
         zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/">
-            <button style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <button style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
               <ChevronLeft size={22} />
             </button>
           </Link>
           <div>
-            <span style={{ color: "#f9fafb", fontWeight: 600, fontSize: 17 }}>Resumos diários</span>
+            <p style={{ color: "#f9fafb", fontWeight: 700, fontSize: 17 }}>Histórico</p>
             {summaries && summaries.length > 0 && (
-              <p style={{ color: "#6b7280", fontSize: 11, marginTop: 1 }}>{summaries.length} dias registrados</p>
+              <p style={{ color: "#6b7280", fontSize: 11, marginTop: 1 }}>
+                {summaries.length} registro{summaries.length !== 1 ? "s" : ""} salvos
+              </p>
             )}
           </div>
         </div>
@@ -134,181 +322,267 @@ export default function RidesPage() {
           <button style={{
             background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
             borderRadius: 10, padding: "7px 14px",
-            color: "#00ff88", fontSize: 13, fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", gap: 6,
+            color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
           }}>
-            <Plus size={14} /> Importar
+            <Plus size={14} /> Novo
           </button>
         </Link>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
 
+        {/* ── Loading ─────────────────────────────────────────────────────── */}
         {loading && (
-          <div style={{ textAlign: "center", paddingTop: 60 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%",
-              border: "3px solid rgba(0,255,136,0.15)",
-              borderTopColor: "#00ff88",
-              margin: "0 auto 16px",
-              animation: "spin 1s linear infinite",
-            }} />
-            <p style={{ color: "#6b7280", fontSize: 14 }}>Carregando resumos...</p>
+          <div style={{ textAlign: "center", paddingTop: 64 }}>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+              style={{
+                width: 44, height: 44, borderRadius: "50%",
+                border: "3px solid rgba(0,255,136,0.12)",
+                borderTopColor: "#00ff88",
+                margin: "0 auto 16px",
+              }}
+            />
+            <p style={{ color: "#6b7280", fontSize: 14 }}>Carregando registros...</p>
           </div>
         )}
 
-        {error && (
+        {/* ── Load error ──────────────────────────────────────────────────── */}
+        {loadError && (
           <div style={{
-            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: 12, padding: "12px 16px", marginBottom: 20,
+            background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 14, padding: "14px 16px", marginBottom: 20,
             color: "#f87171", fontSize: 14, display: "flex", alignItems: "center", gap: 10,
           }}>
-            <AlertCircle size={16} /> {error}
+            <AlertCircle size={16} /> {loadError}
           </div>
         )}
 
-        {!loading && summaries && summaries.length === 0 && (
-          <div style={{ textAlign: "center", paddingTop: 60 }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 20px",
-            }}>
-              <Calendar size={32} color="#374151" />
-            </div>
-            <p style={{ color: "#f9fafb", fontWeight: 600, fontSize: 17, marginBottom: 8 }}>Nenhum resumo ainda</p>
-            <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 32 }}>
-              Importe seu primeiro resultado por screenshot para ver o histórico aqui.
-            </p>
-            <Link href="/import">
-              <button style={{
-                padding: "14px 28px", borderRadius: 14, border: "none",
-                background: "linear-gradient(135deg,#00ff88,#00cc6a)",
-                color: "#0a0a0a", fontWeight: 700, fontSize: 15, cursor: "pointer",
-              }}>
-                Importar resultado
-              </button>
-            </Link>
-          </div>
-        )}
-
-        {!loading && summaries && summaries.length > 0 && (
-          <motion.div variants={container} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-            {/* Totals header */}
-            <motion.div variants={itemAnim}>
-              <div style={{
-                background: "#1a1a1a", borderRadius: 20, padding: "16px 20px",
-                border: "1px solid rgba(255,255,255,0.05)",
-                display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16,
-                marginBottom: 8,
-              }}>
-                <div>
-                  <p style={{ color: "#6b7280", fontSize: 11, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</p>
-                  <p style={{ color: "#00ff88", fontWeight: 800, fontSize: 18 }}>{formatBRL(totalEarnings)}</p>
-                </div>
-                <div>
-                  <p style={{ color: "#6b7280", fontSize: 11, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Corridas</p>
-                  <p style={{ color: "#f9fafb", fontWeight: 700, fontSize: 18 }}>{totalTrips}</p>
-                </div>
-                <div>
-                  <p style={{ color: "#6b7280", fontSize: 11, marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Dias</p>
-                  <p style={{ color: "#f9fafb", fontWeight: 700, fontSize: 18 }}>{summaries.length}</p>
-                </div>
+        {/* ── Content ─────────────────────────────────────────────────────── */}
+        {!loading && summaries != null && (
+          <>
+            {/* ── Filter tabs ─────────────────────────────────────────────── */}
+            {summaries.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {(["all", "week", "today"] as Filter[]).map((f) => {
+                  const label = f === "all" ? "Todos" : f === "week" ? "Esta semana" : "Hoje";
+                  const active = filter === f;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      style={{
+                        padding: "7px 16px", borderRadius: 20,
+                        background: active ? "#00ff88" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${active ? "#00ff88" : "rgba(255,255,255,0.08)"}`,
+                        color: active ? "#000" : "rgba(255,255,255,0.45)",
+                        fontSize: 12, fontWeight: 700, cursor: "pointer",
+                        fontFamily: "inherit", transition: "all 0.18s ease",
+                        letterSpacing: "0.01em",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
-            </motion.div>
+            )}
 
-            {/* Summary cards */}
-            {summaries.map((summary) => {
-              const perTrip = summary.trips > 0 ? summary.earnings / summary.trips : null;
-              const perKm = summary.kmDriven && summary.kmDriven > 0 ? summary.earnings / summary.kmDriven : null;
-              const perHour = summary.hoursWorked && summary.hoursWorked > 0 ? summary.earnings / summary.hoursWorked : null;
-
-              return (
-                <motion.div key={summary.id} variants={itemAnim}>
-                  <div style={{
-                    background: "#1a1a1a",
-                    borderRadius: 20,
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    overflow: "hidden",
+            {/* ── Empty (global) ───────────────────────────────────────────── */}
+            {summaries.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                style={{ textAlign: "center", paddingTop: 64 }}
+              >
+                <div style={{
+                  width: 72, height: 72, borderRadius: "50%",
+                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}>
+                  <Calendar size={32} color="#374151" />
+                </div>
+                <p style={{ color: "#f9fafb", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
+                  Você ainda não tem registros salvos.
+                </p>
+                <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 32, lineHeight: 1.5 }}>
+                  Importe seu primeiro resultado por screenshot para ver o histórico aqui.
+                </p>
+                <Link href="/import">
+                  <button style={{
+                    padding: "14px 28px", borderRadius: 14, border: "none",
+                    background: "#00ff88",
+                    color: "#000", fontWeight: 800, fontSize: 15, cursor: "pointer",
+                    fontFamily: "inherit",
                   }}>
-                    {/* Top row */}
-                    <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                            {summary.platform && (
-                              <span style={{
-                                background: platformColor(summary.platform),
-                                borderRadius: 5, padding: "2px 8px",
-                                color: "#fff", fontSize: 11, fontWeight: 600,
-                              }}>{summary.platform}</span>
-                            )}
-                            <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
-                              <Calendar size={11} />
-                              {formatDate(summary.date)}
-                            </span>
-                          </div>
-                          <p style={{ color: "#00ff88", fontWeight: 800, fontSize: 26 }}>
-                            {formatBRL(summary.earnings)}
-                          </p>
-                          <p style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>
-                            {summary.trips} corrida{summary.trips !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleDelete(summary.id)}
-                          disabled={deletingId === summary.id}
-                          style={{
-                            background: "rgba(239,68,68,0.08)", border: "none",
-                            borderRadius: 10, padding: "8px",
-                            color: "#ef4444", cursor: "pointer",
-                            opacity: deletingId === summary.id ? 0.4 : 1,
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
+                    Importar resultado
+                  </button>
+                </Link>
+              </motion.div>
+            )}
 
-                    {/* Metrics row */}
-                    {(perTrip != null || perKm != null || perHour != null || summary.kmDriven != null || summary.hoursWorked != null || summary.rating != null) && (
-                      <div style={{
-                        padding: "12px 20px",
-                        display: "flex", flexWrap: "wrap", gap: 14,
-                        background: "rgba(255,255,255,0.01)",
-                      }}>
-                        {perTrip != null && (
-                          <MetricPill icon={<TrendingUp size={12} />} value={formatBRL(perTrip)} label="/corrida" />
-                        )}
-                        {perKm != null && (
-                          <MetricPill icon={<Navigation size={12} />} value={formatBRL(perKm)} label="/km" />
-                        )}
-                        {perHour != null && (
-                          <MetricPill icon={<Clock size={12} />} value={formatBRL(perHour)} label="/h" />
-                        )}
-                        {summary.kmDriven != null && perKm == null && (
-                          <MetricPill icon={<Navigation size={12} />} value={`${summary.kmDriven.toFixed(1)}`} label="km" />
-                        )}
-                        {summary.hoursWorked != null && perHour == null && (
-                          <MetricPill icon={<Clock size={12} />} value={`${summary.hoursWorked.toFixed(1)}`} label="h" />
-                        )}
-                        {summary.rating != null && (
-                          <MetricPill icon={<Star size={12} color="#eab308" />} value={summary.rating.toFixed(1)} label="★" />
-                        )}
-                      </div>
-                    )}
+            {/* ── Empty (filter) ───────────────────────────────────────────── */}
+            {summaries.length > 0 && filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                style={{ textAlign: "center", paddingTop: 48 }}
+              >
+                <p style={{ color: "#6b7280", fontSize: 15 }}>
+                  Nenhum registro {filter === "today" ? "de hoje" : "desta semana"}.
+                </p>
+                <button
+                  onClick={() => setFilter("all")}
+                  style={{
+                    marginTop: 14, background: "none", border: "none",
+                    color: "#00ff88", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Ver todos os registros
+                </button>
+              </motion.div>
+            )}
+
+            {/* ── Records ──────────────────────────────────────────────────── */}
+            {filtered.length > 0 && (
+              <motion.div variants={container} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+                {/* Totals summary bar */}
+                <motion.div variants={itemAnim}>
+                  <div style={{
+                    background: "#111",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 18, padding: "14px 18px",
+                    display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12,
+                    marginBottom: 4,
+                  }}>
+                    <div>
+                      <p style={{ color: "#6b7280", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                        {filter === "today" ? "Hoje" : filter === "week" ? "Semana" : "Total"}
+                      </p>
+                      <p style={{ color: "#00ff88", fontWeight: 800, fontSize: 17, fontVariantNumeric: "tabular-nums" }}>
+                        {formatBRL(totalEarnings)}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ color: "#6b7280", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Corridas</p>
+                      <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 17 }}>{totalTrips}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: "#6b7280", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Dias</p>
+                      <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 17 }}>{filtered.length}</p>
+                    </div>
                   </div>
                 </motion.div>
-              );
-            })}
-          </motion.div>
+
+                {/* Section heading */}
+                <motion.div variants={itemAnim}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 4, marginTop: 8 }}>
+                    Registros salvos
+                  </p>
+                </motion.div>
+
+                {/* Individual cards */}
+                <AnimatePresence initial={false}>
+                  {filtered.map((summary) => {
+                    const perTrip = summary.trips > 0 ? summary.earnings / summary.trips : null;
+                    const perKm   = summary.kmDriven   && summary.kmDriven   > 0 ? summary.earnings / summary.kmDriven   : null;
+                    const perHour = summary.hoursWorked && summary.hoursWorked > 0 ? summary.earnings / summary.hoursWorked : null;
+
+                    return (
+                      <motion.div
+                        key={summary.id}
+                        variants={itemAnim}
+                        layout
+                        exit={{ opacity: 0, x: -30, transition: { duration: 0.25 } }}
+                      >
+                        <div style={{
+                          background: "#111",
+                          borderRadius: 20,
+                          border: "1px solid rgba(255,255,255,0.06)",
+                          overflow: "hidden",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                        }}>
+                          {/* Top row: date + earnings + delete */}
+                          <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <div style={{ flex: 1 }}>
+                                {/* Platform badge + date */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                  {summary.platform && (
+                                    <span style={{
+                                      background: platformColor(summary.platform),
+                                      borderRadius: 5, padding: "2px 8px",
+                                      color: "#fff", fontSize: 11, fontWeight: 700,
+                                    }}>
+                                      {summary.platform}
+                                    </span>
+                                  )}
+                                  <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                                    <Calendar size={11} />
+                                    {formatDate(summary.date)}
+                                  </span>
+                                </div>
+
+                                {/* Earnings */}
+                                <p style={{ color: "#00ff88", fontWeight: 900, fontSize: 26, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                                  {formatBRL(summary.earnings)}
+                                </p>
+                                <p style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>
+                                  {summary.trips} corrida{summary.trips !== 1 ? "s" : ""}
+                                </p>
+                              </div>
+
+                              {/* Delete button */}
+                              <button
+                                onClick={() => setConfirmId(summary.id)}
+                                style={{
+                                  background: "rgba(239,68,68,0.07)",
+                                  border: "1px solid rgba(239,68,68,0.15)",
+                                  borderRadius: 12, padding: "10px 10px",
+                                  color: "#ef4444", cursor: "pointer",
+                                  display: "flex", alignItems: "center", gap: 5,
+                                  flexShrink: 0, fontFamily: "inherit",
+                                  fontSize: 12, fontWeight: 700,
+                                  transition: "background 0.15s",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.14)")}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.07)")}
+                              >
+                                <Trash2 size={14} strokeWidth={2.5} />
+                                <span style={{ display: "none" }}>Excluir</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Metrics row */}
+                          {(perTrip != null || perKm != null || perHour != null || summary.kmDriven != null || summary.hoursWorked != null || summary.rating != null) && (
+                            <div style={{
+                              padding: "10px 18px",
+                              display: "flex", flexWrap: "wrap", gap: 14,
+                              background: "rgba(255,255,255,0.01)",
+                            }}>
+                              {perTrip  != null && <MetricPill icon={<TrendingUp size={12} />} value={formatBRL(perTrip)} label="/corrida" />}
+                              {perKm    != null && <MetricPill icon={<Navigation  size={12} />} value={formatBRL(perKm)}   label="/km"     />}
+                              {perHour  != null && <MetricPill icon={<Clock       size={12} />} value={formatBRL(perHour)} label="/h"      />}
+                              {summary.kmDriven    != null && perKm   == null && <MetricPill icon={<Navigation size={12} />} value={`${summary.kmDriven.toFixed(1)}`}    label="km" />}
+                              {summary.hoursWorked != null && perHour == null && <MetricPill icon={<Clock      size={12} />} value={`${summary.hoursWorked.toFixed(1)}`} label="h"  />}
+                              {summary.rating      != null && <MetricPill icon={<Star size={12} color="#eab308" />} value={summary.rating.toFixed(1)} label="★" />}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+              </motion.div>
+            )}
+          </>
         )}
       </div>
-
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

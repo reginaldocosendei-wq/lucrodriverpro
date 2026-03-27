@@ -1,0 +1,85 @@
+Fix the rides/history management in my app "Lucro Driver".
+
+GOAL:
+Show previously saved test rides/daily entries and allow deleting old records safely.
+
+CONTEXT:
+The rides page currently shows only the option to add new data, but it does not show older saved records.
+I also cannot delete previously added test values.
+
+REQUIRED FIXES:
+
+1. SHOW SAVED RECORDS
+- On the rides/history page, display all previously saved daily entries and test records from the database
+- Do not show only the "add new" option
+- Create a list of saved entries ordered by newest first
+
+Each record should show:
+- date
+- earnings
+- trips
+- optional km
+- optional hours
+- optional rating
+
+2. ADD HISTORY SECTION
+Create a visible section:
+"Histórico"
+or
+"Registros salvos"
+
+3. FILTER SAFETY
+- Check if old records are hidden because of filters like:
+  - only today
+  - active only
+  - archived only
+- Remove broken filters
+- Add simple filters if needed:
+  - Today
+  - This week
+  - All
+
+4. DELETE FUNCTION
+- Add a delete button for each saved record
+- Button label:
+  "Excluir"
+
+5. DELETE CONFIRMATION
+Before deleting, show confirmation modal:
+"Tem certeza que deseja excluir este registro?"
+
+Buttons:
+- Cancelar
+- Excluir
+
+6. BACKEND DELETE ROUTE
+Ensure there is a working delete endpoint, for example:
+DELETE /daily-summaries/:id
+or equivalent route used in the app
+
+7. FRONTEND DELETE ACTION
+Connect the delete button to the backend
+After successful deletion:
+- remove item from UI immediately
+- show success message:
+  "Registro excluído com sucesso."
+
+8. ERROR HANDLING
+If delete fails:
+- show message:
+  "Não foi possível excluir este registro."
+
+9. ARCHIVED / OLD TEST DATA
+If older test records exist in database but are not displayed, load them correctly.
+Do not ignore older records.
+
+10. EMPTY STATE
+If there are no records, show:
+"Você ainda não tem registros salvos."
+
+11. FINAL RESULT
+The page must:
+- show saved records
+- allow deleting old test entries
+- keep the current add-new flow
+- work on mobile and desktop
