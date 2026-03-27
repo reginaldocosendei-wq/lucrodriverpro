@@ -19,6 +19,7 @@ import Upgrade from "@/pages/upgrade";
 import Import from "@/pages/Import";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CheckoutCancel from "@/pages/checkout-cancel";
+import PixPayment from "@/pages/pix-payment";
 import AuthScreen from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
@@ -142,6 +143,7 @@ function Router() {
         <Route path="/import" component={Import} />
         <Route path="/checkout/success" component={CheckoutSuccess} />
         <Route path="/checkout/cancel" component={CheckoutCancel} />
+        <Route path="/pix-payment" component={PixPayment} />
         <Route component={NotFound} />
       </Switch>
     </AuthGuard>

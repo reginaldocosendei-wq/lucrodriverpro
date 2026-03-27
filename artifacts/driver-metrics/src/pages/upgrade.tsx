@@ -427,12 +427,14 @@ export default function Upgrade() {
       {/* ── Pix option (BRL only) ────────────────────────────────────────────── */}
       {isBRL && (
         <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
-          <button
-            style={{ width: "100%", height: 50, borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate("/pix-payment")}
+            style={{ width: "100%", height: 50, borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
-            <span style={{ fontSize: 18 }}>🔑</span>
+            <span style={{ fontSize: 16 }}>🔑</span>
             {t("upgrade.ctaPix")}
-          </button>
+          </motion.button>
           <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>
             {t("upgrade.pixComingSoon")}
           </p>
