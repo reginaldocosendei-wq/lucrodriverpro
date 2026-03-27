@@ -264,6 +264,13 @@ export default function AdminPixPage() {
           </div>
         )}
 
+        <motion.button
+          whileTap={{ scale: 0.92 }} onClick={() => navigate("/admin/users")}
+          style={{ height: 34, padding: "0 12px", borderRadius: 10, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.12)", color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Usuários
+        </motion.button>
+
         <button
           onClick={fetchPayments}
           style={{ width: 36, height: 36, borderRadius: 11, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}

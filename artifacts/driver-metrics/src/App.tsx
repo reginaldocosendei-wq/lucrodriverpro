@@ -21,6 +21,7 @@ import CheckoutSuccess from "@/pages/checkout-success";
 import CheckoutCancel from "@/pages/checkout-cancel";
 import PixPayment from "@/pages/pix-payment";
 import AdminPix from "@/pages/admin-pix";
+import AdminUsers from "@/pages/admin-users";
 import AuthScreen from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
@@ -146,6 +147,7 @@ function Router() {
         <Route path="/checkout/cancel" component={CheckoutCancel} />
         <Route path="/pix-payment" component={PixPayment} />
         <Route path="/admin/pix" component={AdminPix} />
+        <Route path="/admin/users" component={AdminUsers} />
         <Route component={NotFound} />
       </Switch>
     </AuthGuard>

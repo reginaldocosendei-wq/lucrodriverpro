@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { computeEffectivePlan, syncStripeStatusForUser, TRIAL_MS } from "../lib/planSync";
 
 declare module "express-session" {
   interface SessionData {
@@ -9,54 +10,19 @@ declare module "express-session" {
   }
 }
 
-const TRIAL_DAYS = 7;
-const TRIAL_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
-
-function computeEffectivePlan(user: typeof usersTable.$inferSelect): {
-  plan: "free" | "pro";
-  trialActive: boolean;
-  trialExpired: boolean;
-  trialDaysLeft: number;
-  trialEndDate: string | null;
-} {
-  const hasPaidPlan = user.plan === "pro" && !user.trialStartDate;
-  if (hasPaidPlan) {
-    return { plan: "pro", trialActive: false, trialExpired: false, trialDaysLeft: 0, trialEndDate: null };
-  }
-
-  if (user.trialStartDate) {
-    const start = new Date(user.trialStartDate).getTime();
-    const end = start + TRIAL_MS;
-    const elapsed = Date.now() - start;
-    const endDate = new Date(end).toISOString();
-
-    if (elapsed < TRIAL_MS) {
-      const daysLeft = Math.ceil((TRIAL_MS - elapsed) / (24 * 60 * 60 * 1000));
-      return { plan: "pro", trialActive: true, trialExpired: false, trialDaysLeft: daysLeft, trialEndDate: endDate };
-    }
-
-    return { plan: "free", trialActive: false, trialExpired: true, trialDaysLeft: 0, trialEndDate: endDate };
-  }
-
-  if (user.plan === "pro") {
-    return { plan: "pro", trialActive: false, trialExpired: false, trialDaysLeft: 0, trialEndDate: null };
-  }
-
-  return { plan: "free", trialActive: false, trialExpired: false, trialDaysLeft: 0, trialEndDate: null };
-}
-
 function userResponse(user: typeof usersTable.$inferSelect) {
   const effective = computeEffectivePlan(user);
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    plan: effective.plan,
-    trialActive: effective.trialActive,
-    trialExpired: effective.trialExpired,
+    id:            user.id,
+    name:          user.name,
+    email:         user.email,
+    plan:          effective.plan,
+    planSource:    effective.planSource,
+    trialActive:   effective.trialActive,
+    trialExpired:  effective.trialExpired,
     trialDaysLeft: effective.trialDaysLeft,
-    trialEndDate: effective.trialEndDate,
-    createdAt: user.createdAt,
+    trialEndDate:  effective.trialEndDate,
+    createdAt:     user.createdAt,
   };
 }
 
@@ -88,7 +54,7 @@ router.post("/login", async (req, res) => {
     res.status(400).json({ error: "Email e senha são obrigatórios" });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (!user) {
     res.status(401).json({ error: "Email ou senha incorretos" });
     return;
@@ -98,6 +64,10 @@ router.post("/login", async (req, res) => {
     res.status(401).json({ error: "Email ou senha incorretos" });
     return;
   }
+
+  // Sync plan with Stripe in case any webhooks were missed
+  user = await syncStripeStatusForUser(user);
+
   req.session.userId = user.id;
   res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
 });
@@ -112,11 +82,15 @@ router.get("/me", async (req, res) => {
     res.status(401).json({ error: "Não autenticado" });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
   if (!user) {
     res.status(401).json({ error: "Usuário não encontrado" });
     return;
   }
+
+  // Sync plan with Stripe in case any webhooks were missed
+  user = await syncStripeStatusForUser(user);
+
   res.json(userResponse(user));
 });
 
@@ -150,15 +124,16 @@ router.post("/trial/start", async (req, res) => {
   await db.update(usersTable).set({ trialStartDate: now }).where(eq(usersTable.id, user.id));
 
   const updatedUser = { ...user, trialStartDate: now };
-  const effective = computeEffectivePlan(updatedUser);
+  const effective   = computeEffectivePlan(updatedUser);
 
   res.json({
-    message: "Seu teste gratuito de 7 dias foi ativado! Aproveite os recursos PRO.",
-    plan: effective.plan,
-    trialActive: effective.trialActive,
-    trialExpired: effective.trialExpired,
+    message:       "Seu teste gratuito de 7 dias foi ativado! Aproveite os recursos PRO.",
+    plan:          effective.plan,
+    planSource:    effective.planSource,
+    trialActive:   effective.trialActive,
+    trialExpired:  effective.trialExpired,
     trialDaysLeft: effective.trialDaysLeft,
-    trialEndDate: effective.trialEndDate,
+    trialEndDate:  effective.trialEndDate,
   });
 });
 

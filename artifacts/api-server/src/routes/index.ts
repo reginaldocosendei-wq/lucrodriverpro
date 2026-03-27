@@ -14,6 +14,7 @@ import weeklyPerformanceRouter from "./weeklyPerformance";
 import devAdminRouter from "./devAdmin";
 import pixRouter from "./pix";
 import pixAdminRouter from "./pixAdmin";
+import adminUsersRouter from "./adminUsers";
 
 const router: IRouter = Router();
 
@@ -32,6 +33,7 @@ router.use("/weekly-performance", weeklyPerformanceRouter);
 
 router.use("/pix", pixRouter);
 router.use("/admin/pix", pixAdminRouter);
+router.use("/admin/users", adminUsersRouter);
 
 // Dev-only utilities — the router itself refuses all requests in production
 router.use("/dev", devAdminRouter);
