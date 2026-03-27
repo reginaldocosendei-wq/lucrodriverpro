@@ -13,7 +13,8 @@ const BASE = getApiBase();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DailySummary {
-  id: number;
+  id: number | null;
+  source: "summary" | "rides";
   date: string;
   earnings: number;
   trips: number;
@@ -204,9 +205,9 @@ export default function RidesPage() {
   const [loading, setLoading]           = useState(true);
   const [loadError, setLoadError]       = useState<string | null>(null);
   const [filter, setFilter]             = useState<Filter>("all");
-  const [confirmId, setConfirmId]       = useState<number | null>(null);
-  const [isDeleting, setIsDeleting]     = useState(false);
-  const [toast, setToast]               = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<{ id: number | null; date: string; source: "summary" | "rides" } | null>(null);
+  const [isDeleting, setIsDeleting]       = useState(false);
+  const [toast, setToast]                 = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // ── Load records ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -256,22 +257,35 @@ export default function RidesPage() {
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDeleteConfirm = async () => {
-    if (confirmId == null) return;
+    if (!confirmTarget) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`${BASE}/api/daily-summaries/${confirmId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      let res: Response;
+      if (confirmTarget.source === "rides") {
+        res = await fetch(`${BASE}/api/rides/day/${confirmTarget.date}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      } else {
+        res = await fetch(`${BASE}/api/daily-summaries/${confirmTarget.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      }
       if (!res.ok) throw new Error();
-      setSummaries((prev) => prev?.filter((s) => s.id !== confirmId) ?? null);
+      setSummaries((prev) =>
+        prev?.filter((s) => {
+          if (confirmTarget.source === "rides") return s.date !== confirmTarget.date || s.source !== "rides";
+          return s.id !== confirmTarget.id;
+        }) ?? null
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       setToast({ message: "Registro excluído com sucesso.", type: "success" });
     } catch {
       setToast({ message: "Não foi possível excluir este registro.", type: "error" });
     } finally {
       setIsDeleting(false);
-      setConfirmId(null);
+      setConfirmTarget(null);
     }
   };
 
@@ -285,10 +299,10 @@ export default function RidesPage() {
       </AnimatePresence>
 
       {/* ── Delete confirmation modal ──────────────────────────────────────── */}
-      {confirmId != null && (
+      {confirmTarget != null && (
         <ConfirmModal
           onConfirm={handleDeleteConfirm}
-          onCancel={() => !isDeleting && setConfirmId(null)}
+          onCancel={() => !isDeleting && setConfirmTarget(null)}
           isDeleting={isDeleting}
         />
       )}
@@ -537,7 +551,7 @@ export default function RidesPage() {
 
                               {/* Delete button */}
                               <button
-                                onClick={() => setConfirmId(summary.id)}
+                                onClick={() => setConfirmTarget({ id: summary.id, date: summary.date, source: summary.source })}
                                 style={{
                                   background: "rgba(239,68,68,0.07)",
                                   border: "1px solid rgba(239,68,68,0.15)",

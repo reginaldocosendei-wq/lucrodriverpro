@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, dailySummariesTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -15,12 +15,57 @@ function requireAuth(req: any, res: any, next: any) {
 router.get("/", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
   try {
+    // 1. Fetch real daily summaries
     const summaries = await db
       .select()
       .from(dailySummariesTable)
       .where(eq(dailySummariesTable.userId, userId))
       .orderBy(desc(dailySummariesTable.date));
-    res.json(summaries);
+
+    // Dates already covered by a real summary (no need to add rides for these)
+    const coveredDates = new Set(summaries.map((s) => s.date));
+
+    // 2. Aggregate rides by calendar date for any dates not already covered
+    const ridesAgg = await db.execute(sql`
+      SELECT
+        TO_CHAR(created_at, 'YYYY-MM-DD')          AS date,
+        ROUND(SUM(value)::numeric, 2)               AS earnings,
+        COUNT(*)::int                               AS trips,
+        NULLIF(ROUND(SUM(distance_km)::numeric, 2), 0)  AS km_driven,
+        NULLIF(ROUND((SUM(duration_minutes) / 60.0)::numeric, 2), 0) AS hours_worked,
+        ROUND(AVG(passenger_rating)::numeric, 2)   AS rating,
+        MAX(platform)                               AS platform
+      FROM rides
+      WHERE user_id = ${userId}
+      GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+      ORDER BY date DESC
+    `);
+
+    // 3. Build synthetic entries for uncovered dates
+    const ridesEntries = (ridesAgg.rows as any[])
+      .filter((r) => !coveredDates.has(r.date))
+      .map((r) => ({
+        id: null,
+        source: "rides" as const,
+        date: r.date,
+        earnings: parseFloat(r.earnings),
+        trips: parseInt(r.trips),
+        kmDriven: r.km_driven ? parseFloat(r.km_driven) : null,
+        hoursWorked: r.hours_worked ? parseFloat(r.hours_worked) : null,
+        rating: r.rating ? parseFloat(r.rating) : null,
+        platform: r.platform || null,
+        notes: null,
+      }));
+
+    // 4. Tag real summaries with their source
+    const summaryEntries = summaries.map((s) => ({ ...s, source: "summary" as const }));
+
+    // 5. Merge and sort newest first
+    const all = [...summaryEntries, ...ridesEntries].sort((a, b) =>
+      b.date.localeCompare(a.date)
+    );
+
+    res.json(all);
   } catch (err) {
     console.error("List daily summaries error:", err);
     res.status(500).json({ error: "Erro ao buscar resumos" });
