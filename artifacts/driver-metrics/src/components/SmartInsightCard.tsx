@@ -125,8 +125,8 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
         <p style={{
           fontSize: 15,
           fontWeight: 600,
-          color: "rgba(255,255,255,0.82)",
-          lineHeight: 1.6,
+          color: "rgba(255,255,255,0.88)",
+          lineHeight: 1.68,
           marginBottom: 16,
           letterSpacing: "-0.005em",
           wordBreak: "break-word",
@@ -157,8 +157,8 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
           <p style={{
             fontSize: 13,
             fontWeight: 500,
-            color: "rgba(255,255,255,0.42)",
-            lineHeight: 1.6,
+            color: "rgba(255,255,255,0.48)",
+            lineHeight: 1.68,
             wordBreak: "break-word",
             overflowWrap: "break-word",
           }}>

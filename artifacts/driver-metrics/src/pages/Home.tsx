@@ -128,10 +128,10 @@ export default function Home() {
       {/* ── Greeting ──────────────────────────────────────────────────────── */}
       <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
             {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
           </p>
-          <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>{t("home.dashboard")}</p>
+          <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.015em" }}>{t("home.dashboard")}</p>
         </div>
         <motion.div
           animate={{ opacity: [1, 0.35, 1] }}
@@ -152,7 +152,7 @@ export default function Home() {
           ║  1. LUCRO — Big profit number
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
-        <div style={{ position: "relative", borderRadius: 24, overflow: "hidden" }}>
+        <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
           {/* Base */}
           <div style={{ position: "absolute", inset: 0, background: "#080808", pointerEvents: "none" }} />
 
@@ -227,7 +227,7 @@ export default function Home() {
                   </span>
                 </div>
                 {/* Stacked bar: costs + profit */}
-                <div style={{ height: 8, background: "rgba(0,0,0,0.5)", borderRadius: 999, overflow: "hidden", display: "flex" }}>
+                <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden", display: "flex" }}>
                   <motion.div
                     style={{ height: "100%", background: "rgba(239,68,68,0.65)", borderRadius: "999px 0 0 999px" }}
                     initial={{ width: 0 }}
@@ -406,7 +406,7 @@ export default function Home() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.5, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   style={{
-                    width: 56, height: 56, borderRadius: "50%",
+                    width: 52, height: 52, borderRadius: "50%",
                     border: `3px solid ${gColor}40`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: `${gColor}08`,
@@ -421,7 +421,7 @@ export default function Home() {
 
               {/* Progress bar with milestone dots */}
               <div style={{ position: "relative", marginBottom: 10 }}>
-                <Bar pct={goalPct} color={gColor} height={10} delay={0.3} />
+                <Bar pct={goalPct} color={gColor} height={8} delay={0.3} />
 
                 {/* Milestone markers at 25/50/75% */}
                 {[25, 50, 75].map((m) => (
@@ -443,7 +443,7 @@ export default function Home() {
                 {goalPct >= 100 ? (
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#00ff88" }}>✓ {t("home.goalReached")}</p>
                 ) : (
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
                     {t("home.goalRemaining", { value: formatBRL(goalRemaining) })}
                   </p>
                 )}

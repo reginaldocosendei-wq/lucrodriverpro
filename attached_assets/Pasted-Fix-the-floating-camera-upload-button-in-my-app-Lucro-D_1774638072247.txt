@@ -1,0 +1,70 @@
+Fix the floating camera/upload button in my app "Lucro Driver".
+
+GOAL:
+Make the floating screenshot button work again on mobile and desktop.
+
+PROBLEM:
+The floating camera button appears on screen, but it no longer opens the screenshot import flow.
+Previously it worked, now it does not.
+
+REQUIRED FIXES:
+
+1. RESTORE BUTTON ACTION
+- Find the floating action button (camera/upload button)
+- Ensure it has a working onClick handler
+
+2. EXPECTED BEHAVIOR
+When the user taps/clicks the floating button:
+- open the screenshot import flow
+OR
+- trigger the hidden file input directly
+
+3. FILE INPUT CONNECTION
+If the button should open file selection:
+- connect it to a hidden input[type="file"]
+- accept image/*
+- allow gallery selection on mobile
+
+Example behavior:
+- user taps floating camera button
+- gallery/file picker opens immediately
+
+4. CHECK IF BUTTON IS BLOCKED
+- Inspect z-index
+- inspect overlay/background layers
+- ensure no invisible element is covering the button
+- ensure pointer-events are working correctly
+
+5. RESTORE MOBILE FUNCTIONALITY
+- On Android/mobile, tapping the floating button must open gallery or file picker
+- On desktop, clicking it must also open file picker
+
+6. NAVIGATION OPTION
+If the intended behavior is navigation to the import page:
+- ensure it correctly navigates to the screenshot import page
+- ensure route exists and loads properly
+
+7. DEBUG
+- verify if the button lost its handler after recent layout/UI refactor
+- inspect the component where the FAB is defined
+- inspect any recent changes to:
+  - BottomNav
+  - AppShell
+  - Floating button component
+  - Import page
+  - screenshot upload logic
+
+8. UX
+Keep the same premium look:
+- floating circular button
+- green style
+- camera/upload icon
+
+But restore full functionality.
+
+9. FINAL RESULT
+The floating camera button must:
+- be clickable
+- open the file picker or screenshot import flow
+- work on mobile and desktop
+- not require using a separate link

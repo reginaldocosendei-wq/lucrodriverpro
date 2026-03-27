@@ -243,13 +243,18 @@ export default function AuthScreen() {
             <motion.div
               initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ marginBottom: 40 }}
+              style={{ marginBottom: 32, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
+              {/* Ambient glow ring */}
               <div style={{
-                width: 56, height: 56, borderRadius: 16, overflow: "hidden",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 0 40px rgba(0,255,136,0.2), 0 12px 32px rgba(0,0,0,0.6)",
-                margin: "0 auto",
+                position: "absolute", inset: -16, borderRadius: 34, pointerEvents: "none",
+                background: "radial-gradient(ellipse, rgba(0,255,136,0.17) 0%, transparent 68%)",
+              }} />
+              <div style={{
+                width: 72, height: 72, borderRadius: 20, overflow: "hidden",
+                border: "1px solid rgba(0,255,136,0.22)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 48px rgba(0,255,136,0.28), 0 16px 40px rgba(0,0,0,0.55)",
+                position: "relative", zIndex: 1,
               }}>
                 <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
@@ -260,7 +265,7 @@ export default function AuthScreen() {
             <motion.h1
               initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontSize: "clamp(36px, 12vw, 52px)", fontWeight: 900, lineHeight: 1.06, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 18, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
+              style={{ fontSize: "clamp(32px, 10vw, 46px)", fontWeight: 900, lineHeight: 1.1, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
             >
               {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
               <span style={{ color: "#00ff88", textShadow: "0 0 32px rgba(0,255,136,0.4)" }}>
@@ -272,16 +277,38 @@ export default function AuthScreen() {
             <motion.p
               initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.5, color: "rgba(255,255,255,0.42)", marginBottom: 48, maxWidth: 280 }}
+              style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.65, color: "rgba(255,255,255,0.52)", marginBottom: 24, maxWidth: 320 }}
             >
               {t("auth.subtitle")}
             </motion.p>
 
+            {/* Feature chips */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.36, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 36 }}
+            >
+              {[
+                { icon: "🔒", text: "7 dias grátis" },
+                { icon: "📊", text: "Lucro real" },
+                { icon: "📱", text: "Offline" },
+              ].map(({ icon, text }) => (
+                <div key={text} style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                  borderRadius: 999, padding: "5px 12px",
+                }}>
+                  <span style={{ fontSize: 12 }}>{icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", letterSpacing: "0.02em" }}>{text}</span>
+                </div>
+              ))}
+            </motion.div>
+
             {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.38, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ width: "100%", maxWidth: 320 }}
+              transition={{ delay: 0.44, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{ width: "100%", maxWidth: 340 }}
             >
               <motion.button
                 whileTap={{ scale: 0.97 }}
@@ -289,10 +316,10 @@ export default function AuthScreen() {
                 style={{
                   width: "100%", height: 58, borderRadius: 18, border: "none",
                   background: "#00ff88", color: "#000",
-                  fontWeight: 900, fontSize: 17, letterSpacing: "-0.01em",
+                  fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em",
                   cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  boxShadow: "0 12px 40px rgba(0,255,136,0.38), 0 4px 12px rgba(0,0,0,0.4)",
+                  boxShadow: "0 16px 48px rgba(0,255,136,0.42), 0 4px 16px rgba(0,0,0,0.4)",
                   fontFamily: "inherit",
                 }}
               >
@@ -304,10 +331,10 @@ export default function AuthScreen() {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => { setFormMode("login"); setShowForm(true); }}
                 style={{
-                  marginTop: 16, width: "100%", height: 48, borderRadius: 14,
-                  background: "transparent", border: "1px solid rgba(255,255,255,0.09)",
-                  color: "rgba(255,255,255,0.4)", fontWeight: 600, fontSize: 14,
-                  cursor: "pointer", fontFamily: "inherit",
+                  marginTop: 12, width: "100%", height: 50, borderRadius: 14,
+                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 15,
+                  cursor: "pointer", fontFamily: "inherit", letterSpacing: "-0.01em",
                 }}
               >
                 {t("auth.alreadyHaveAccount")}
@@ -318,7 +345,7 @@ export default function AuthScreen() {
             <motion.p
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.55, duration: 0.4 }}
-              style={{ marginTop: 36, fontSize: 12, color: "rgba(255,255,255,0.18)", letterSpacing: "0.02em" }}
+              style={{ marginTop: 28, fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.03em" }}
             >
               {t("auth.trustLine")}
             </motion.p>
