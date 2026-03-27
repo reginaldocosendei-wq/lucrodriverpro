@@ -195,12 +195,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#080808", display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", height: "100%", background: "#080808", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header style={{
-        position: "sticky", top: 0, zIndex: 40,
-        background: "rgba(8,8,8,0.9)",
+        flexShrink: 0,
+        zIndex: 40,
+        background: "rgba(8,8,8,0.95)",
         backdropFilter: "blur(24px) saturate(1.8)",
         WebkitBackdropFilter: "blur(24px) saturate(1.8)",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -301,17 +302,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* ── Page content ────────────────────────────────────────────────────── */}
       <main style={{
         flex: 1,
-        maxWidth: 480, width: "100%", margin: "0 auto",
-        padding: "20px 16px",
-        paddingBottom: "calc(92px + env(safe-area-inset-bottom, 0px))",
+        minHeight: 0,
+        overflowY: "auto",
+        overflowX: "hidden",
+        width: "100%",
+        padding: "20px 16px 16px",
       }}>
         {children}
       </main>
 
       {/* ── Bottom tab bar ──────────────────────────────────────────────────── */}
       <nav style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-        background: "rgba(8,8,8,0.92)",
+        flexShrink: 0,
+        zIndex: 50,
+        background: "rgba(8,8,8,0.97)",
         backdropFilter: "blur(28px) saturate(1.8)",
         WebkitBackdropFilter: "blur(28px) saturate(1.8)",
         borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -319,7 +323,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}>
         <div style={{
-          maxWidth: 480, margin: "0 auto",
           height: 64,
           display: "flex", alignItems: "stretch",
           padding: "0 8px",

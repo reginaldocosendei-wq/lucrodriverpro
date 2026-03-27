@@ -202,7 +202,7 @@ export default function AuthScreen() {
     <div style={{
       minHeight: "100dvh", background: "#080808",
       display: "flex", flexDirection: "column",
-      position: "relative", overflow: "hidden",
+      position: "relative", overflowX: "hidden",
     }}>
 
       {/* Ambient grid */}

@@ -91,14 +91,9 @@
   }
 
   html {
-    /* Fill entire viewport including notch areas */
-    height: 100%;
-    height: -webkit-fill-available;
-    /* Prevent overscroll bounce (iOS) */
+    height: 100dvh;
     overscroll-behavior: none;
-    /* Smooth scroll */
     scroll-behavior: smooth;
-    /* Consistent text rendering */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
@@ -106,18 +101,24 @@
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    /* Fill dynamic viewport (handles mobile address bar) */
-    min-height: 100dvh;
-    /* Prevent pull-to-refresh and overscroll */
+    height: 100dvh;
+    overflow: hidden;
     overscroll-behavior-y: none;
-    /* Touch scrolling momentum */
     -webkit-overflow-scrolling: touch;
-    /* Prevent text selection on long-press */
     -webkit-user-select: none;
     user-select: none;
-    /* Better font rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Desktop: center the 480px shell with dark wings */
+    background: #080808;
+  }
+
+  /* Root: flex container that centers the mobile shell */
+  #root {
+    height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
   }
 
   /* Allow text selection only in inputs and text areas */

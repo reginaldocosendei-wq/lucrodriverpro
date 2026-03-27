@@ -117,11 +117,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return (
     <AnimatePresence mode="wait" initial={false}>
       {isAuthed ? (
-        <motion.div key="authed" {...fadeProps} style={{ minHeight: "100dvh" }}>
+        <motion.div key="authed" {...fadeProps} style={{ width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", height: "100dvh" }}>
           <Layout>{children}</Layout>
         </motion.div>
       ) : (
-        <motion.div key="unauthed" {...fadeProps}>
+        <motion.div key="unauthed" {...fadeProps} style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
           <AuthScreen />
         </motion.div>
       )}
