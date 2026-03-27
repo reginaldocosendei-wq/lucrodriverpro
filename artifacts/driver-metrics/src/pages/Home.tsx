@@ -173,26 +173,29 @@ export default function Home() {
             {/* Label */}
             <p style={{
               fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 12,
+              color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 14,
             }}>
               Seu lucro real hoje
             </p>
 
             {/* Big number */}
             {isLoading ? (
-              <Skeleton h={72} w={220} r={12} />
+              <Skeleton h={56} w={200} r={12} />
             ) : (
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontSize: 76, fontWeight: 900, lineHeight: 1,
+                  fontSize: "clamp(42px, 11vw, 60px)",
+                  fontWeight: 900,
+                  lineHeight: 1.05,
                   color: pColor,
                   fontVariantNumeric: "tabular-nums",
                   letterSpacing: "-0.025em",
-                  textShadow: `0 0 56px ${pColor}50`,
-                  marginBottom: 14,
+                  textShadow: `0 0 48px ${pColor}45`,
+                  marginBottom: 12,
+                  wordBreak: "break-word",
                 }}
               >
                 <Counter value={profit} />
