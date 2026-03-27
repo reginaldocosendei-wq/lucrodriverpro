@@ -1,0 +1,90 @@
+Fix the UI/layout regression in my app "Lucro Driver".
+
+GOAL:
+The app used to look stable, clean, and well-aligned, but now parts of the interface are visually broken, with text appearing out of place and elements looking misconfigured.
+
+IMPORTANT:
+Do not redesign everything from scratch.
+Preserve the current premium visual style, but restore layout consistency, spacing, and alignment.
+
+TASKS:
+
+1. FIND THE REGRESSION
+- Inspect recent layout/CSS changes
+- Identify what caused the UI to become visually broken
+- Check global styles, shared layout wrappers, and recently added components
+
+2. CHECK GLOBAL CSS
+Review for issues in:
+- global styles
+- font sizes
+- line-height
+- spacing
+- margin/padding resets
+- width/max-width
+- overflow
+- position absolute/fixed
+- z-index
+- flex/grid containers
+
+3. CHECK BROKEN TEXT PLACEMENT
+Fix any text that is:
+- overflowing
+- misaligned
+- outside cards
+- overlapping other elements
+- rendered in wrong containers
+
+4. RESTORE CONSISTENT SPACING
+Ensure all pages have:
+- consistent padding
+- consistent vertical spacing
+- proper card spacing
+- proper alignment on mobile and desktop
+
+5. CHECK MAIN PAGES
+Inspect and fix layout on:
+- home page
+- dashboard
+- rides/history page
+- payment/upgrade page
+- screenshot import flow
+
+6. SAFE RESPONSIVE LAYOUT
+- Use responsive typography
+- Prevent oversized text
+- Prevent cropped values
+- Ensure cards adapt well to mobile and desktop
+
+7. REVIEW WRAPPERS
+Check if there is any broken parent container causing child elements to inherit wrong layout.
+Pay special attention to:
+- full-screen wrappers
+- hero sections
+- dashboard containers
+- card components
+
+8. VISUAL POLISH
+Keep the current premium fintech style:
+- dark theme
+- green highlights
+- gold premium accents
+- rounded cards
+- clean typography
+
+9. DO NOT BREAK FUNCTIONALITY
+Fix visuals without breaking:
+- buttons
+- navigation
+- history page
+- payment flow
+- screenshot import
+
+10. DEBUG SUMMARY
+After fixing, provide a summary:
+- what caused the visual regression
+- which files were changed
+- what was restored
+
+11. FINAL RESULT
+The app must look stable, aligned, premium, and consistent again on both mobile and desktop.
