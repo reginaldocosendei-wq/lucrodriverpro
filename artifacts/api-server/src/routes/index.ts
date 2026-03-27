@@ -10,6 +10,7 @@ import stripeRouter from "./stripe";
 import importRouter from "./import";
 import dailySummariesRouter from "./dailySummaries";
 import insightsRouter from "./insights";
+import weeklyPerformanceRouter from "./weeklyPerformance";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/stripe", stripeRouter);
 router.use("/import", importRouter);
 router.use("/daily-summaries", dailySummariesRouter);
 router.use("/insights", insightsRouter);
+router.use("/weekly-performance", weeklyPerformanceRouter);
 
 export default router;

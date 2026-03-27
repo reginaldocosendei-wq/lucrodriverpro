@@ -12,6 +12,7 @@ import { Link } from "wouter";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { DecisionEngine } from "@/components/DecisionEngine";
 import { DailyGoalCard } from "@/components/DailyGoalCard";
+import { WeeklyRanking } from "@/components/WeeklyRanking";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -651,6 +652,11 @@ export default function Home() {
       {/* ─── DAILY ANALYSIS ─────────────────────────────────────────────────── */}
       <motion.div variants={item}>
         <DailyAnalysis summary={summary} />
+      </motion.div>
+
+      {/* ─── WEEKLY RANKING ──────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <WeeklyRanking />
       </motion.div>
 
       {/* ─── DECISION ENGINE ─────────────────────────────────────────────────── */}
