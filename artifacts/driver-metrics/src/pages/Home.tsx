@@ -6,6 +6,7 @@ import {
   TrendingUp, Car, MapPin, AlertCircle, Target, Award,
   Zap, Lock, Plus, ChevronRight, Camera, Clock, Navigation, Star
 } from "lucide-react";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import { motion, animate } from "framer-motion";
 import { Link } from "wouter";
 import {
@@ -580,6 +581,11 @@ export default function Home() {
             </p>
           </Card>
         </div>
+      </motion.div>
+
+      {/* ─── FINANCIAL INTELLIGENCE ─── */}
+      <motion.div variants={item}>
+        <InsightsPanel />
       </motion.div>
 
       {/* ─── WEEKLY CHART ─── */}
