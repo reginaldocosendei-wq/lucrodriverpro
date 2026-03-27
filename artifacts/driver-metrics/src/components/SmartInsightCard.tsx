@@ -21,25 +21,25 @@ const CONFIG: Record<InsightStatus, {
   good: {
     label:  "Ótimo",
     color:  "#00ff88",
-    bg:     "rgba(0,255,136,0.04)",
-    border: "rgba(0,255,136,0.18)",
-    glow:   "rgba(0,255,136,0.22)",
+    bg:     "rgba(0,255,136,0.03)",
+    border: "rgba(0,255,136,0.14)",
+    glow:   "rgba(0,255,136,0.1)",
     icon:   "🔥",
   },
   average: {
     label:  "Regular",
     color:  "#eab308",
-    bg:     "rgba(234,179,8,0.04)",
-    border: "rgba(234,179,8,0.2)",
-    glow:   "rgba(234,179,8,0.2)",
+    bg:     "rgba(234,179,8,0.03)",
+    border: "rgba(234,179,8,0.14)",
+    glow:   "rgba(234,179,8,0.09)",
     icon:   "⚡",
   },
   bad: {
     label:  "Ruim",
     color:  "#ef4444",
-    bg:     "rgba(239,68,68,0.04)",
-    border: "rgba(239,68,68,0.2)",
-    glow:   "rgba(239,68,68,0.2)",
+    bg:     "rgba(239,68,68,0.03)",
+    border: "rgba(239,68,68,0.14)",
+    glow:   "rgba(239,68,68,0.09)",
     icon:   "⚠️",
   },
   idle: {
@@ -94,19 +94,12 @@ export function SmartInsightCard({ status, message, suggestion }: SmartInsightPr
             padding: "5px 11px",
           }}>
             {/* Status dot */}
-            <motion.div
-              animate={status !== "idle"
-                ? { opacity: [1, 0.3, 1], scale: [1, 0.85, 1] }
-                : { opacity: 0.4 }
-              }
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              style={{
-                width: 6, height: 6,
-                borderRadius: "50%",
-                background: c.color,
-                boxShadow: `0 0 6px ${c.color}`,
-              }}
-            />
+            <div style={{
+              width: 6, height: 6,
+              borderRadius: "50%",
+              background: c.color,
+              opacity: status === "idle" ? 0.4 : 0.85,
+            }} />
             <span style={{
               fontSize: 11, fontWeight: 700,
               color: c.color,

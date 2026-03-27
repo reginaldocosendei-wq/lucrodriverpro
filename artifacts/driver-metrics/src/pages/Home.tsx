@@ -36,7 +36,7 @@ function Bar({
   return (
     <div style={{ height, background: "rgba(255,255,255,0.05)", borderRadius: 999, overflow: "hidden" }}>
       <motion.div
-        style={{ height: "100%", borderRadius: 999, background: color, boxShadow: `0 0 10px ${color}70` }}
+        style={{ height: "100%", borderRadius: 999, background: color }}
         initial={{ width: 0 }}
         animate={{ width: `${clamped}%` }}
         transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay }}
@@ -133,18 +133,14 @@ export default function Home() {
           </p>
           <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.015em" }}>{t("home.dashboard")}</p>
         </div>
-        <motion.div
-          animate={{ opacity: [1, 0.35, 1] }}
-          transition={{ duration: 2.2, repeat: Infinity }}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: "rgba(0,255,136,0.07)", border: "1px solid rgba(0,255,136,0.18)",
-            borderRadius: 20, padding: "5px 12px",
-          }}
-        >
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#00ff88", letterSpacing: "0.06em" }}>{t("home.live")}</span>
-        </motion.div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.1)",
+          borderRadius: 20, padding: "5px 12px",
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#00ff88", opacity: 0.7 }} />
+          <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(0,255,136,0.6)", letterSpacing: "0.05em" }}>{t("home.live")}</span>
+        </div>
       </motion.div>
 
 
@@ -156,20 +152,13 @@ export default function Home() {
           {/* Base */}
           <div style={{ position: "absolute", inset: 0, background: "#080808", pointerEvents: "none" }} />
 
-          {/* Grid */}
-          <div style={{
-            position: "absolute", inset: 0, opacity: 0.05, pointerEvents: "none",
-            backgroundImage: "linear-gradient(rgba(0,255,136,1) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,1) 1px,transparent 1px)",
-            backgroundSize: "30px 30px",
-          }} />
-
           {/* Glow */}
           <div style={{
             position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)",
             width: 400, height: 240, pointerEvents: "none",
             background: profitPos
-              ? "radial-gradient(ellipse,rgba(0,255,136,0.2) 0%,transparent 70%)"
-              : "radial-gradient(ellipse,rgba(239,68,68,0.17) 0%,transparent 70%)",
+              ? "radial-gradient(ellipse,rgba(0,255,136,0.09) 0%,transparent 70%)"
+              : "radial-gradient(ellipse,rgba(239,68,68,0.08) 0%,transparent 70%)",
           }} />
 
           <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
@@ -197,7 +186,6 @@ export default function Home() {
                   fontVariantNumeric: "tabular-nums",
                   fontFeatureSettings: '"tnum" 1',
                   letterSpacing: "-0.02em",
-                  textShadow: `0 0 40px ${pColor}38`,
                   marginBottom: 10,
                   wordBreak: "break-word",
                   overflowWrap: "break-word",
@@ -235,7 +223,7 @@ export default function Home() {
                     transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
                   />
                   <motion.div
-                    style={{ height: "100%", background: pColor, boxShadow: `0 0 12px ${pColor}60`, borderRadius: "0 999px 999px 0" }}
+                    style={{ height: "100%", background: pColor, borderRadius: "0 999px 999px 0" }}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.max(0, profitPos ? marginPct : 0)}%` }}
                     transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
@@ -376,13 +364,6 @@ export default function Home() {
               borderRadius: 20, padding: "20px",
               position: "relative", overflow: "hidden",
             }}>
-              {/* Subtle glow behind bar */}
-              <div style={{
-                position: "absolute", bottom: -20, left: `${goalPct / 2}%`,
-                width: 160, height: 80,
-                background: `radial-gradient(ellipse, ${gColor}20 0%, transparent 70%)`,
-                pointerEvents: "none", transition: "left 1.5s ease",
-              }} />
 
               {/* Header row */}
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, position: "relative" }}>
@@ -533,16 +514,6 @@ export default function Home() {
           whileTap={{ scale: 0.88 }}
           whileHover={{ scale: 1.08 }}
         >
-          {/* Pulse ring */}
-          <motion.div
-            animate={{ scale: [1, 1.35, 1], opacity: [0.35, 0, 0.35] }}
-            transition={{ duration: 2.6, repeat: Infinity, ease: "easeOut" }}
-            style={{
-              position: "absolute", inset: -8, borderRadius: "50%",
-              background: "rgba(0,255,136,0.28)",
-              pointerEvents: "none",
-            }}
-          />
           {/* Button */}
           <div style={{
             width: 58, height: 58, borderRadius: "50%",
@@ -587,12 +558,6 @@ function MetricTile({
         position: "relative", overflow: "hidden",
       }}
     >
-      {/* Corner glow */}
-      <div style={{
-        position: "absolute", top: -16, right: -16, width: 64, height: 64, borderRadius: "50%",
-        background: `radial-gradient(circle, ${accent}20 0%, transparent 70%)`,
-        pointerEvents: "none",
-      }} />
 
       {/* Icon + label */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

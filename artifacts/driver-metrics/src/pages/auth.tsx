@@ -205,18 +205,11 @@ export default function AuthScreen() {
       position: "relative", overflow: "hidden",
     }}>
 
-      {/* Ambient grid */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
-        backgroundImage: "linear-gradient(rgba(0,255,136,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,1) 1px, transparent 1px)",
-        backgroundSize: "36px 36px",
-      }} />
-
       {/* Top glow */}
       <div style={{
         position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
         width: 500, height: 400, pointerEvents: "none",
-        background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 65%)",
+        background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
       }} />
 
       {/* Bottom glow */}
@@ -248,12 +241,12 @@ export default function AuthScreen() {
               {/* Ambient glow ring */}
               <div style={{
                 position: "absolute", inset: -16, borderRadius: 34, pointerEvents: "none",
-                background: "radial-gradient(ellipse, rgba(0,255,136,0.17) 0%, transparent 68%)",
+                background: "radial-gradient(ellipse, rgba(0,255,136,0.09) 0%, transparent 68%)",
               }} />
               <div style={{
                 width: 72, height: 72, borderRadius: 20, overflow: "hidden",
                 border: "1px solid rgba(0,255,136,0.22)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 48px rgba(0,255,136,0.28), 0 16px 40px rgba(0,0,0,0.55)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,255,136,0.14), 0 12px 32px rgba(0,0,0,0.5)",
                 position: "relative", zIndex: 1,
               }}>
                 <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
@@ -268,7 +261,7 @@ export default function AuthScreen() {
               style={{ fontSize: "clamp(32px, 10vw, 46px)", fontWeight: 900, lineHeight: 1.1, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
             >
               {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
-              <span style={{ color: "#00ff88", textShadow: "0 0 32px rgba(0,255,136,0.4)" }}>
+              <span style={{ color: "#00ff88" }}>
                 {t("auth.tagline").split(" ").slice(-1)[0]}
               </span>
             </motion.h1>
