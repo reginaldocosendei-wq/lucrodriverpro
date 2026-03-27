@@ -4,10 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button, Input, Label, Card } from "@/components/ui";
-import { Mail, Lock, User, Car } from "lucide-react";
+import { Input, Label } from "@/components/ui";
+import { Mail, Lock, User, ArrowRight, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ─── SCHEMAS ──────────────────────────────────────────────────────────────────
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha muito curta"),
@@ -17,12 +18,13 @@ const registerSchema = loginSchema.extend({
   name: z.string().min(2, "Nome obrigatório"),
 });
 
-export default function AuthScreen() {
-  const [isLogin, setIsLogin] = useState(true);
+// ─── AUTH FORM ────────────────────────────────────────────────────────────────
+function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
+  const [mode, setMode] = useState<"login" | "register">(defaultMode);
+  const [errorMsg, setErrorMsg] = useState("");
   const queryClient = useQueryClient();
   const loginMutation = useLogin();
   const registerMutation = useRegister();
-  const [errorMsg, setErrorMsg] = useState("");
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -37,175 +39,399 @@ export default function AuthScreen() {
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
     loginMutation.mutate({ data }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      },
-      onError: (err: any) => {
-        setErrorMsg(err?.response?.data?.error || "E-mail ou senha incorretos. Tente novamente.");
-      }
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
+      onError: (err: any) => { setErrorMsg(err?.response?.data?.error || "E-mail ou senha incorretos."); },
     });
   });
 
   const onRegister = registerForm.handleSubmit((data) => {
     setErrorMsg("");
     registerMutation.mutate({ data }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      },
-      onError: (err: any) => {
-        setErrorMsg(err?.response?.data?.error || "Não foi possível criar sua conta. Tente novamente.");
-      }
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
+      onError: (err: any) => { setErrorMsg(err?.response?.data?.error || "Não foi possível criar sua conta."); },
     });
   });
 
+  const isPending = loginMutation.isPending || registerMutation.isPending;
+
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-background">
-      {/* Background Image & Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={`${import.meta.env.BASE_URL}images/auth-bg.png`} 
-          alt="Dark neon street background" 
-          className="w-full h-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+    <div style={{ width: "100%" }}>
+      {/* Tab switcher */}
+      <div style={{
+        display: "flex", background: "rgba(255,255,255,0.04)",
+        borderRadius: 14, padding: 4, marginBottom: 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}>
+        {(["login", "register"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); setErrorMsg(""); }}
+            style={{
+              flex: 1, padding: "11px 0", fontSize: 13, fontWeight: 700,
+              borderRadius: 11, border: "none", cursor: "pointer",
+              transition: "all 0.2s ease",
+              background: mode === m ? "#00ff88" : "transparent",
+              color: mode === m ? "#000" : "rgba(255,255,255,0.4)",
+              boxShadow: mode === m ? "0 4px 16px rgba(0,255,136,0.25)" : "none",
+            }}
+          >
+            {m === "login" ? "Entrar" : "Criar conta"}
+          </button>
+        ))}
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-10">
-          <motion.div 
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 bg-primary/20 rounded-3xl mx-auto mb-6 flex items-center justify-center border border-primary/30 glow-primary"
-          >
-            <Car size={40} className="text-primary fill-primary" />
-          </motion.div>
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="text-4xl font-display font-extrabold text-white mb-2"
-          >
-            Lucro <span className="text-primary">Driver</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground text-lg"
-          >
-            Seu painel inteligente de ganhos
-          </motion.p>
+      {/* Error */}
+      {errorMsg && (
+        <div style={{
+          marginBottom: 18, padding: "12px 14px", borderRadius: 12,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+          fontSize: 13, color: "#fca5a5", fontWeight: 500, textAlign: "center",
+        }}>
+          {errorMsg}
         </div>
+      )}
 
-        <Card className="p-8 backdrop-blur-xl bg-card/80 border-white/10">
-          <div className="flex bg-black/40 rounded-xl p-1 mb-8">
-            <button
-              onClick={() => { setIsLogin(true); setErrorMsg(""); }}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${isLogin ? 'bg-primary text-black shadow-lg' : 'text-muted-foreground hover:text-white'}`}
-            >
-              Entrar
-            </button>
-            <button
-              onClick={() => { setIsLogin(false); setErrorMsg(""); }}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${!isLogin ? 'bg-primary text-black shadow-lg' : 'text-muted-foreground hover:text-white'}`}
-            >
-              Cadastrar
-            </button>
-          </div>
-
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium text-center">
-              {errorMsg}
+      {/* Forms */}
+      <AnimatePresence mode="wait">
+        {mode === "login" ? (
+          <motion.form
+            key="login"
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={onLogin}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            <div>
+              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
+                Email
+              </Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder="seu@email.com" {...loginForm.register("email")} />
+              {loginForm.formState.errors.email && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{loginForm.formState.errors.email.message}</p>
+              )}
             </div>
-          )}
+            <div>
+              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
+                Senha
+              </Label>
+              <Input type="password" icon={<Lock size={17} />} placeholder="••••••" {...loginForm.register("password")} />
+            </div>
+            <button
+              type="submit"
+              disabled={isPending}
+              style={{
+                marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
+                background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
+                cursor: isPending ? "not-allowed" : "pointer",
+                opacity: isPending ? 0.6 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+              }}
+            >
+              {isPending ? "Entrando..." : "Acessar painel"}
+            </button>
+          </motion.form>
+        ) : (
+          <motion.form
+            key="register"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={onRegister}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            <div>
+              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
+                Nome
+              </Label>
+              <Input type="text" icon={<User size={17} />} placeholder="João Silva" {...registerForm.register("name")} />
+              {registerForm.formState.errors.name && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div>
+              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
+                Email
+              </Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder="seu@email.com" {...registerForm.register("email")} />
+              {registerForm.formState.errors.email && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <Label style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>
+                Senha
+              </Label>
+              <Input type="password" icon={<Lock size={17} />} placeholder="Mínimo 6 caracteres" {...registerForm.register("password")} />
+              {registerForm.formState.errors.password && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.password.message}</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={isPending}
+              style={{
+                marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
+                background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
+                cursor: isPending ? "not-allowed" : "pointer",
+                opacity: isPending ? 0.6 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+              }}
+            >
+              {isPending ? "Criando conta..." : "Criar conta grátis"}
+            </button>
+          </motion.form>
+        )}
+      </AnimatePresence>
 
-          <AnimatePresence mode="wait">
-            {isLogin ? (
-              <motion.form
-                key="login"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                onSubmit={onLogin}
-                className="space-y-5"
+      {/* Trial note */}
+      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 18, lineHeight: 1.6 }}>
+        7 dias de PRO grátis · Sem cartão de crédito
+      </p>
+    </div>
+  );
+}
+
+// ─── MAIN AUTH SCREEN ─────────────────────────────────────────────────────────
+export default function AuthScreen() {
+  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<"login" | "register">("register");
+
+  return (
+    <div style={{
+      minHeight: "100dvh",
+      background: "#080808",
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      overflow: "hidden",
+    }}>
+
+      {/* ── Ambient grid texture ── */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        opacity: 0.04,
+        backgroundImage:
+          "linear-gradient(rgba(0,255,136,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,1) 1px, transparent 1px)",
+        backgroundSize: "36px 36px",
+      }} />
+
+      {/* ── Top glow ── */}
+      <div style={{
+        position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
+        width: 500, height: 400, pointerEvents: "none",
+        background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 65%)",
+      }} />
+
+      {/* ── Bottom glow ── */}
+      <div style={{
+        position: "absolute", bottom: -80, left: "50%", transform: "translateX(-50%)",
+        width: 360, height: 300, pointerEvents: "none",
+        background: "radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 65%)",
+      }} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          LANDING HERO
+      ══════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence mode="wait">
+        {!showForm ? (
+          <motion.div
+            key="landing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              padding: "0 28px", textAlign: "center", position: "relative", zIndex: 2,
+            }}
+          >
+            {/* Logo mark */}
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{ marginBottom: 40 }}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, overflow: "hidden",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 0 40px rgba(0,255,136,0.2), 0 12px 32px rgba(0,0,0,0.6)",
+                margin: "0 auto",
+              }}>
+                <img
+                  src={`${import.meta.env.BASE_URL}icon.svg`}
+                  alt="Lucro Driver"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  draggable={false}
+                />
+              </div>
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                fontSize: 52, fontWeight: 900, lineHeight: 1.06,
+                color: "#f9fafb", letterSpacing: "-0.025em",
+                marginBottom: 18,
+              }}
+            >
+              Faturamento<br />
+              <span style={{ color: "#00ff88", textShadow: "0 0 32px rgba(0,255,136,0.4)" }}>
+                engana.
+              </span>
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                fontSize: 18, fontWeight: 500, lineHeight: 1.5,
+                color: "rgba(255,255,255,0.42)",
+                marginBottom: 48, maxWidth: 280,
+              }}
+            >
+              Veja seu lucro real em segundos.
+            </motion.p>
+
+            {/* Primary CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.38, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{ width: "100%", maxWidth: 320 }}
+            >
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setFormMode("register"); setShowForm(true); }}
+                style={{
+                  width: "100%", height: 58, borderRadius: 18, border: "none",
+                  background: "#00ff88", color: "#000",
+                  fontWeight: 900, fontSize: 17, letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  boxShadow: "0 12px 40px rgba(0,255,136,0.38), 0 4px 12px rgba(0,0,0,0.4)",
+                  fontFamily: "inherit",
+                }}
               >
-                <div>
-                  <Label>Email</Label>
-                  <Input 
-                    type="email" 
-                    icon={<Mail size={20} />} 
-                    placeholder="seu@email.com" 
-                    {...loginForm.register("email")}
-                  />
-                  {loginForm.formState.errors.email && (
-                    <p className="text-destructive text-xs mt-1">{loginForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Senha</Label>
-                  <Input 
-                    type="password" 
-                    icon={<Lock size={20} />} 
-                    placeholder="••••••" 
-                    {...loginForm.register("password")}
-                  />
-                </div>
-                <Button type="submit" className="w-full mt-4" size="lg" isLoading={loginMutation.isPending}>
-                  Acessar Painel
-                </Button>
-              </motion.form>
-            ) : (
-              <motion.form
-                key="register"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onSubmit={onRegister}
-                className="space-y-5"
+                Importar meu dia
+                <ArrowRight size={20} strokeWidth={2.5} />
+              </motion.button>
+
+              {/* Secondary link */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setFormMode("login"); setShowForm(true); }}
+                style={{
+                  marginTop: 16, width: "100%", height: 48, borderRadius: 14,
+                  background: "transparent", border: "1px solid rgba(255,255,255,0.09)",
+                  color: "rgba(255,255,255,0.4)", fontWeight: 600, fontSize: 14,
+                  cursor: "pointer", fontFamily: "inherit",
+                  transition: "border-color 0.2s, color 0.2s",
+                }}
               >
-                <div>
-                  <Label>Nome</Label>
-                  <Input 
-                    type="text" 
-                    icon={<User size={20} />} 
-                    placeholder="João Silva" 
-                    {...registerForm.register("name")}
-                  />
-                  {registerForm.formState.errors.name && (
-                    <p className="text-destructive text-xs mt-1">{registerForm.formState.errors.name.message}</p>
-                  )}
+                Já tenho conta — Entrar
+              </motion.button>
+            </motion.div>
+
+            {/* Trust line */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55, duration: 0.4 }}
+              style={{
+                marginTop: 36, fontSize: 12,
+                color: "rgba(255,255,255,0.18)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              🔒 Grátis · Sem cartão · 7 dias PRO
+            </motion.p>
+          </motion.div>
+
+        ) : (
+
+          /* ══════════════════════════════════════════════════════════════════════
+              AUTH FORM PANEL
+          ══════════════════════════════════════════════════════════════════════ */
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column",
+              justifyContent: "flex-end",
+              position: "relative", zIndex: 2,
+            }}
+          >
+            {/* Compact headline above form */}
+            <div style={{ textAlign: "center", padding: "40px 28px 0" }}>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.05, duration: 0.4 }}
+                style={{ marginBottom: 20 }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12, overflow: "hidden",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  boxShadow: "0 0 24px rgba(0,255,136,0.15)",
+                  margin: "0 auto",
+                }}>
+                  <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
                 </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input 
-                    type="email" 
-                    icon={<Mail size={20} />} 
-                    placeholder="seu@email.com" 
-                    {...registerForm.register("email")}
-                  />
-                  {registerForm.formState.errors.email && (
-                    <p className="text-destructive text-xs mt-1">{registerForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Senha</Label>
-                  <Input 
-                    type="password" 
-                    icon={<Lock size={20} />} 
-                    placeholder="Mínimo 6 caracteres" 
-                    {...registerForm.register("password")}
-                  />
-                  {registerForm.formState.errors.password && (
-                    <p className="text-destructive text-xs mt-1">{registerForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full mt-4" size="lg" isLoading={registerMutation.isPending}>
-                  Criar Conta
-                </Button>
-              </motion.form>
-            )}
-          </AnimatePresence>
-        </Card>
-      </div>
+              </motion.div>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", marginBottom: 4 }}>
+                Lucro <span style={{ color: "#00ff88" }}>Driver</span>
+              </p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                Seu painel inteligente de ganhos
+              </p>
+            </div>
+
+            {/* Back hint */}
+            <div style={{ display: "flex", justifyContent: "center", padding: "18px 0 0" }}>
+              <button
+                onClick={() => setShowForm(false)}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 4,
+                  color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600,
+                  fontFamily: "inherit",
+                }}
+              >
+                <ChevronDown size={14} />
+                voltar
+              </button>
+            </div>
+
+            {/* Form card — slides up from bottom */}
+            <div style={{
+              background: "#111111",
+              borderTop: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "28px 28px 0 0",
+              padding: "28px 24px",
+              marginTop: 20,
+              paddingBottom: "calc(28px + env(safe-area-inset-bottom, 0px))",
+            }}>
+              <AuthForm defaultMode={formMode} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
