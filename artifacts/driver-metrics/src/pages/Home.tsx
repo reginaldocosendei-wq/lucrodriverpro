@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
 import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-react";
 import { motion, animate } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
@@ -70,6 +70,7 @@ function Skeleton({ h = 24, w = "100%", r = 8 }: { h?: number; w?: number | stri
 // HOME
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
+  const [, navigate] = useLocation();
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: user } = useGetMe();
   const { t } = useT();
@@ -483,27 +484,27 @@ export default function Home() {
 
 
       {/* ── FAB ─────────────────────────────────────────────────────────────── */}
-      <Link href="/import">
-        <motion.div
-          style={{ position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 480px) / 2 + 20px))", zIndex: 50 }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
-          whileTap={{ scale: 0.88 }}
-          whileHover={{ scale: 1.08 }}
-        >
-          {/* Button */}
-          <div style={{
-            width: 58, height: 58, borderRadius: "50%",
-            background: "#00ff88",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-            position: "relative",
-          }}>
-            <Camera size={24} color="#000" strokeWidth={2.2} />
-          </div>
-        </motion.div>
-      </Link>
+      <motion.div
+        onClick={() => navigate("/import")}
+        style={{
+          position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 480px) / 2 + 20px))",
+          zIndex: 50, cursor: "pointer",
+        }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
+        whileTap={{ scale: 0.88 }}
+        whileHover={{ scale: 1.08 }}
+      >
+        <div style={{
+          width: 58, height: 58, borderRadius: "50%",
+          background: "#00ff88",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        }}>
+          <Camera size={24} color="#000" strokeWidth={2.2} />
+        </div>
+      </motion.div>
 
     </motion.div>
   );
