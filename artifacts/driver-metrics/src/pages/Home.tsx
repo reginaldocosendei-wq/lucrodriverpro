@@ -13,6 +13,7 @@ import { InsightsPanel } from "@/components/InsightsPanel";
 import { DecisionEngine } from "@/components/DecisionEngine";
 import { DailyGoalCard } from "@/components/DailyGoalCard";
 import { WeeklyRanking } from "@/components/WeeklyRanking";
+import { LostProfitCard } from "@/components/LostProfitCard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -657,6 +658,11 @@ export default function Home() {
       {/* ─── WEEKLY RANKING ──────────────────────────────────────────────────── */}
       <motion.div variants={item}>
         <WeeklyRanking />
+      </motion.div>
+
+      {/* ─── LOST PROFIT ESTIMATION ──────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <LostProfitCard />
       </motion.div>
 
       {/* ─── DECISION ENGINE ─────────────────────────────────────────────────── */}
