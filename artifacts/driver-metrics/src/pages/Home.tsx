@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { formatBRL } from "@/lib/utils";
-import { Car, Clock, Navigation, Plus, Camera, ChevronRight, Lock, Zap } from "lucide-react";
+import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-react";
 import { motion, animate } from "framer-motion";
 import { Link } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
@@ -516,23 +516,34 @@ export default function Home() {
 
 
       {/* ── FAB ─────────────────────────────────────────────────────────────── */}
-      <Link href="/rides">
+      <Link href="/import">
         <motion.div
-          style={{ position: "fixed", bottom: 88, right: 20, zIndex: 40 }}
+          style={{ position: "fixed", bottom: 92, right: 20, zIndex: 50 }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.8, type: "spring", damping: 14, stiffness: 220 }}
-          whileTap={{ scale: 0.92 }}
+          transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
+          whileTap={{ scale: 0.88 }}
+          whileHover={{ scale: 1.08 }}
         >
+          {/* Pulse ring */}
+          <motion.div
+            animate={{ scale: [1, 1.35, 1], opacity: [0.35, 0, 0.35] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: "easeOut" }}
+            style={{
+              position: "absolute", inset: -8, borderRadius: "50%",
+              background: "rgba(0,255,136,0.28)",
+              pointerEvents: "none",
+            }}
+          />
+          {/* Button */}
           <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "#00ff88", color: "#000",
-            fontWeight: 800, fontSize: 13,
-            paddingLeft: 18, paddingRight: 20, height: 50, borderRadius: 999,
-            boxShadow: "0 8px 32px rgba(0,255,136,0.4)",
+            width: 58, height: 58, borderRadius: "50%",
+            background: "#00ff88",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 8px 32px rgba(0,255,136,0.45), 0 2px 8px rgba(0,0,0,0.4)",
+            position: "relative",
           }}>
-            <Plus size={18} strokeWidth={2.5} />
-            <span>Nova corrida</span>
+            <Camera size={24} color="#000" strokeWidth={2.2} />
           </div>
         </motion.div>
       </Link>
