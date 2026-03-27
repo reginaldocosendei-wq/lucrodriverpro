@@ -3,13 +3,15 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { ChevronLeft, Copy, Check, Clock } from "lucide-react";
+import { useGetMe } from "@workspace/api-client-react";
 
 // ─── CONFIG — replace these with the real PIX details ────────────────────────
-const PIX_KEY      = "contato@lucrodriver.com.br";
-const PIX_NAME     = "Lucro Driver";
-const PIX_CITY     = "Sao Paulo";
-const PIX_AMOUNT   = "19.90";
-const PIX_TXID     = "LUCROPRO";
+const PIX_KEY        = "contato@lucrodriver.com.br";
+const PIX_NAME       = "Lucro Driver";
+const PIX_CITY       = "Sao Paulo";
+const PIX_AMOUNT     = "19.90";
+const PIX_TXID       = "LUCROPRO";
+const WHATSAPP_NUMBER = "5511999999999"; // ← replace with your WhatsApp number (country code + number, no spaces or symbols)
 
 // ─── PIX EMV GENERATOR ────────────────────────────────────────────────────────
 function tlv(id: string, value: string) {
@@ -69,10 +71,20 @@ function useCopy(text: string, resetMs = 2200) {
 // PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function PixPaymentPage() {
-  const [, navigate] = useLocation();
+  const [, navigate]  = useLocation();
   const [step, setStep] = useState<"payment" | "pending">("payment");
-  const { copied: keyCopied, copy: copyKey }         = useCopy(PIX_KEY);
-  const { copied: codeCopied, copy: copyCode }       = useCopy(PIX_PAYLOAD);
+  const { data: user } = useGetMe();
+  const { copied: keyCopied, copy: copyKey }   = useCopy(PIX_KEY);
+  const { copied: codeCopied, copy: copyCode } = useCopy(PIX_PAYLOAD);
+
+  const handlePaid = () => {
+    const email = (user as any)?.email ?? "";
+    const text = encodeURIComponent(
+      `Olá, acabei de pagar o Lucro Driver PRO via Pix.\n\nMeu email é: ${email}\n\nSegue o comprovante:`
+    );
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, "_blank");
+    setStep("pending");
+  };
 
   return (
     <div style={{
@@ -294,7 +306,7 @@ export default function PixPaymentPage() {
               {/* CTA */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setStep("pending")}
+                onClick={handlePaid}
                 style={{
                   width: "100%", height: 60, borderRadius: 18, border: "none",
                   background: "#00ff88", color: "#000",
@@ -306,7 +318,7 @@ export default function PixPaymentPage() {
                 }}
               >
                 <Check size={20} strokeWidth={2.8} />
-                Já paguei
+                Já paguei — Enviar comprovante
               </motion.button>
 
               <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 14, lineHeight: 1.6 }}>
