@@ -10,6 +10,7 @@ import {
 import { motion, animate, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { InsightsPanel } from "@/components/InsightsPanel";
+import { DecisionEngine } from "@/components/DecisionEngine";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -641,6 +642,11 @@ export default function Home() {
       {/* ─── DAILY ANALYSIS ─────────────────────────────────────────────────── */}
       <motion.div variants={item}>
         <DailyAnalysis summary={summary} />
+      </motion.div>
+
+      {/* ─── DECISION ENGINE ─────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <DecisionEngine />
       </motion.div>
 
       {/* ─── FINANCIAL INTELLIGENCE ──────────────────────────────────────────── */}

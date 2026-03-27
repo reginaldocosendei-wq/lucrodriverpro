@@ -127,7 +127,8 @@ function InsightCard({ insight, index }: { insight: Insight; index: number }) {
 }
 
 export function InsightsPanel() {
-  const { data: insights, isLoading } = useInsights();
+  const { data, isLoading } = useInsights();
+  const insights = data?.insights;
 
   if (isLoading) {
     return (

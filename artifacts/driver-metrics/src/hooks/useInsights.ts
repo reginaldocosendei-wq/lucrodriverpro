@@ -11,16 +11,30 @@ export interface Insight {
   suggestion: string;
 }
 
+export interface Decision {
+  score: number;
+  status: InsightStatus;
+  verdict: string;
+  message: string;
+  suggestion: string;
+  dominantCause: string;
+}
+
+export interface InsightsResponse {
+  decision: Decision | null;
+  insights: Insight[];
+}
+
 export function useInsights() {
   const BASE = getApiBase();
 
-  return useQuery<Insight[]>({
+  return useQuery<InsightsResponse>({
     queryKey: ["/api/insights"],
     queryFn: async () => {
       const res = await fetch(`${BASE}/api/insights`, {
         credentials: "include",
       });
-      if (!res.ok) return [];
+      if (!res.ok) return { decision: null, insights: [] };
       return res.json();
     },
     staleTime: 5 * 60 * 1000,

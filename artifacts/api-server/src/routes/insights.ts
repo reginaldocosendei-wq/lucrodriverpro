@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, dailySummariesTable, costsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { aggregateMetrics } from "../services/metricsService";
-import { generateInsights } from "../services/insightsService";
+import { generateInsights, calculateDecision } from "../services/insightsService";
 
 const router = Router();
 
@@ -49,7 +49,7 @@ router.get("/", requireAuth, async (req, res) => {
     // All-time averages for rating
     const allAgg = aggregateMetrics(summaries);
 
-    const insights = generateInsights({
+    const engineInput = {
       summaries,
       costsToday,
       costsMonth,
@@ -63,9 +63,12 @@ router.get("/", requireAuth, async (req, res) => {
       earningsPerKmToday: todayAgg.earningsPerKm,
       ratingToday: todayAgg.avgRating,
       ratingAll: allAgg.avgRating,
-    });
+    };
 
-    res.json(insights);
+    const insights = generateInsights(engineInput);
+    const decision = calculateDecision(engineInput);
+
+    res.json({ decision, insights });
   } catch (err: any) {
     console.error("Insights error:", err);
     res.status(500).json({ error: "Erro ao gerar insights" });

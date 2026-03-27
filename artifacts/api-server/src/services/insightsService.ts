@@ -8,6 +8,15 @@ export interface Insight {
   suggestion: string;
 }
 
+export interface Decision {
+  score: number;           // 0–100 efficiency score
+  status: InsightStatus;   // good / average / bad
+  verdict: string;         // "EFICIENTE" | "ATENÇÃO" | "CRÍTICO"
+  message: string;         // "Ótima performance. Continue rodando."
+  suggestion: string;      // Actionable one-liner
+  dominantCause: string;   // which factor drove the score most
+}
+
 interface DailySummaryRow {
   date: string;
   earnings: number;
@@ -313,4 +322,196 @@ export function generateInsights(input: InsightInput): Insight[] {
   ].slice(0, 5);
 
   return prioritized;
+}
+
+// ─── DECISION ENGINE ─────────────────────────────────────────────────────────
+// Collapses all signals into a single 0–100 efficiency score and one clear verdict.
+export function calculateDecision(input: InsightInput): Decision | null {
+  const {
+    summaries,
+    costsToday,
+    earningsToday,
+    tripsToday,
+    hoursToday,
+    earningsPerHourToday,
+    earningsPerTripToday,
+    earningsPerKmToday,
+  } = input;
+
+  // Need at least some today-data to make a decision
+  if (earningsToday <= 0 && tripsToday <= 0) return null;
+
+  const today = getDateStr(0);
+  const d7ago = getDateStr(7);
+  const d14ago = getDateStr(14);
+  const last7 = summaries.filter((s) => s.date < today && s.date >= d7ago);
+  const prev7 = summaries.filter((s) => s.date < d7ago && s.date >= d14ago);
+
+  let score = 50; // neutral baseline
+  let dominantCause = "geral";
+
+  // ── Factor 1: Hourly rate vs 7-day average (weight: ±25) ──────────────────
+  let hourlyDelta = 0;
+  if (earningsPerHourToday != null) {
+    const avgH = avg(
+      last7
+        .filter((s) => s.hoursWorked && s.hoursWorked > 0)
+        .map((s) => safeDiv(s.earnings, s.hoursWorked!)!)
+        .filter((v): v is number => v !== null),
+    );
+    if (avgH !== null && avgH > 0) {
+      const r = earningsPerHourToday / avgH;
+      if (r >= 1.15)      { score += 25; hourlyDelta = 25; }
+      else if (r >= 1.0)  { score += 10; hourlyDelta = 10; }
+      else if (r >= 0.85) { score -= 10; hourlyDelta = -10; }
+      else                { score -= 25; hourlyDelta = -25; }
+      if (Math.abs(hourlyDelta) >= 20) dominantCause = "taxa_horaria";
+    }
+  }
+
+  // ── Factor 2: Trip value vs 7-day average (weight: ±15) ──────────────────
+  let tripDelta = 0;
+  if (earningsPerTripToday != null && tripsToday >= 2) {
+    const avgT = avg(
+      last7
+        .filter((s) => s.trips > 0)
+        .map((s) => safeDiv(s.earnings, s.trips)!)
+        .filter((v): v is number => v !== null),
+    );
+    if (avgT !== null && avgT > 0) {
+      const r = earningsPerTripToday / avgT;
+      if (r >= 1.1)      { score += 15; tripDelta = 15; }
+      else if (r >= 0.9) { score +=  5; tripDelta = 5;  }
+      else if (r >= 0.8) { score -= 10; tripDelta = -10; }
+      else               { score -= 15; tripDelta = -15; }
+      if (Math.abs(tripDelta) >= 15 && Math.abs(tripDelta) > Math.abs(hourlyDelta))
+        dominantCause = "valor_corrida";
+    }
+  }
+
+  // ── Factor 3: Cost ratio (weight: ±20) ───────────────────────────────────
+  let costDelta = 0;
+  if (earningsToday > 0 && costsToday > 0) {
+    const ratio = costsToday / earningsToday;
+    if (ratio < 0.25)      { score += 20; costDelta = 20; }
+    else if (ratio < 0.40) { score += 10; costDelta = 10; }
+    else if (ratio < 0.55) { score -= 15; costDelta = -15; }
+    else                   { score -= 25; costDelta = -25; }
+    if (costDelta <= -20 && Math.abs(costDelta) > Math.abs(hourlyDelta))
+      dominantCause = "custos";
+  }
+
+  // ── Factor 4: Burnout / long hours (weight: −10 to −20) ──────────────────
+  let burnoutDelta = 0;
+  if (hoursToday !== null) {
+    if (hoursToday > 12)       { score -= 20; burnoutDelta = -20; }
+    else if (hoursToday > 10)  { score -= 12; burnoutDelta = -12; }
+    else if (hoursToday > 8)   { score -=  5; burnoutDelta = -5;  }
+    if (burnoutDelta <= -12 && dominantCause === "geral")
+      dominantCause = "horas_trabalhadas";
+  }
+
+  // ── Factor 5: Weekly trend (weight: ±10) ─────────────────────────────────
+  if (last7.length >= 3 && prev7.length >= 3) {
+    const avgL = avg(last7.map((s) => s.earnings));
+    const avgP = avg(prev7.map((s) => s.earnings));
+    if (avgL !== null && avgP !== null && avgP > 0) {
+      const change = (avgL - avgP) / avgP;
+      if (change >= 0.1)       score += 10;
+      else if (change <= -0.1) score -= 10;
+    }
+  }
+
+  // ── Factor 6: km efficiency (weight: ±10) ────────────────────────────────
+  if (earningsPerKmToday !== null) {
+    const avgKm = avg(
+      last7
+        .filter((s) => s.kmDriven && s.kmDriven > 0)
+        .map((s) => safeDiv(s.earnings, s.kmDriven!)!)
+        .filter((v): v is number => v !== null),
+    );
+    if (avgKm !== null && avgKm > 0) {
+      const r = earningsPerKmToday / avgKm;
+      if (r >= 1.2)      score += 10;
+      else if (r <= 0.75) score -= 10;
+    }
+  }
+
+  // Clamp 0–100
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  // ── Build verdict ─────────────────────────────────────────────────────────
+  const status: InsightStatus =
+    score >= 70 ? "good" : score >= 45 ? "average" : "bad";
+
+  const verdict =
+    score >= 70 ? "EFICIENTE" : score >= 45 ? "ATENÇÃO" : "CRÍTICO";
+
+  // Context-aware messages based on dominant cause
+  const messages: Record<string, { good: string; average: string; bad: string }> = {
+    taxa_horaria: {
+      good: "Sua taxa por hora está acima da média. Ótimo momento para continuar rodando.",
+      average: "Sua taxa por hora está moderada. Avalie se vale a pena continuar nessa região.",
+      bad: "Sua performance por hora caiu significativamente. Considere encerrar o turno em breve.",
+    },
+    valor_corrida: {
+      good: "Corridas muito rentáveis hoje. Continue priorizando essa estratégia.",
+      average: "Valor médio por corrida abaixo do esperado. Filtre corridas curtas.",
+      bad: "Suas corridas estão rendendo pouco. Mude de região ou aguarde maior demanda.",
+    },
+    custos: {
+      good: "Custos controlados. Sua margem de lucro está saudável.",
+      average: "Seus custos estão reduzindo seu lucro. Planeje melhor os gastos.",
+      bad: "Custos muito altos. Cada real gasto está corroendo seu lucro real.",
+    },
+    horas_trabalhadas: {
+      good: "Bom equilíbrio de horas. Mantenha o ritmo.",
+      average: "Jornada longa. Monitore sua taxa por hora para não perder eficiência.",
+      bad: "Você trabalhou muitas horas. Sua eficiência tende a cair — considere uma pausa.",
+    },
+    geral: {
+      good: "Ótima performance geral. Continue rodando — o momento é favorável.",
+      average: "Performance estável. Há espaço para melhorar eficiência e reduzir custos.",
+      bad: "Performance abaixo do ideal. Revise horários, região e gastos.",
+    },
+  };
+
+  const suggestions: Record<string, { good: string; average: string; bad: string }> = {
+    taxa_horaria: {
+      good: "Aproveite o pico atual — cada hora agora vale mais.",
+      average: "Tente mudar para uma região de maior demanda.",
+      bad: "Pause, descanse e recomece em um horário de pico.",
+    },
+    valor_corrida: {
+      good: "Prefira aceitar corridas acima de R$ 15 para manter a média.",
+      average: "Evite aceitar corridas abaixo de R$ 10.",
+      bad: "Mova-se para o centro ou aeroporto onde as corridas costumam ser mais longas.",
+    },
+    custos: {
+      good: "Continue registrando todos os gastos para manter o controle.",
+      average: "Reduza paradas desnecessárias que aumentam o consumo de combustível.",
+      bad: "Cadastre seus custos detalhados e identifique onde cortar.",
+    },
+    horas_trabalhadas: {
+      good: "Planeje uma pausa a cada 3–4 horas para manter o foco.",
+      average: "Faça uma pausa de 20 minutos para recuperar a concentração.",
+      bad: "Encerre o turno — sua saúde e segurança valem mais que corridas extras.",
+    },
+    geral: {
+      good: "Replique os horários e regiões de hoje na próxima semana.",
+      average: "Registre seus resultados diariamente para identificar padrões.",
+      bad: "Analise quais dias e horários deram mais retorno e foque neles.",
+    },
+  };
+
+  const cause = dominantCause in messages ? dominantCause : "geral";
+
+  return {
+    score,
+    status,
+    verdict,
+    message: messages[cause][status],
+    suggestion: suggestions[cause][status],
+    dominantCause: cause,
+  };
 }
