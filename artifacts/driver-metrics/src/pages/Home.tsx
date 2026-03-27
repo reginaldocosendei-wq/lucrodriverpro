@@ -154,13 +154,14 @@ export default function Home() {
       <motion.div variants={item}>
         <div style={{ position: "relative", borderRadius: 28, overflow: "hidden" }}>
           {/* Base */}
-          <div style={{ position: "absolute", inset: 0, background: "#080808", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", inset: 0, background: "#080808", pointerEvents: "none", outline: "3px solid red" }} />
 
           {/* Grid */}
           <div style={{
             position: "absolute", inset: 0, opacity: 0.05, pointerEvents: "none",
             backgroundImage: "linear-gradient(rgba(0,255,136,1) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,1) 1px,transparent 1px)",
             backgroundSize: "30px 30px",
+            outline: "3px solid red",
           }} />
 
           {/* Glow */}
@@ -170,6 +171,7 @@ export default function Home() {
             background: profitPos
               ? "radial-gradient(ellipse,rgba(0,255,136,0.2) 0%,transparent 70%)"
               : "radial-gradient(ellipse,rgba(239,68,68,0.17) 0%,transparent 70%)",
+            outline: "3px solid orange",
           }} />
 
           <div style={{ position: "relative", zIndex: 2, padding: "28px 24px 26px" }}>
@@ -485,8 +487,8 @@ export default function Home() {
         <motion.div variants={item}>
           <Link href="/upgrade">
             <motion.div whileTap={{ scale: 0.98 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(234,179,8,0.1),rgba(217,119,6,0.05))", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, background: "rgba(234,179,8,0.1)", borderRadius: "50%", filter: "blur(32px)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(234,179,8,0.1),rgba(217,119,6,0.05))", pointerEvents: "none", outline: "3px solid red" }} />
+              <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, background: "rgba(234,179,8,0.1)", borderRadius: "50%", filter: "blur(32px)", pointerEvents: "none", outline: "3px solid orange" }} />
               <div style={{ position: "relative", zIndex: 1, padding: "14px 16px", border: "1px solid rgba(234,179,8,0.16)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#eab308,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Lock size={18} color="#000" />
@@ -506,7 +508,7 @@ export default function Home() {
       <motion.div variants={item}>
         <Link href="/import">
           <motion.div whileTap={{ scale: 0.97 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(0,255,136,0.09),rgba(0,204,106,0.04))", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(0,255,136,0.09),rgba(0,204,106,0.04))", pointerEvents: "none", outline: "3px solid red" }} />
             <div style={{ position: "relative", zIndex: 1, padding: "14px 16px", border: "1px solid rgba(0,255,136,0.13)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
               <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#00ff88,#00cc6a)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 6px 20px rgba(0,255,136,0.25)" }}>
                 <Camera size={18} color="#000" />

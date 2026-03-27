@@ -210,6 +210,7 @@ export default function AuthScreen() {
         position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
         backgroundImage: "linear-gradient(rgba(0,255,136,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,1) 1px, transparent 1px)",
         backgroundSize: "36px 36px",
+        outline: "3px solid red",
       }} />
 
       {/* Top glow */}
@@ -217,6 +218,7 @@ export default function AuthScreen() {
         position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
         width: 500, height: 400, pointerEvents: "none",
         background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 65%)",
+        outline: "3px solid orange",
       }} />
 
       {/* Bottom glow */}
@@ -224,6 +226,7 @@ export default function AuthScreen() {
         position: "absolute", bottom: -80, left: "50%", transform: "translateX(-50%)",
         width: 360, height: 300, pointerEvents: "none",
         background: "radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 65%)",
+        outline: "3px solid orange",
       }} />
 
       <AnimatePresence mode="wait">
