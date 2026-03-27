@@ -306,7 +306,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         overflowY: "auto",
         overflowX: "hidden",
         width: "100%",
-        padding: "20px 16px 16px",
+        padding: "20px 16px 24px",
       }}>
         {children}
       </main>
