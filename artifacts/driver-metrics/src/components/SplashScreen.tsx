@@ -14,7 +14,7 @@ export function SplashScreen({ show }: SplashScreenProps) {
           exit={{ opacity: 0, scale: 1.04 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center select-none"
-          style={{ background: "#0a0a0a" }}
+          style={{ background: "#0a0a0a", pointerEvents: "none" }}
         >
           {/* Ambient glow */}
           <div
