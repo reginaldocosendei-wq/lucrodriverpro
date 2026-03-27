@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { ChevronLeft, Copy, Check, Clock } from "lucide-react";
 import { useGetMe } from "@workspace/api-client-react";
+import { getApiBase } from "@/lib/api";
+
+const BASE = getApiBase();
 
 // ─── CONFIG — replace these with the real PIX details ────────────────────────
 const PIX_KEY        = "contato@lucrodriver.com.br";
@@ -79,6 +82,10 @@ export default function PixPaymentPage() {
 
   const handlePaid = () => {
     const email = (user as any)?.email ?? "";
+
+    fetch(`${BASE}/api/pix/request`, { method: "POST", credentials: "include" })
+      .catch(() => {});
+
     const text = encodeURIComponent(
       `Olá, acabei de pagar o Lucro Driver PRO via Pix.\n\nMeu email é: ${email}\n\nSegue o comprovante:`
     );

@@ -3,3 +3,4 @@ export * from "./rides";
 export * from "./costs";
 export * from "./goals";
 export * from "./dailySummaries";
+export * from "./pixPayments";

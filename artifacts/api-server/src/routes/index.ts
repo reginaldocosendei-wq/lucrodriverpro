@@ -12,6 +12,8 @@ import dailySummariesRouter from "./dailySummaries";
 import insightsRouter from "./insights";
 import weeklyPerformanceRouter from "./weeklyPerformance";
 import devAdminRouter from "./devAdmin";
+import pixRouter from "./pix";
+import pixAdminRouter from "./pixAdmin";
 
 const router: IRouter = Router();
 
@@ -27,6 +29,9 @@ router.use("/import", importRouter);
 router.use("/daily-summaries", dailySummariesRouter);
 router.use("/insights", insightsRouter);
 router.use("/weekly-performance", weeklyPerformanceRouter);
+
+router.use("/pix", pixRouter);
+router.use("/admin/pix", pixAdminRouter);
 
 // Dev-only utilities — the router itself refuses all requests in production
 router.use("/dev", devAdminRouter);

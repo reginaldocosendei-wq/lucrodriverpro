@@ -1,0 +1,169 @@
+Create a complete admin panel for my app "Lucro Driver".
+
+GOAL:
+Manage users, subscriptions, PIX payments, trials, and PRO access in one place.
+
+---
+
+## 🧠 MAIN PAGE
+
+Create a page:
+"Admin Panel" or "Painel Admin"
+
+---
+
+## 📊 DASHBOARD OVERVIEW
+
+Show summary cards:
+
+- Total users
+- Active PRO users
+- Users in trial
+- PIX pending payments
+- Total revenue (optional)
+
+---
+
+## 👤 USERS MANAGEMENT
+
+Create a user list with:
+
+- name or email
+- status: free / trial / PRO
+- trial remaining days
+- plan type
+- created date
+
+---
+
+## 🔘 USER ACTIONS
+
+For each user:
+
+- "Ativar PRO"
+- "Remover PRO"
+- "Iniciar Trial"
+- "Encerrar Trial"
+- "Excluir usuário"
+
+---
+
+## ⏱ TRIAL SYSTEM
+
+Show:
+
+- trial start date
+- trial end date
+- days remaining
+
+Logic:
+
+- auto-expire trial
+- change user to free after trial ends
+
+---
+
+## 💳 PAYMENTS (STRIPE)
+
+Show:
+
+- payment history
+- subscription status
+- last payment date
+
+Status:
+
+- active
+- canceled
+- failed
+
+---
+
+## ⚡ PIX PANEL
+
+Create PIX section with:
+
+- user email
+- date
+- value
+- status: pending / confirmed / rejected
+- proof image
+
+---
+
+## 🔘 PIX ACTIONS
+
+- "Confirmar pagamento"
+- "Ativar PRO"
+- "Recusar"
+- "Excluir"
+
+---
+
+## 🔄 LOGIC
+
+When PIX is confirmed:
+
+- set user.isPro = true
+- set paymentStatus = confirmed
+- set activatedAt = now
+
+---
+
+## 📅 FILTERS
+
+Add filters:
+
+- All users
+- Only PRO
+- Only trial
+- Only free
+- Pending PIX
+- Confirmed PIX
+
+---
+
+## 🔍 SEARCH
+
+Search users by:
+
+- email
+- name
+
+---
+
+## 📱 DESIGN
+
+- premium dashboard
+- dark theme
+- clean cards
+- tables or card list
+- responsive
+
+---
+
+## 🔐 SECURITY
+
+- restrict to admin users only
+
+---
+
+## ⚙️ STRUCTURE
+
+Create:
+
+/frontend/src/pages/AdminPage.jsx
+/frontend/src/components/admin/UserList.jsx
+/frontend/src/components/admin/UserCard.jsx
+/frontend/src/components/admin/PixPanel.jsx
+/frontend/src/components/admin/DashboardStats.jsx
+
+/backend/src/routes/adminRoutes.js
+/backend/src/controllers/adminController.js
+/backend/src/services/adminService.js
+
+---
+
+## 🚀 FINAL RESULT
+
+A complete admin system to manage the entire app.
