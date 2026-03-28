@@ -201,7 +201,7 @@ export default function Home() {
 
       {isDesktop ? (
         /* ─────────────── DESKTOP ROW 1 ─────────────── */
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 24, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.9fr)", gap: 24, alignItems: "start" }}>
 
           {/* LEFT: Profit card — vertical layout */}
           <motion.div variants={item}>
@@ -278,47 +278,47 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* RIGHT: Metric tiles stacked vertically */}
+          {/* RIGHT: Metric tiles — 3-column grid */}
           <motion.div variants={item}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
               {t("home.indicators")}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <MetricTile
-                icon={<Car size={15} color="#60a5fa" />}
+                icon={<Car size={14} color="#60a5fa" />}
                 label={t("home.rides")} accent="#60a5fa" loading={isLoading}
                 value={isLoading ? null : (
-                  <span style={{ fontSize: 34, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                     {trips}
                   </span>
                 )}
               />
               <MetricTile
-                icon={<Clock size={15} color="#c084fc" />}
+                icon={<Clock size={14} color="#c084fc" />}
                 label={t("home.perHour")} accent="#c084fc" loading={isLoading}
                 value={isLoading ? null : rph != null ? (
                   <>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                    <span style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
+                    <span style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                       {rph.toFixed(0)}
                     </span>
                   </>
                 ) : (
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>{t("home.enterHours")}</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>{t("home.enterHours")}</span>
                 )}
               />
               <MetricTile
-                icon={<Navigation size={15} color="#fb923c" />}
+                icon={<Navigation size={14} color="#fb923c" />}
                 label={t("home.perKm")} accent="#fb923c" loading={isLoading}
                 value={isLoading ? null : rpkm != null ? (
                   <>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                    <span style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
+                    <span style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                       {rpkm.toFixed(2)}
                     </span>
                   </>
                 ) : (
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>{t("home.enterKm")}</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>{t("home.enterKm")}</span>
                 )}
               />
             </div>
@@ -465,7 +465,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════════════════════════
            ROW 3 — Daily Analysis | Goal  (desktop: 3fr 2fr)
           ══════════════════════════════════════════════════════════════════════ */}
-      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
+      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.9fr)", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
       {/* ╔══════════════════════════════════════════════════════════════════
           ║  3. ANÁLISE INTELIGENTE DO DIA
@@ -653,7 +653,7 @@ export default function Home() {
         <motion.div
           onClick={() => navigate("/import")}
           style={{
-            position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 680px) / 2 + 20px))",
+            position: "fixed", bottom: 92, right: 20,
             zIndex: 50, cursor: "pointer",
           }}
           initial={{ scale: 0, opacity: 0 }}

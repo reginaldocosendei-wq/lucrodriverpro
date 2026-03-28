@@ -209,7 +209,7 @@ export default function AdminUsers() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 520, margin: "0 auto", width: "100%", padding: "0 16px 100px", overflowY: "auto", height: "100dvh" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 16px 100px", overflowY: "auto", height: "100dvh" }}>
 
         {/* ── Header ────────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 52, marginBottom: 24 }}>

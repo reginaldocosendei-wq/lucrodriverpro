@@ -392,10 +392,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         overflowY: "auto",
         overflowX: "hidden",
         width: "100%",
-        padding: isDesktop ? "28px 40px 40px" : "20px 16px 24px",
         boxSizing: "border-box",
       }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%" }}>
+        <div style={{
+          maxWidth: 1280,
+          width: "100%",
+          margin: "0 auto",
+          padding: isDesktop ? "28px 40px 40px" : "20px 16px 24px",
+          boxSizing: "border-box",
+        }}>
           {children}
         </div>
       </main>
