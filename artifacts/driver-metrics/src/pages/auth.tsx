@@ -47,17 +47,13 @@ function AuthForm({
 
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
-    console.log("[AUTH] login submit", { email: data.email, ts: Date.now() });
     loginMutation.mutate({ data }, {
       onSuccess: async () => {
-        console.log("[AUTH] login 200 → awaiting invalidateQueries", { ts: Date.now() });
-        // Wait for the session to be confirmed in cache BEFORE navigating.
-        // The server already guarantees the session is persisted (session.save()
-        // is called before sending the 200), so this refetch will succeed.
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        console.log("[AUTH] invalidateQueries done → navigating /", { ts: Date.now() });
-        // Persistence check: if this key survives to the next screen, localStorage works.
-        localStorage.setItem("login_test", "ok");
+        // Clear any error state from the initial unauthenticated load, then
+        // force a fresh /api/auth/me call. We wait for this to resolve so
+        // the user object is in cache BEFORE we navigate — HomeRoute will
+        // render the dashboard immediately with no flash.
+        await queryClient.resetQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },
       onError: (err: any) => {
@@ -73,9 +69,7 @@ function AuthForm({
     console.debug("[AuthForm] submitting register", { email: data.email });
     registerMutation.mutate({ data }, {
       onSuccess: async () => {
-        console.debug("[AuthForm] register success → refreshing user cache");
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        console.debug("[AuthForm] cache refreshed → calling onSuccess");
+        await queryClient.resetQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },
       onError: (err: any) => {
@@ -258,7 +252,6 @@ export default function AuthScreen({
   const { t } = useT();
   const [, navigate] = useLocation();
 
-  console.debug("[AuthScreen]", { startWithForm });
 
   if (startWithForm) {
     // ── Form-only view (used on /login route) ───────────────────────────────
@@ -314,10 +307,7 @@ export default function AuthScreen({
             <AuthForm
               defaultMode="login"
               onSuccess={onSuccess}
-              onBack={() => {
-                console.debug("[AuthScreen] back from /login → /");
-                navigate("/");
-              }}
+              onBack={() => navigate("/")}
             />
           </motion.div>
         </div>
