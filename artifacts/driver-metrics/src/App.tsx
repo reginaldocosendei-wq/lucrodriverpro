@@ -150,12 +150,41 @@ function LoadingSpinner() {
   );
 }
 
+// ─── DEBUG PANEL (desktop only, temporary) ────────────────────────────────────
+function DebugPanel() {
+  const [location] = useLocation();
+  const { data: user, isLoading } = useBootAuth();
+  const lsTest = typeof window !== "undefined" ? localStorage.getItem("login_test") : null;
+  if (typeof window === "undefined" || window.innerWidth < 768) return null;
+  const row = (label: string, value: string, ok?: boolean) => (
+    <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "monospace" }}>{label}</span>
+      <span style={{ fontSize: 10, fontFamily: "monospace", fontWeight: 700, color: ok === undefined ? "#e5e7eb" : ok ? "#00ff88" : "#f87171" }}>{value}</span>
+    </div>
+  );
+  return (
+    <div style={{
+      position: "fixed", bottom: 12, right: 12, zIndex: 99999, pointerEvents: "none",
+      background: "rgba(0,0,0,0.88)", border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: 10, padding: "10px 14px", minWidth: 230,
+      backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", gap: 5,
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>DEBUG</div>
+      {row("route",          location || "/")}
+      {row("authLoading",    String(isLoading),  !isLoading)}
+      {row("isAuthenticated", user ? "true" : "false", !!user)}
+      {row("currentUser",    user ? (user as any).email ?? "yes" : "none", !!user)}
+      {row("login_test",     lsTest ?? "(not set)", lsTest === "ok")}
+    </div>
+  );
+}
+
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
-// "/" shows the landing page if unauthenticated, the dashboard if authenticated.
-// Auth resolves in background; when user data arrives, swaps to dashboard.
-// DEV_DISABLE_AUTH_FETCH: skip the check entirely and show dashboard directly.
+// "/" shows the dashboard if authenticated, landing page if not.
+// Waits for auth to settle before deciding — prevents flashing landing page
+// when a returning user loads the app with a valid session.
 function HomeRoute() {
-  const { data: user } = useBootAuth();
+  const { data: user, isLoading } = useBootAuth();
 
   if (DEV_DISABLE_AUTH_FETCH) {
     return (
@@ -164,6 +193,11 @@ function HomeRoute() {
       </div>
     );
   }
+
+  // While auth is in flight: show a neutral spinner.
+  // Without this guard, a returning user briefly sees the landing page
+  // before the session resolves, which can look like a login loop.
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -264,6 +298,8 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 function Router() {
   return (
+    <>
+    <DebugPanel />
     <Switch>
       {/* ── Public: login / register ── */}
       <Route path="/login" component={LoginRoute} />
@@ -311,6 +347,7 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 

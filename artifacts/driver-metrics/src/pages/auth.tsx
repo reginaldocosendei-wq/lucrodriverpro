@@ -47,12 +47,17 @@ function AuthForm({
 
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
-    console.debug("[AuthForm] submitting login", { email: data.email });
+    console.log("[AUTH] login submit", { email: data.email, ts: Date.now() });
     loginMutation.mutate({ data }, {
       onSuccess: async () => {
-        console.debug("[AuthForm] login success → refreshing user cache");
-        // Await invalidation so the user data is in cache BEFORE navigating
+        console.log("[AUTH] login 200 → awaiting invalidateQueries", { ts: Date.now() });
+        // Wait for the session to be confirmed in cache BEFORE navigating.
+        // The server already guarantees the session is persisted (session.save()
+        // is called before sending the 200), so this refetch will succeed.
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        console.log("[AUTH] invalidateQueries done → navigating /", { ts: Date.now() });
+        // Persistence check: if this key survives to the next screen, localStorage works.
+        localStorage.setItem("login_test", "ok");
         onSuccess?.();
       },
       onError: (err: any) => {

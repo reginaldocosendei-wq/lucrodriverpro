@@ -26,6 +26,16 @@ function userResponse(user: typeof usersTable.$inferSelect) {
   };
 }
 
+// Wait for the session to be fully persisted in PostgreSQL BEFORE sending the
+// response. Without this, the browser fires GET /api/auth/me immediately after
+// the login 200, and that request can arrive at the server BEFORE the session
+// row is written — causing a spurious 401 and the login redirect loop.
+function saveSession(req: Parameters<Router>[0]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+}
+
 const router = Router();
 
 router.post("/register", async (req, res) => {
@@ -45,6 +55,7 @@ router.post("/register", async (req, res) => {
     .values({ name, email, passwordHash, plan: "free" })
     .returning();
   req.session.userId = user.id;
+  await saveSession(req);
   res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
 });
 
@@ -65,10 +76,13 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  // Sync plan with Stripe in case any webhooks were missed
   user = await syncStripeStatusForUser(user);
 
   req.session.userId = user.id;
+  // Wait until the session row is committed to PostgreSQL before replying.
+  // This prevents the race condition where GET /api/auth/me arrives before
+  // the session is written and receives a 401 despite a successful login.
+  await saveSession(req);
   res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
 });
 
@@ -88,7 +102,6 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  // Sync plan with Stripe in case any webhooks were missed
   user = await syncStripeStatusForUser(user);
 
   res.json(userResponse(user));
