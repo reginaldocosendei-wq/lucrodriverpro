@@ -5,12 +5,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input, Label } from "@/components/ui";
-import { Mail, Lock, User, ArrowRight, ChevronDown } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
+import { useLocation } from "wouter";
 
 // ─── AUTH FORM ────────────────────────────────────────────────────────────────
-function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
+function AuthForm({
+  defaultMode,
+  onSuccess,
+  onBack,
+}: {
+  defaultMode: "login" | "register";
+  onSuccess?: () => void;
+  onBack?: () => void;
+}) {
   const { t } = useT();
   const [mode, setMode] = useState<"login" | "register">(defaultMode);
   const [errorMsg, setErrorMsg] = useState("");
@@ -38,17 +47,38 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
 
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
+    console.debug("[AuthForm] submitting login", { email: data.email });
     loginMutation.mutate({ data }, {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
-      onError:   (err: any) => { setErrorMsg(err?.response?.data?.error || t("auth.loginError")); },
+      onSuccess: async () => {
+        console.debug("[AuthForm] login success → refreshing user cache");
+        // Await invalidation so the user data is in cache BEFORE navigating
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        console.debug("[AuthForm] cache refreshed → calling onSuccess");
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
+        console.debug("[AuthForm] login error:", msg);
+        setErrorMsg(msg);
+      },
     });
   });
 
   const onRegister = registerForm.handleSubmit((data) => {
     setErrorMsg("");
+    console.debug("[AuthForm] submitting register", { email: data.email });
     registerMutation.mutate({ data }, {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); },
-      onError:   (err: any) => { setErrorMsg(err?.response?.data?.error || t("auth.registerError")); },
+      onSuccess: async () => {
+        console.debug("[AuthForm] register success → refreshing user cache");
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        console.debug("[AuthForm] cache refreshed → calling onSuccess");
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        const msg = err?.data?.error || err?.response?.data?.error || t("auth.registerError");
+        console.debug("[AuthForm] register error:", msg);
+        setErrorMsg(msg);
+      },
     });
   });
 
@@ -188,16 +218,110 @@ function AuthForm({ defaultMode }: { defaultMode: "login" | "register" }) {
       <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 18, lineHeight: 1.6 }}>
         {t("auth.trialNote")}
       </p>
+
+      {/* Back link */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            marginTop: 20, background: "transparent", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 4,
+            color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+            width: "100%", justifyContent: "center",
+          }}
+        >
+          <ChevronLeft size={13} />
+          {t("auth.goBack")}
+        </button>
+      )}
     </div>
   );
 }
 
 // ─── MAIN AUTH SCREEN ─────────────────────────────────────────────────────────
-export default function AuthScreen() {
+// Props:
+//   startWithForm — when true (e.g. on the /login route), skip the landing and
+//                   show the login/register form immediately.
+//   onSuccess     — called after a successful login or registration so the
+//                   caller can navigate away (e.g. LoginRoute → navigate("/")).
+export default function AuthScreen({
+  startWithForm = false,
+  onSuccess,
+}: {
+  startWithForm?: boolean;
+  onSuccess?: () => void;
+}) {
   const { t } = useT();
-  const [showForm, setShowForm] = useState(false);
-  const [formMode, setFormMode] = useState<"login" | "register">("register");
+  const [, navigate] = useLocation();
 
+  console.debug("[AuthScreen]", { startWithForm });
+
+  if (startWithForm) {
+    // ── Form-only view (used on /login route) ───────────────────────────────
+    return (
+      <div style={{
+        minHeight: "100dvh", background: "#080808",
+        display: "flex", flexDirection: "column",
+        position: "relative",
+      }}>
+        {/* Top glow */}
+        <div style={{
+          position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
+          width: 500, height: 400, pointerEvents: "none",
+          background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
+        }} />
+
+        <div
+          style={{
+            flex: 1, display: "flex", flexDirection: "column",
+            justifyContent: "center", alignItems: "center",
+            position: "relative", zIndex: 2,
+            padding: "32px 24px calc(32px + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          {/* Logo + brand */}
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.35 }}
+            style={{ textAlign: "center", marginBottom: 24 }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 13, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto 12px" }}>
+              <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+            </div>
+            <p style={{ fontSize: 20, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", margin: 0 }}>
+              Lucro <span style={{ color: "#00ff88" }}>Driver</span>
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500, marginTop: 4 }}>
+              {t("auth.appSubtitle")}
+            </p>
+          </motion.div>
+
+          {/* Form card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              width: "100%", maxWidth: 380,
+              background: "#111111",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 24, padding: "28px 24px 24px",
+            }}
+          >
+            <AuthForm
+              defaultMode="login"
+              onSuccess={onSuccess}
+              onBack={() => {
+                console.debug("[AuthScreen] back from /login → /");
+                navigate("/");
+              }}
+            />
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Landing view (used on "/" when unauthenticated) ─────────────────────────
   return (
     <div style={{
       minHeight: "100dvh", background: "#080808",
@@ -212,170 +336,116 @@ export default function AuthScreen() {
         background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
       }} />
 
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          padding: "0 28px", textAlign: "center", position: "relative", zIndex: 2,
+        }}
+      >
+        {/* Logo */}
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ marginBottom: 32, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div style={{
+            width: 72, height: 72, borderRadius: 20, overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+            position: "relative", zIndex: 1,
+          }}>
+            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+          </div>
+        </motion.div>
 
-      <AnimatePresence mode="wait">
-        {!showForm ? (
-          /* ── Landing ── */
-          <motion.div
-            key="landing"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -24 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontSize: "clamp(32px, 10vw, 46px)", fontWeight: 900, lineHeight: 1.1, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
+        >
+          {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
+          <span style={{ color: "#00ff88" }}>
+            {t("auth.tagline").split(" ").slice(-1)[0]}
+          </span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.65, color: "rgba(255,255,255,0.52)", marginBottom: 24, maxWidth: 320 }}
+        >
+          {t("auth.subtitle")}
+        </motion.p>
+
+        {/* Proof line */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.36, duration: 0.4 }}
+          style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: "0.01em", marginBottom: 36 }}
+        >
+          7 dias grátis · Sem cartão necessário
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.44, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: "100%", maxWidth: 340 }}
+        >
+          {/* Primary CTA: try the import flow */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              console.debug("[AuthScreen] 'Importar meu dia' clicked → /import");
+              navigate("/import");
+            }}
             style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              padding: "0 28px", textAlign: "center", position: "relative", zIndex: 2,
+              width: "100%", height: 58, borderRadius: 18, border: "none",
+              background: "#00ff88", color: "#000",
+              fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: "0 4px 20px rgba(0,255,136,0.2)",
+              fontFamily: "inherit",
             }}
           >
-            {/* Logo */}
-            <motion.div
-              initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ marginBottom: 32, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-            >
-              <div style={{
-                width: 72, height: 72, borderRadius: 20, overflow: "hidden",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                position: "relative", zIndex: 1,
-              }}>
-                <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
-              </div>
-            </motion.div>
+            Importar meu dia
+            <ArrowRight size={20} strokeWidth={2.5} />
+          </motion.button>
 
-            {/* Headline */}
-            <motion.h1
-              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontSize: "clamp(32px, 10vw, 46px)", fontWeight: 900, lineHeight: 1.1, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
-            >
-              {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
-              <span style={{ color: "#00ff88" }}>
-                {t("auth.tagline").split(" ").slice(-1)[0]}
-              </span>
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.65, color: "rgba(255,255,255,0.52)", marginBottom: 24, maxWidth: 320 }}
-            >
-              {t("auth.subtitle")}
-            </motion.p>
-
-            {/* Proof line */}
-            <motion.p
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ delay: 0.36, duration: 0.4 }}
-              style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: "0.01em", marginBottom: 36 }}
-            >
-              7 dias grátis · Sem cartão necessário
-            </motion.p>
-
-            {/* CTAs */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.44, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ width: "100%", maxWidth: 340 }}
-            >
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { setFormMode("register"); setShowForm(true); }}
-                style={{
-                  width: "100%", height: 58, borderRadius: 18, border: "none",
-                  background: "#00ff88", color: "#000",
-                  fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em",
-                  cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  boxShadow: "0 4px 20px rgba(0,255,136,0.2)",
-                  fontFamily: "inherit",
-                }}
-              >
-                {t("auth.cta")}
-                <ArrowRight size={20} strokeWidth={2.5} />
-              </motion.button>
-
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { setFormMode("login"); setShowForm(true); }}
-                style={{
-                  marginTop: 12, width: "100%", height: 50, borderRadius: 14,
-                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 15,
-                  cursor: "pointer", fontFamily: "inherit", letterSpacing: "-0.01em",
-                }}
-              >
-                {t("auth.alreadyHaveAccount")}
-              </motion.button>
-            </motion.div>
-
-            {/* Trust */}
-            <motion.p
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.4 }}
-              style={{ marginTop: 28, fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.03em" }}
-            >
-              {t("auth.trustLine")}
-            </motion.p>
-          </motion.div>
-
-        ) : (
-
-          /* ── Form panel ── */
-          <motion.div
-            key="form"
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          {/* Secondary CTA: login / register */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              console.debug("[AuthScreen] 'Já tenho conta' clicked → /login");
+              navigate("/login");
+            }}
             style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              justifyContent: "center", alignItems: "center",
-              position: "relative", zIndex: 2,
-              padding: "32px 24px calc(32px + env(safe-area-inset-bottom, 0px))",
+              marginTop: 12, width: "100%", height: 50, borderRadius: 14,
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 15,
+              cursor: "pointer", fontFamily: "inherit", letterSpacing: "-0.01em",
             }}
           >
-            {/* Logo + brand */}
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.05, duration: 0.35 }}
-              style={{ textAlign: "center", marginBottom: 24 }}
-            >
-              <div style={{ width: 44, height: 44, borderRadius: 13, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto 12px" }}>
-                <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
-              </div>
-              <p style={{ fontSize: 20, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", margin: 0 }}>
-                Lucro <span style={{ color: "#00ff88" }}>Driver</span>
-              </p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500, marginTop: 4 }}>
-                {t("auth.appSubtitle")}
-              </p>
-            </motion.div>
+            {t("auth.alreadyHaveAccount")}
+          </motion.button>
+        </motion.div>
 
-            {/* Form card */}
-            <div style={{
-              width: "100%", maxWidth: 380,
-              background: "#111111",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 24, padding: "28px 24px 24px",
-            }}>
-              <AuthForm defaultMode={formMode} />
-            </div>
-
-            {/* Back link */}
-            <button
-              onClick={() => setShowForm(false)}
-              style={{
-                marginTop: 20, background: "transparent", border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4,
-                color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-              }}
-            >
-              <ChevronDown size={13} />
-              {t("auth.goBack")}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Trust */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.55, duration: 0.4 }}
+          style={{ marginTop: 28, fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.03em" }}
+        >
+          {t("auth.trustLine")}
+        </motion.p>
+      </motion.div>
     </div>
   );
 }

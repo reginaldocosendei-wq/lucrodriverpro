@@ -70,6 +70,8 @@ export default function ImportPage() {
   const queryClient = useQueryClient();
   const isPro = me?.plan === "pro";
 
+  console.debug("[ImportPage]", { isAuthed: !!me, isPro, plan: me?.plan });
+
   const [step, setStep] = useState<Step>("locked");
   useEffect(() => {
     if (isPro && step === "locked") setStep("upload");
@@ -200,7 +202,13 @@ export default function ImportPage() {
             {/* ══════════════════════════════════════════════════════════════
                 LOCKED
             ══════════════════════════════════════════════════════════════ */}
-            {step === "locked" && <LockedView onUpgrade={() => navigate("/upgrade")} />}
+            {step === "locked" && (
+              <LockedView
+                isAuthed={!!me}
+                onUpgrade={() => navigate("/upgrade")}
+                onSignUp={() => navigate("/login")}
+              />
+            )}
 
             {/* ══════════════════════════════════════════════════════════════
                 STEP 1 — UPLOAD
@@ -802,23 +810,35 @@ const FEATURES = [
   "Histórico completo de importações",
 ];
 
-function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
+function LockedView({
+  isAuthed,
+  onUpgrade,
+  onSignUp,
+}: {
+  isAuthed: boolean;
+  onUpgrade: () => void;
+  onSignUp: () => void;
+}) {
   return (
     <div style={{ textAlign: "center", paddingTop: 16 }}>
       <div style={{
         width: 72, height: 72, borderRadius: 22,
-        background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)",
+        background: isAuthed ? "rgba(234,179,8,0.1)" : "rgba(0,255,136,0.08)",
+        border: `1px solid ${isAuthed ? "rgba(234,179,8,0.25)" : "rgba(0,255,136,0.2)"}`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        margin: "0 auto 24px", boxShadow: "0 0 32px rgba(234,179,8,0.12)",
+        margin: "0 auto 24px",
+        boxShadow: isAuthed ? "0 0 32px rgba(234,179,8,0.12)" : "0 0 32px rgba(0,255,136,0.08)",
       }}>
-        <Lock size={30} color="#eab308" />
+        <Lock size={30} color={isAuthed ? "#eab308" : "#00ff88"} />
       </div>
 
       <p style={{ fontSize: 24, fontWeight: 900, color: "#f9fafb", marginBottom: 8, letterSpacing: "-0.01em" }}>
-        Recurso PRO
+        {isAuthed ? "Recurso PRO" : "Importe seus ganhos"}
       </p>
       <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, marginBottom: 28, maxWidth: 280, margin: "0 auto 28px" }}>
-        Importe screenshots do Uber, 99 e InDrive. Nossa IA extrai todos os dados automaticamente.
+        {isAuthed
+          ? "Importe screenshots do Uber, 99 e InDrive. Nossa IA extrai todos os dados automaticamente."
+          : "Crie sua conta grátis e teste por 7 dias. Nossa IA lê seu print e preenche tudo automaticamente."}
       </p>
 
       <div style={{
@@ -827,7 +847,12 @@ function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
       }}>
         {FEATURES.map((f, i) => (
           <div key={f} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < FEATURES.length - 1 ? 14 : 0 }}>
-            <div style={{ width: 22, height: 22, borderRadius: 7, background: "rgba(234,179,8,0.12)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 7,
+              background: isAuthed ? "rgba(234,179,8,0.12)" : "rgba(0,255,136,0.08)",
+              border: `1px solid ${isAuthed ? "rgba(234,179,8,0.2)" : "rgba(0,255,136,0.15)"}`,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
               <span style={{ fontSize: 11 }}>✓</span>
             </div>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>{f}</p>
@@ -835,17 +860,32 @@ function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
         ))}
       </div>
 
-      <button
-        onClick={onUpgrade}
-        style={{
-          width: "100%", height: 56, borderRadius: 18, border: "none",
-          background: "linear-gradient(135deg, #eab308, #ca8a04)",
-          color: "#000", fontWeight: 900, fontSize: 16, cursor: "pointer",
-          boxShadow: "0 10px 32px rgba(234,179,8,0.28)", fontFamily: "inherit",
-        }}
-      >
-        ✦ Fazer upgrade para PRO
-      </button>
+      {isAuthed ? (
+        <button
+          onClick={onUpgrade}
+          style={{
+            width: "100%", height: 56, borderRadius: 18, border: "none",
+            background: "linear-gradient(135deg, #eab308, #ca8a04)",
+            color: "#000", fontWeight: 900, fontSize: 16, cursor: "pointer",
+            boxShadow: "0 10px 32px rgba(234,179,8,0.28)", fontFamily: "inherit",
+          }}
+        >
+          ✦ Fazer upgrade para PRO
+        </button>
+      ) : (
+        <button
+          onClick={onSignUp}
+          style={{
+            width: "100%", height: 56, borderRadius: 18, border: "none",
+            background: "#00ff88",
+            color: "#000", fontWeight: 900, fontSize: 16, cursor: "pointer",
+            boxShadow: "0 10px 32px rgba(0,255,136,0.25)", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          }}
+        >
+          Criar conta grátis
+        </button>
+      )}
 
       <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 14 }}>
         7 dias grátis · Cancele quando quiser

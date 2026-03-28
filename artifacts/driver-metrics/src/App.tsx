@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { I18nProvider } from "@/lib/i18n";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,8 +32,6 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: false,
-      // Prevent constant background refetches while the user is navigating.
-      // Auth/user data is stable; 3 minutes is more than enough.
       staleTime: 3 * 60 * 1000,
     },
   },
@@ -53,9 +51,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("App render error:", error.message, error.stack);
-    console.log("[ErrorBoundary] Crash:", {
-      message: error.message,
+    console.error("[ErrorBoundary] Crash:", error.message, {
       route: typeof window !== "undefined" ? window.location.pathname : "unknown",
       componentStack: info.componentStack?.slice(0, 800),
     });
@@ -100,6 +96,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+// ─── SHARED STYLES ────────────────────────────────────────────────────────────
 const fadeTransition = { duration: 0.2, ease: "easeInOut" };
 const fadeProps = {
   initial: { opacity: 0 },
@@ -108,31 +105,44 @@ const fadeProps = {
   transition: fadeTransition,
 };
 
-function AuthGuard({ children }: { children: React.ReactNode }) {
+const appShellStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 480,
+  display: "flex",
+  flexDirection: "column",
+  height: "100dvh",
+};
+
+// ─── SHARED SPINNER ───────────────────────────────────────────────────────────
+function LoadingSpinner() {
+  return (
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center">
+      <div className="w-12 h-12 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// ─── HOME ROUTE ───────────────────────────────────────────────────────────────
+// "/" shows the landing page if unauthenticated, the dashboard if authenticated.
+function HomeRoute() {
   const { data: user, isLoading } = useGetMe();
 
-  // Show spinner only on the very first load (no cached data yet).
-  // If there is any cached user object, render immediately — this prevents
-  // the auth screen from flashing when a background refetch temporarily fails
-  // (e.g. cross-origin cookie rejection in the Replit proxy on desktop).
-  if (isLoading && !user) {
-    return (
-      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-        <div className="w-12 h-12 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
+  console.debug("[HomeRoute]", { isLoading, isAuthed: !!user });
 
-  const isAuthed = !!user;
+  if (isLoading && !user) return <LoadingSpinner />;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {isAuthed ? (
-        <motion.div key="authed" {...fadeProps} style={{ width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", height: "100dvh" }}>
-          <Layout>{children}</Layout>
+      {user ? (
+        <motion.div key="authed" {...fadeProps} style={appShellStyle}>
+          <Layout><Home /></Layout>
         </motion.div>
       ) : (
-        <motion.div key="unauthed" {...fadeProps} style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
+        <motion.div
+          key="landing"
+          {...fadeProps}
+          style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}
+        >
           <AuthScreen />
         </motion.div>
       )}
@@ -140,34 +150,133 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Router() {
+// ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
+// Public route — accessible without auth.
+// Redirects to "/" if the user is already authenticated.
+// After successful login/register it navigates to "/".
+function LoginRoute() {
+  const { data: user, isLoading } = useGetMe();
+  const [, navigate] = useLocation();
+
+  console.debug("[LoginRoute]", { isLoading, isAuthed: !!user });
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      console.debug("[LoginRoute] already authenticated → redirecting to /");
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
+
+  // While loading or about to redirect, show spinner
+  if ((isLoading && !user) || user) return <LoadingSpinner />;
+
   return (
-    <AuthGuard>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/rides" component={Rides} />
-        <Route path="/costs" component={Costs} />
-        <Route path="/goals" component={Goals} />
-        <Route path="/reports" component={Reports} />
-        <Route path="/upgrade" component={Upgrade} />
-        <Route path="/import" component={Import} />
-        <Route path="/checkout/success" component={CheckoutSuccess} />
-        <Route path="/checkout/cancel" component={CheckoutCancel} />
-        <Route path="/pix-payment" component={PixPayment} />
-        <Route path="/admin/pix" component={AdminPix} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
-    </AuthGuard>
+    <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
+      <AuthScreen startWithForm onSuccess={() => {
+        console.debug("[LoginRoute] login success → navigating to /");
+        navigate("/");
+      }} />
+    </div>
   );
 }
 
-/**
- * Mounted inside QueryClientProvider.
- * Listens for native app lifecycle events and refreshes data accordingly.
- * No-ops in browser (non-native) environments.
- */
+// ─── IMPORT ROUTE ─────────────────────────────────────────────────────────────
+// Semi-public route — accessible without auth.
+// The Import page handles its own locked/unlocked state internally.
+function ImportRoute() {
+  const { data: user } = useGetMe();
+
+  console.debug("[ImportRoute]", { isAuthed: !!user });
+
+  return (
+    <div style={appShellStyle}>
+      <Layout>
+        <Import />
+      </Layout>
+    </div>
+  );
+}
+
+// ─── PRIVATE GUARD ────────────────────────────────────────────────────────────
+// Wraps private routes. Redirects to "/login" if not authenticated.
+function PrivateGuard({ children }: { children: React.ReactNode }) {
+  const { data: user, isLoading } = useGetMe();
+  const [location, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.debug("[PrivateGuard] not authenticated → redirecting to /login", { from: location });
+      navigate("/login");
+    }
+  }, [user, isLoading, navigate, location]);
+
+  if (isLoading && !user) return <LoadingSpinner />;
+  if (!user) return null;
+
+  return (
+    <div style={appShellStyle}>
+      <Layout>{children}</Layout>
+    </div>
+  );
+}
+
+// ─── ROUTER ───────────────────────────────────────────────────────────────────
+function Router() {
+  const [location] = useLocation();
+  console.debug("[Router] current location:", location);
+
+  return (
+    <Switch>
+      {/* ── Public: login / register ── */}
+      <Route path="/login" component={LoginRoute} />
+
+      {/* ── Semi-public: import (auth handled inside the page) ── */}
+      <Route path="/import" component={ImportRoute} />
+
+      {/* ── Home: landing if unauthed, dashboard if authed ── */}
+      <Route path="/" component={HomeRoute} />
+
+      {/* ── Private routes: redirect to /login if not authenticated ── */}
+      <Route path="/rides">
+        <PrivateGuard><Rides /></PrivateGuard>
+      </Route>
+      <Route path="/costs">
+        <PrivateGuard><Costs /></PrivateGuard>
+      </Route>
+      <Route path="/goals">
+        <PrivateGuard><Goals /></PrivateGuard>
+      </Route>
+      <Route path="/reports">
+        <PrivateGuard><Reports /></PrivateGuard>
+      </Route>
+      <Route path="/upgrade">
+        <PrivateGuard><Upgrade /></PrivateGuard>
+      </Route>
+      <Route path="/checkout/success">
+        <PrivateGuard><CheckoutSuccess /></PrivateGuard>
+      </Route>
+      <Route path="/checkout/cancel">
+        <PrivateGuard><CheckoutCancel /></PrivateGuard>
+      </Route>
+      <Route path="/pix-payment">
+        <PrivateGuard><PixPayment /></PrivateGuard>
+      </Route>
+      <Route path="/admin/pix">
+        <PrivateGuard><AdminPix /></PrivateGuard>
+      </Route>
+      <Route path="/admin/users">
+        <PrivateGuard><AdminUsers /></PrivateGuard>
+      </Route>
+      <Route path="/settings">
+        <PrivateGuard><Settings /></PrivateGuard>
+      </Route>
+
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+// ─── NATIVE EVENT LISTENERS ───────────────────────────────────────────────────
 function NativeEventListeners() {
   const queryClient = useQueryClient();
 
@@ -177,8 +286,6 @@ function NativeEventListeners() {
     let handle: { remove: () => void } | null = null;
 
     CapApp.addListener("resume", () => {
-      // User returned to the app (e.g., after Stripe payment in system browser).
-      // Refresh the user plan so any subscription update is reflected immediately.
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     }).then((h) => {
       handle = h;
@@ -192,6 +299,7 @@ function NativeEventListeners() {
   return null;
 }
 
+// ─── APP SHELL ────────────────────────────────────────────────────────────────
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
 
