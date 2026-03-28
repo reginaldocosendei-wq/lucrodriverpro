@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, ridesTable, costsTable, goalsTable, dailySummariesTable } from "@workspace/db";
+import { db, ridesTable, costsTable, goalsTable, dailySummariesTable, extraEarningsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { aggregateMetrics } from "../services/metricsService";
 
@@ -34,11 +34,12 @@ function startOfMonth(): string {
 router.get("/summary", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
 
-  const [summaries, rides, costs, [goal]] = await Promise.all([
+  const [summaries, rides, costs, [goal], extraEarnings] = await Promise.all([
     db.select().from(dailySummariesTable).where(eq(dailySummariesTable.userId, userId)),
     db.select().from(ridesTable).where(eq(ridesTable.userId, userId)),
     db.select().from(costsTable).where(eq(costsTable.userId, userId)),
     db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1),
+    db.select().from(extraEarningsTable).where(eq(extraEarningsTable.userId, userId)),
   ]);
 
   const today = getDateStr(0);
@@ -74,12 +75,17 @@ router.get("/summary", requireAuth, async (req, res) => {
   const earningsWeek = weekAgg.totalEarnings > 0 ? weekAgg.totalEarnings : ridesEarningsWeek;
   const earningsMonth = monthAgg.totalEarnings > 0 ? monthAgg.totalEarnings : ridesEarningsMonth;
 
+  // ── Extra earnings ─────────────────────────────────────────────────────────
+  const extraToday  = extraEarnings.filter((e) => e.date >= today).reduce((s, e) => s + e.amount, 0);
+  const extraWeek   = extraEarnings.filter((e) => e.date >= weekStart).reduce((s, e) => s + e.amount, 0);
+  const extraMonth  = extraEarnings.filter((e) => e.date >= monthStart).reduce((s, e) => s + e.amount, 0);
+
   // ── Costs ──────────────────────────────────────────────────────────────────
   const costsToday = costs.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
   const costsMonth = costs.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
 
-  const realProfitToday = earningsToday - costsToday;
-  const realProfitMonth = earningsMonth - costsMonth;
+  const realProfitToday = (earningsToday + extraToday) - costsToday;
+  const realProfitMonth = (earningsMonth + extraMonth) - costsMonth;
 
   // ── New metrics from daily_summaries ──────────────────────────────────────
   const earningsPerTripToday = todayAgg.earningsPerTrip;
@@ -117,15 +123,23 @@ router.get("/summary", requireAuth, async (req, res) => {
   const goalWeekly = goal?.weekly ?? 0;
   const goalMonthly = goal?.monthly ?? 0;
 
-  const goalDailyPct = goalDaily > 0 ? Math.min((earningsToday / goalDaily) * 100, 100) : 0;
-  const goalWeeklyPct = goalWeekly > 0 ? Math.min((earningsWeek / goalWeekly) * 100, 100) : 0;
-  const goalMonthlyPct = goalMonthly > 0 ? Math.min((earningsMonth / goalMonthly) * 100, 100) : 0;
+  const goalDailyPct   = goalDaily   > 0 ? Math.min(((earningsToday + extraToday)   / goalDaily)   * 100, 100) : 0;
+  const goalWeeklyPct  = goalWeekly  > 0 ? Math.min(((earningsWeek  + extraWeek)    / goalWeekly)  * 100, 100) : 0;
+  const goalMonthlyPct = goalMonthly > 0 ? Math.min(((earningsMonth + extraMonth)   / goalMonthly) * 100, 100) : 0;
 
   res.json({
-    // Earnings
+    // Earnings (app only, from screenshots)
     earningsToday,
     earningsWeek,
     earningsMonth,
+    // Extra manual earnings
+    extraEarningsToday: extraToday,
+    extraEarningsWeek: extraWeek,
+    extraEarningsMonth: extraMonth,
+    // True totals (app + extras)
+    totalEarningsToday: earningsToday + extraToday,
+    totalEarningsWeek:  earningsWeek  + extraWeek,
+    totalEarningsMonth: earningsMonth + extraMonth,
     // Trips
     ridesCountToday: tripsToday,
     totalRides,

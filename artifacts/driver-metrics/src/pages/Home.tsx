@@ -112,15 +112,17 @@ export default function Home() {
   const profit        = summary?.realProfitToday ?? 0;
   const profitPos     = profit >= 0;
   const earnings      = summary?.earningsToday ?? 0;
+  const extras        = (summary as any)?.extraEarningsToday ?? 0;
+  const totalEarnings = earnings + extras;
   const costs         = summary?.costsToday ?? 0;
   const trips         = summary?.ridesCountToday ?? 0;
   const rph           = summary?.earningsPerHourToday ?? null;
   const rpkm          = summary?.earningsPerKmToday ?? summary?.avgPerKm ?? null;
-  const marginPct     = earnings > 0 ? (profit / earnings) * 100 : 0;
+  const marginPct     = totalEarnings > 0 ? (profit / totalEarnings) * 100 : 0;
 
   const goalPct       = Math.min(100, summary?.goalDailyPct ?? 0);
   const goalDaily     = summary?.goalDaily ?? 0;
-  const goalRemaining = goalDaily > 0 ? Math.max(0, goalDaily - earnings) : 0;
+  const goalRemaining = goalDaily > 0 ? Math.max(0, goalDaily - totalEarnings) : 0;
 
   // ── Profit color ───────────────────────────────────────────────────────────
   const pColor = profitPos ? "#00ff88" : "#ef4444";
@@ -130,7 +132,7 @@ export default function Home() {
 
   // ── Smart insight (legacy — kept for type compat) ─────────────────────────
   const insightStatus: InsightStatus =
-    earnings <= 0 ? "idle"
+    totalEarnings <= 0 ? "idle"
     : profit <= 0 || marginPct < 15 ? "bad"
     : marginPct < 40 ? "average"
     : "good";
@@ -224,16 +226,23 @@ export default function Home() {
 
             {/* Earnings · costs */}
             {!isLoading && (
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400, marginBottom: 20 }}>
-                {t("home.earned")}{" "}
-                <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(earnings)}</span>
-                <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
-                <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
-              </p>
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>
+                  {t("home.earned")}{" "}
+                  <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(totalEarnings)}</span>
+                  <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
+                  <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
+                </p>
+                {extras > 0 && (
+                  <p style={{ fontSize: 11, color: "rgba(74,222,128,0.7)", fontWeight: 600, marginTop: 4 }}>
+                    App {formatBRL(earnings)} + extras {formatBRL(extras)}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Margin bar */}
-            {!isLoading && earnings > 0 && (
+            {!isLoading && totalEarnings > 0 && (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{t("home.margin")}</span>
@@ -246,7 +255,7 @@ export default function Home() {
                   <motion.div
                     style={{ height: "100%", background: "rgba(239,68,68,0.65)", borderRadius: "999px 0 0 999px" }}
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, earnings > 0 ? (costs / earnings) * 100 : 0)}%` }}
+                    animate={{ width: `${Math.min(100, totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0)}%` }}
                     transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
                   />
                   <motion.div

@@ -122,14 +122,19 @@ pnpm run cap:open
 - `rides` — ride entries with calculated net value, commission, value/km
 - `costs` — expense entries by category
 - `goals` — per-user daily/weekly/monthly targets
+- `daily_summaries` — aggregated daily metrics from screenshot imports
+- `pix_payments` — PIX payment requests/confirmations
+- `extra_earnings` — manual extra income entries (tips, cash rides, bonuses) linked by date
 
 ### API Routes (artifacts/api-server/src/routes/)
 - `/api/auth` — register, login, logout, me
 - `/api/rides` — CRUD for ride entries
 - `/api/costs` — CRUD for cost entries
 - `/api/goals` — get/upsert goals
-- `/api/dashboard/summary` — aggregated stats
+- `/api/dashboard/summary` — aggregated stats (now includes extraEarningsToday/Week/Month + true totals)
 - `/api/reports/earnings` — chart data for PRO users
+- `/api/extra-earnings` — CRUD for extra earnings entries (?date=YYYY-MM-DD filter)
+- `/api/extra-earnings/:id` — PATCH/DELETE individual entries
 
 ## TypeScript & Composite Projects
 
@@ -158,6 +163,9 @@ Database layer using Drizzle ORM with PostgreSQL.
 - `src/schema/rides.ts` — rides table
 - `src/schema/costs.ts` — costs table
 - `src/schema/goals.ts` — goals table
+- `src/schema/dailySummaries.ts` — daily summaries (from screenshot import)
+- `src/schema/pixPayments.ts` — PIX payment requests
+- `src/schema/extraEarnings.ts` — extra earnings entries (tips, cash rides, bonuses)
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 

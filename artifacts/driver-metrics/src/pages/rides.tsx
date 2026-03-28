@@ -4,12 +4,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, Calendar, Navigation, Clock, Star,
   Trash2, TrendingUp, AlertCircle, Plus, CheckCircle,
-  FlaskConical, TriangleAlert, Pencil, X, SlidersHorizontal,
+  FlaskConical, TriangleAlert, Pencil, X, SlidersHorizontal, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { getApiBase } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import {
+  useExtraEarnings, useAddExtraEarning, useUpdateExtraEarning, useDeleteExtraEarning,
+  EXTRA_EARNING_TYPES, typeLabel,
+  type ExtraEarning,
+} from "@/lib/useExtraEarnings";
 
 const BASE = getApiBase();
 
@@ -451,6 +456,167 @@ interface EditPayload {
   hoursWorked: number | null;
   rating:      number | null;
   platform:    string | null;
+}
+
+// ─── HistoryExtrasPanel ───────────────────────────────────────────────────────
+function HistoryExtrasPanel({ date, appEarnings }: { date: string; appEarnings: number }) {
+  const { data: entries = [], isLoading } = useExtraEarnings(date);
+  const addMutation    = useAddExtraEarning();
+  const updateMutation = useUpdateExtraEarning();
+  const deleteMutation = useDeleteExtraEarning();
+
+  const [open, setOpen]         = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId]     = useState<number | null>(null);
+  const [formType, setFormType] = useState("tip_cash");
+  const [formAmt,  setFormAmt]  = useState("");
+  const [formNote, setFormNote] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const total = entries.reduce((s, e) => s + e.amount, 0);
+
+  function openAdd() {
+    setEditId(null);
+    setFormType("tip_cash"); setFormAmt(""); setFormNote("");
+    setShowForm(true);
+  }
+
+  function openEdit(e: ExtraEarning) {
+    setEditId(e.id);
+    setFormType(e.type); setFormAmt(String(e.amount)); setFormNote(e.note ?? "");
+    setShowForm(true);
+  }
+
+  async function handleSave() {
+    const parsed = parseFloat(formAmt);
+    if (!formType || isNaN(parsed) || parsed <= 0) return;
+    if (editId != null) {
+      await updateMutation.mutateAsync({ id: editId, type: formType, amount: parsed, note: formNote, date });
+    } else {
+      await addMutation.mutateAsync({ date, type: formType, amount: parsed, note: formNote });
+    }
+    setShowForm(false); setEditId(null);
+  }
+
+  async function handleDelete(id: number) {
+    setDeletingId(id);
+    try { await deleteMutation.mutateAsync({ id, date }); } finally { setDeletingId(null); }
+  }
+
+  const isSaving = addMutation.isPending || updateMutation.isPending;
+  const valid = formType && parseFloat(formAmt) > 0;
+
+  if (isLoading) return null;
+
+  return (
+    <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", background: "rgba(255,255,255,0.01)" }}>
+      <button
+        onClick={() => { setOpen(v => !v); if (!open) setShowForm(false); }}
+        style={{
+          width: "100%", background: "none", border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 18px", fontFamily: "inherit",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Ganhos extras
+          </span>
+          {total > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#4ade80", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 20, padding: "1px 7px" }}>
+              +{formatBRL(total)}
+            </span>
+          )}
+          {total === 0 && !open && (
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>Nenhum</span>
+          )}
+        </div>
+        <span style={{ color: "rgba(255,255,255,0.25)", lineHeight: 0 }}>
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <div style={{ padding: "0 18px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+
+              {/* Entry list */}
+              <AnimatePresence>
+                {entries.map((e) => (
+                  <motion.div key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#f9fafb" }}>{typeLabel(e.type)}</p>
+                      {e.note && <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.note}</p>}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#4ade80", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>+{formatBRL(e.amount)}</span>
+                    <button onClick={() => openEdit(e)} style={{ background: "none", border: "none", cursor: "pointer", padding: 3, color: "rgba(255,255,255,0.35)", lineHeight: 0 }}>
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => handleDelete(e.id)} disabled={deletingId === e.id} style={{ background: "none", border: "none", cursor: deletingId === e.id ? "not-allowed" : "pointer", padding: 3, color: deletingId === e.id ? "rgba(239,68,68,0.3)" : "rgba(239,68,68,0.55)", lineHeight: 0 }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {/* True total row */}
+              {entries.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#0a0a0a", borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Total do dia</span>
+                  <span style={{ fontSize: 15, fontWeight: 900, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>{formatBRL(appEarnings + total)}</span>
+                </div>
+              )}
+
+              {/* Inline form */}
+              <AnimatePresence>
+                {showForm && (
+                  <motion.div key="form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {EXTRA_EARNING_TYPES.map((t) => (
+                          <button key={t.value} onClick={() => setFormType(t.value)}
+                            style={{ padding: "5px 10px", borderRadius: 20, border: formType === t.value ? "1px solid #00ff88" : "1px solid rgba(255,255,255,0.1)", background: formType === t.value ? "rgba(0,255,136,0.1)" : "transparent", color: formType === t.value ? "#00ff88" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
+                        <input type="number" inputMode="decimal" placeholder="0,00" value={formAmt} onChange={(e) => setFormAmt(e.target.value)}
+                          style={{ width: "100%", height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f9fafb", fontSize: 15, fontWeight: 700, fontFamily: "inherit", outline: "none", paddingLeft: 32, paddingRight: 12, boxSizing: "border-box" }} />
+                      </div>
+                      <input type="text" placeholder="Observação (opcional)" value={formNote} onChange={(e) => setFormNote(e.target.value)}
+                        style={{ width: "100%", height: 38, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f9fafb", fontSize: 13, fontFamily: "inherit", outline: "none", padding: "0 12px", boxSizing: "border-box" }} />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => { setShowForm(false); setEditId(null); }} style={{ flex: 1, height: 38, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancelar</button>
+                        <button onClick={handleSave} disabled={!valid || isSaving} style={{ flex: 2, height: 38, borderRadius: 10, border: "none", background: valid && !isSaving ? "#00ff88" : "rgba(0,255,136,0.2)", color: valid && !isSaving ? "#000" : "rgba(0,255,136,0.4)", fontSize: 13, fontWeight: 800, cursor: valid && !isSaving ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
+                          {isSaving ? "Salvando..." : editId != null ? "Atualizar" : "Salvar"}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Add button */}
+              {!showForm && (
+                <button onClick={openAdd} style={{ width: "100%", height: 38, borderRadius: 10, border: "1px dashed rgba(0,255,136,0.2)", background: "rgba(0,255,136,0.02)", color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  <Plus size={13} /> Adicionar ganho extra
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -948,6 +1114,9 @@ export default function RidesPage() {
                               )}
                             </div>
                           )}
+
+                          {/* ── Extra earnings panel ──────────────────────────── */}
+                          <HistoryExtrasPanel date={s.date} appEarnings={s.earnings} />
                         </div>
                       </motion.div>
                     );

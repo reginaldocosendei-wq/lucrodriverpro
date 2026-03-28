@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { analyzeScreenshot, confirmImport, type ExtractedData } from "@/services/importService";
 import { formatBRL } from "@/lib/utils";
+import { ExtraEarningsSection } from "@/components/ExtraEarningsSection";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const PLATFORMS = ["Uber", "99", "InDrive", "Outro"];
@@ -771,7 +772,13 @@ export default function ImportPage() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10 }}>
+                {/* Extra earnings */}
+                <ExtraEarningsSection
+                  date={new Date().toISOString().slice(0, 10)}
+                  appEarnings={parseFloat(editEarnings) || 0}
+                />
+
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                   <button
                     onClick={reset}
                     style={{
