@@ -24,6 +24,8 @@ import AdminPix from "@/pages/admin-pix";
 import AdminUsers from "@/pages/admin-users";
 import Settings from "@/pages/settings";
 import AuthScreen from "@/pages/auth";
+import ImportTest from "@/pages/import-test";
+import LoginTest from "@/pages/login-test";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
@@ -229,6 +231,10 @@ function Router() {
 
   return (
     <Switch>
+      {/* ── DIAGNOSTIC test pages — completely public, no auth, no guards ── */}
+      <Route path="/import-test" component={ImportTest} />
+      <Route path="/login-test" component={LoginTest} />
+
       {/* ── Public: login / register ── */}
       <Route path="/login" component={LoginRoute} />
 

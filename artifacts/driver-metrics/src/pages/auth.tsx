@@ -392,18 +392,14 @@ export default function AuthScreen({
           7 dias grátis · Sem cartão necessário
         </motion.p>
 
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.44, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          style={{ width: "100%", maxWidth: 340 }}
-        >
-          {/* Primary CTA: try the import flow */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
+        {/* CTAs — DIAGNOSTIC: plain <button>, z-index forced, alert on click */}
+        <div style={{ width: "100%", maxWidth: 340, position: "relative", zIndex: 9999 }}>
+          {/* Primary CTA */}
+          <button
             onClick={() => {
-              console.debug("[AuthScreen] 'Importar meu dia' clicked → /import");
-              navigate("/import");
+              console.log("IMPORT BUTTON CLICKED");
+              alert("IMPORT BUTTON CLICKED");
+              navigate("/import-test");
             }}
             style={{
               width: "100%", height: 58, borderRadius: 18, border: "none",
@@ -413,29 +409,31 @@ export default function AuthScreen({
               display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
               boxShadow: "0 4px 20px rgba(0,255,136,0.2)",
               fontFamily: "inherit",
+              position: "relative", zIndex: 9999,
             }}
           >
             Importar meu dia
             <ArrowRight size={20} strokeWidth={2.5} />
-          </motion.button>
+          </button>
 
-          {/* Secondary CTA: login / register */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
+          {/* Secondary CTA */}
+          <button
             onClick={() => {
-              console.debug("[AuthScreen] 'Já tenho conta' clicked → /login");
-              navigate("/login");
+              console.log("LOGIN BUTTON CLICKED");
+              alert("LOGIN BUTTON CLICKED");
+              navigate("/login-test");
             }}
             style={{
               marginTop: 12, width: "100%", height: 50, borderRadius: 14,
               background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",
               color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 15,
               cursor: "pointer", fontFamily: "inherit", letterSpacing: "-0.01em",
+              position: "relative", zIndex: 9999,
             }}
           >
             {t("auth.alreadyHaveAccount")}
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
 
         {/* Trust */}
         <motion.p
