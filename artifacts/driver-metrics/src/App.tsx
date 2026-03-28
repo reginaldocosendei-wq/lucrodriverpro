@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
-import { DEV_DISABLE_AUTH_FETCH } from "@/lib/dev-flags";
+import { DEV_DISABLE_AUTH_FETCH, DEV_SKIP_ROUTE_GUARDS } from "@/lib/dev-flags";
 import { AnimatePresence, motion } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
@@ -196,6 +196,17 @@ function HomeRoute() {
     );
   }
 
+  // Debug bypass: always show dashboard — auth query still fires so the
+  // debug panel reports live isAuthenticated state (true after login).
+  // This isolates session persistence from route-guard timing.
+  if (DEV_SKIP_ROUTE_GUARDS) {
+    return (
+      <div style={appShellStyle}>
+        <Layout><Home /></Layout>
+      </div>
+    );
+  }
+
   // Show spinner while auth is settling.
   // isPending = status==="pending" (TanStack Query v5) — covers both the
   // initial fetch AND the brief idle-pending gap after resetQueries/refetchQueries
@@ -232,6 +243,7 @@ function LoginRoute() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
+    if (DEV_SKIP_ROUTE_GUARDS) return; // bypass: stay on /login to test auth freely
     if (!isLoading && user) {
       navigate("/");
     }
@@ -268,7 +280,7 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   // Timeout safety valve: if auth has not settled within 8s, treat as
   // unauthenticated so the user is not stuck on a spinner forever.
   useEffect(() => {
-    if (DEV_DISABLE_AUTH_FETCH) return;
+    if (DEV_DISABLE_AUTH_FETCH || DEV_SKIP_ROUTE_GUARDS) return;
     const t = setTimeout(() => setTimedOut(true), 8000);
     return () => clearTimeout(t);
   }, []);
@@ -278,13 +290,23 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   // OR the safety timeout fired. This prevents kicking the user out while the
   // /api/auth/me refetch is still in progress after login.
   useEffect(() => {
-    if (DEV_DISABLE_AUTH_FETCH) return;
+    if (DEV_DISABLE_AUTH_FETCH || DEV_SKIP_ROUTE_GUARDS) return;
     const settled = (!isPending && !isLoading) || timedOut;
     if (settled && !user) navigate("/login");
   }, [user, isLoading, isPending, timedOut, navigate]);
 
-  // Bypass: skip every auth check — render immediately.
+  // Full auth bypass — skip all auth checks.
   if (DEV_DISABLE_AUTH_FETCH) {
+    return (
+      <div style={appShellStyle}>
+        <Layout>{children}</Layout>
+      </div>
+    );
+  }
+
+  // Route-guard bypass — auth query still fires; no redirect is issued.
+  // Debug panel will show live isAuthenticated state (confirms session works).
+  if (DEV_SKIP_ROUTE_GUARDS) {
     return (
       <div style={appShellStyle}>
         <Layout>{children}</Layout>
