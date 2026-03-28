@@ -86,6 +86,10 @@ export default function Upgrade() {
 
   // ── Stripe checkout ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -166,7 +170,12 @@ export default function Upgrade() {
   return (
     <motion.div
       variants={stagger} initial="hidden" animate="show"
-      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40, width: "100%" }}
+      style={{
+        display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40,
+        width: "100%",
+        maxWidth: isDesktop ? 720 : undefined,
+        margin: isDesktop ? "0 auto" : undefined,
+      }}
     >
 
       {/* ── Back button ─────────────────────────────────────────────────────── */}
@@ -233,7 +242,7 @@ export default function Upgrade() {
         </h1>
 
         {/* Sub */}
-        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.6, maxWidth: 300 }}>
+        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.6 }}>
           {showExpired ? t("upgrade.expiredSub") : t("upgrade.headlineSub")}
         </p>
       </motion.div>
@@ -422,7 +431,7 @@ export default function Upgrade() {
             <>
               <Zap size={20} strokeWidth={2.5} />
               {t("upgrade.cta")}
-              <ChevronRight size={20} strokeWidth={2.5} style={{ marginLeft: "auto" }} />
+              <ChevronRight size={20} strokeWidth={2.5} />
             </>
           )}
         </motion.button>

@@ -1,0 +1,103 @@
+Fix the remaining bugs and polish the upgrade page of my app "Lucro Driver".
+
+GOAL:
+Correct the remaining UI/UX and functional bugs, especially on the desktop version, while preserving the current premium design.
+
+IMPORTANT:
+- Do NOT break the working mobile version
+- Do NOT redesign everything from scratch
+- Focus on alignment, premium access flow, and visual polish
+
+======================================
+1. FIX UPGRADE PAGE LAYOUT BUGS
+======================================
+
+Current issues noticed:
+
+1. The main CTA text "Começar agora" is too far left and looks misaligned
+2. The PRO access / upgrade flow is not working correctly
+3. Some sections on the upgrade page are stretched too much and feel unbalanced on desktop
+4. Spacing and alignment need polish
+
+REQUIRED FIXES:
+
+A. CTA BUTTON ALIGNMENT
+- Center the text and icon properly inside the "Começar agora" button
+- Ensure text is visually balanced horizontally
+- Keep button premium and prominent
+- Make sure the right arrow/icon alignment is also correct
+
+B. DESKTOP CTA WIDTH
+- Do not make the CTA look awkwardly oversized
+- Keep it large and important, but visually elegant
+- Use a balanced max width if necessary
+
+C. SECTION SPACING
+- Improve spacing between:
+  - pricing header
+  - benefits list
+  - warning/error bar
+  - CTA button
+  - PIX option
+  - trust cards at the bottom
+
+D. TOP AREA POLISH
+- Ensure price area and the green info block above are properly aligned and not visually cramped or cut
+
+======================================
+2. FIX PRO ACCESS / UPGRADE FLOW
+======================================
+
+PROBLEM:
+The PRO access is not being accepted properly.
+
+TASKS:
+
+1. Inspect the upgrade action / premium activation logic
+2. Ensure clicking the main upgrade button triggers the correct payment/upgrade flow
+3. Ensure authenticated users can proceed correctly
+4. If plan availability is failing incorrectly, fix the logic
+5. If a Stripe/Pix flow is still not fully connected, make the UI handle it gracefully
+6. Remove false blocking states if the user should be allowed to continue
+
+EXPECTED RESULT:
+- the upgrade button should work
+- the user should be able to continue to payment or premium activation flow
+- no broken "plan unavailable" dead-end behavior
+
+======================================
+3. FIND AND FIX OTHER REMAINING BUGS
+======================================
+
+Inspect the app for other obvious bugs and polish issues, especially in desktop mode.
+
+Check for:
+- misaligned buttons
+- broken spacing
+- text too close to edges
+- stretched sections
+- unreadable cards
+- inactive buttons that should work
+- incorrect authenticated state usage
+- false error messages
+
+======================================
+4. DESKTOP POLISH
+======================================
+
+Keep the current wide desktop style, but refine it:
+- cleaner spacing
+- better horizontal balance
+- stronger visual hierarchy
+- no awkward oversized blocks
+
+======================================
+5. FINAL RESULT
+======================================
+
+The upgrade page and remaining app bugs must feel:
+- premium
+- aligned
+- stable
+- professional
+- ready for real users
