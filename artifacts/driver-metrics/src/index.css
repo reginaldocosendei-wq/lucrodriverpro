@@ -113,11 +113,10 @@
     background: #080808;
   }
 
-  /* Root: flex container that centers the mobile shell */
+  /* Root: full-height flex container — children handle their own centering */
   #root {
     height: 100dvh;
     display: flex;
-    justify-content: center;
     align-items: stretch;
   }
 

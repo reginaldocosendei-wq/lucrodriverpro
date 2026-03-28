@@ -194,7 +194,7 @@ function HomeRoute() {
         <motion.div
           key="landing"
           {...fadeProps}
-          style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}
+          style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}
         >
           <AuthScreen />
         </motion.div>
@@ -220,7 +220,7 @@ function LoginRoute() {
   }, [user, isLoading, navigate]);
 
   return (
-    <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
+    <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen startWithForm onSuccess={() => navigate("/")} />
     </div>
   );
