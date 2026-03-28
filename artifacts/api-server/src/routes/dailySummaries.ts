@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, dailySummariesTable } from "@workspace/db";
+import { db, dailySummariesTable, usersTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 const router = Router();
@@ -82,6 +82,14 @@ router.post("/", requireAuth, async (req, res) => {
   }
 
   try {
+    // Fetch user preference (replace vs merge)
+    const [userPrefs] = await db
+      .select({ saveModeReplace: usersTable.saveModeReplace })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    const shouldReplace = userPrefs?.saveModeReplace ?? false;
+
     const existing = await db
       .select()
       .from(dailySummariesTable)
@@ -102,23 +110,35 @@ router.post("/", requireAuth, async (req, res) => {
     if (existing.length > 0) {
       const prev = existing[0];
 
-      const mergedPayload = {
-        earnings:    prev.earnings    + newEarnings,
-        trips:       prev.trips       + newTrips,
-        platform:    newPlatform ?? prev.platform,
-        notes:       newNotes    ?? prev.notes,
-        kmDriven:    (prev.kmDriven    != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
-        hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
-        rating:      newRating ?? prev.rating,
-        updatedAt:   new Date(),
-      };
-
-      result = await db
-        .update(dailySummariesTable)
-        .set(mergedPayload)
-        .where(eq(dailySummariesTable.id, prev.id))
-        .returning();
-      merged = true;
+      if (shouldReplace) {
+        // Replace mode: overwrite all fields
+        result = await db
+          .update(dailySummariesTable)
+          .set({
+            earnings: newEarnings, trips: newTrips, platform: newPlatform ?? prev.platform,
+            notes: newNotes ?? prev.notes, kmDriven: newKm, hoursWorked: newHours,
+            rating: newRating, updatedAt: new Date(),
+          })
+          .where(eq(dailySummariesTable.id, prev.id))
+          .returning();
+      } else {
+        // Merge mode: accumulate sumable fields, keep latest rating
+        result = await db
+          .update(dailySummariesTable)
+          .set({
+            earnings:    prev.earnings    + newEarnings,
+            trips:       prev.trips       + newTrips,
+            platform:    newPlatform ?? prev.platform,
+            notes:       newNotes    ?? prev.notes,
+            kmDriven:    (prev.kmDriven    != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
+            hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
+            rating:      newRating ?? prev.rating,
+            updatedAt:   new Date(),
+          })
+          .where(eq(dailySummariesTable.id, prev.id))
+          .returning();
+        merged = true;
+      }
     } else {
       result = await db.insert(dailySummariesTable).values({
         userId, date,

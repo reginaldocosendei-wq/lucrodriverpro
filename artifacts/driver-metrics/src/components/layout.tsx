@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Globe } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Globe, Settings } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -260,6 +260,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Language picker */}
             <LangPicker />
+
+            {/* Settings */}
+            <Link href="/settings">
+              <motion.div
+                whileTap={{ scale: 0.92 }}
+                style={{
+                  width: 36, height: 36, borderRadius: 12,
+                  background: location === "/settings" ? "rgba(0,255,136,0.08)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${location === "/settings" ? "rgba(0,255,136,0.2)" : "rgba(255,255,255,0.07)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                title="Configurações"
+              >
+                <Settings size={16} color={location === "/settings" ? "#00ff88" : "rgba(255,255,255,0.45)"} />
+              </motion.div>
+            </Link>
 
             <motion.button
               whileTap={{ scale: 0.92 }}

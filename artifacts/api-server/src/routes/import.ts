@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { db, dailySummariesTable } from "@workspace/db";
+import { db, dailySummariesTable, usersTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { parseExtracted, parseBRLNumber, parseTrips, todayDateStr } from "../services/importService";
 
@@ -145,6 +145,14 @@ router.post("/confirm", requireAuth, async (req, res) => {
   }
 
   try {
+    // Fetch user preference (replace vs merge)
+    const [userPrefs] = await db
+      .select({ saveModeReplace: usersTable.saveModeReplace })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    const shouldReplace = userPrefs?.saveModeReplace ?? false;
+
     const existing = await db
       .select()
       .from(dailySummariesTable)
@@ -162,23 +170,34 @@ router.post("/confirm", requireAuth, async (req, res) => {
     if (existing.length > 0) {
       const prev = existing[0];
 
-      // Accumulate sumable fields; keep latest rating; keep existing value if new is null
-      const mergedPayload = {
-        earnings:    prev.earnings    + earningsNum,
-        trips:       prev.trips       + tripsNum,
-        platform:    newPlatform      || prev.platform || "Outro",
-        kmDriven:    (prev.kmDriven   != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
-        hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
-        rating:      newRating ?? prev.rating,
-        updatedAt:   new Date(),
-      };
-
-      result = await db
-        .update(dailySummariesTable)
-        .set(mergedPayload)
-        .where(eq(dailySummariesTable.id, prev.id))
-        .returning();
-      merged = true;
+      if (shouldReplace) {
+        // Replace mode: overwrite all fields with the new values
+        result = await db
+          .update(dailySummariesTable)
+          .set({
+            earnings: earningsNum, trips: tripsNum, platform: newPlatform,
+            kmDriven: newKm, hoursWorked: newHours, rating: newRating,
+            updatedAt: new Date(),
+          })
+          .where(eq(dailySummariesTable.id, prev.id))
+          .returning();
+      } else {
+        // Merge mode: accumulate sumable fields, keep latest rating
+        result = await db
+          .update(dailySummariesTable)
+          .set({
+            earnings:    prev.earnings    + earningsNum,
+            trips:       prev.trips       + tripsNum,
+            platform:    newPlatform      || prev.platform || "Outro",
+            kmDriven:    (prev.kmDriven   != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
+            hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
+            rating:      newRating ?? prev.rating,
+            updatedAt:   new Date(),
+          })
+          .where(eq(dailySummariesTable.id, prev.id))
+          .returning();
+        merged = true;
+      }
     } else {
       result = await db.insert(dailySummariesTable).values({
         userId,
@@ -195,8 +214,11 @@ router.post("/confirm", requireAuth, async (req, res) => {
     res.status(201).json({
       message: merged
         ? "Os dados deste dia foram somados com sucesso."
-        : "Registro salvo com sucesso.",
+        : shouldReplace && existing.length > 0
+          ? "Registro do dia substituído com sucesso."
+          : "Registro salvo com sucesso.",
       merged,
+      replaced: shouldReplace && existing.length > 0,
       summary: result[0],
     });
   } catch (err: any) {
