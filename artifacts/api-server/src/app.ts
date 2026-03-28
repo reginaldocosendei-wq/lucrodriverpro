@@ -9,6 +9,13 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Trust the first proxy hop (Replit's HTTPS termination layer).
+// Without this, req.secure is always false because the server itself receives
+// plain HTTP from the Replit reverse proxy.  express-session silently skips
+// setting the cookie when secure:true and req.secure is false, causing 401
+// on every request after login.
+app.set("trust proxy", 1);
+
 // ─── STRIPE WEBHOOK — must be registered BEFORE express.json() ───────────────
 // Stripe sends raw Buffer; if express.json() runs first the signature check fails.
 app.post(
@@ -51,6 +58,13 @@ app.use(express.urlencoded({ extended: true, limit: "6mb" }));
 
 const isProd = process.env.NODE_ENV === "production";
 
+// Running inside Replit (dev or prod) means the app is always accessed over
+// HTTPS (replit.dev / replit.app domains), AND the preview pane is an iframe
+// embedded cross-site inside replit.com.  SameSite=Lax blocks cookies in that
+// cross-site iframe context — so we must use SameSite=None + Secure=true
+// whenever we're in Replit, not just in production.
+const isReplit = !!process.env["REPLIT_DEV_DOMAIN"] || isProd;
+
 // ─── SESSION STORE ────────────────────────────────────────────────────────────
 // PostgreSQL-backed so sessions survive server restarts.
 // The `session` table is created automatically on first boot (createTableIfMissing).
@@ -68,12 +82,15 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      // In production, cookies must be Secure + SameSite=None so that
-      // Capacitor WebViews (capacitor://localhost / https://localhost)
-      // can send them cross-site to the deployed API.
-      secure: isProd,
+      // SameSite=None + Secure=true is required in two situations:
+      //   1. Production: Capacitor WebViews send cookies cross-site to the API.
+      //   2. Replit dev preview: the preview pane is a cross-site iframe on
+      //      replit.com, so SameSite=Lax causes the browser to block the
+      //      session cookie on every fetch after the initial page load → 401.
+      // Both cases are HTTPS, so Secure=true is always valid here.
+      secure: isReplit,
       httpOnly: true,
-      sameSite: isProd ? "none" : "lax",
+      sameSite: isReplit ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),

@@ -1,0 +1,76 @@
+Fix desktop authentication persistence in my app "Lucro Driver".
+
+PROBLEM:
+On desktop, after login, the app still behaves as unauthenticated and redirects back to /login.
+Mobile works, desktop does not.
+
+DEBUG STATE:
+- authLoading: false
+- isAuthenticated: false
+- currentUser: none
+
+GOAL:
+Make desktop login persist correctly and keep the user authenticated after login.
+
+IMPORTANT:
+Do not redesign UI.
+Do not change unrelated features.
+Focus only on desktop auth/session persistence.
+
+TASKS:
+
+1. IDENTIFY AUTH STRATEGY
+Check whether auth uses:
+- cookie session
+- JWT token in localStorage
+- sessionStorage
+- mixed/inconsistent logic
+
+2. MAKE AUTH CONSISTENT
+Use one consistent auth strategy.
+If using cookie-based session:
+- ensure login sets the cookie properly
+- ensure all authenticated requests send credentials
+- ensure backend reads session correctly
+
+If using token-based auth:
+- ensure login stores the token in localStorage
+- ensure subsequent API requests send Authorization header
+- ensure auth bootstrap reads token on app load
+
+3. FIX DESKTOP LOGIN PERSISTENCE
+After successful login on desktop:
+- user must remain authenticated
+- auth bootstrap must detect session/token
+- currentUser must load correctly
+- isAuthenticated must become true
+
+4. FIX /api/auth/me OR EQUIVALENT
+Ensure current-user endpoint returns 200 on desktop after login.
+Do not allow false 401 responses when login succeeded.
+
+5. FIX ROUTE GUARDS
+Protected routes must not redirect to /login if auth state is still being restored.
+If auth bootstrap succeeds, allow access.
+
+6. ADD TEMP DEBUG LOGS
+Log:
+- login response status
+- whether cookie/token is stored
+- auth bootstrap result
+- response from /api/auth/me
+- route guard decision
+
+7. TEMP DESKTOP TEST MODE
+After successful login, temporarily force:
+isAuthenticated = true
+currentUser = logged user
+to verify that route guards and protected pages work correctly on desktop.
+
+8. FINAL RESULT
+On desktop:
+- login succeeds
+- session/token persists
+- isAuthenticated becomes true
+- currentUser is populated
+- app no longer redirects back to /login

@@ -6,15 +6,6 @@
 export const DEV_DISABLE_AUTH_FETCH = false;
 export const DEV_DISABLE_DASHBOARD_PRELOAD = false;
 
-// Route-guard bypass — set to true to confirm session persistence on desktop.
-//
-// With this ON:
-//   • HomeRoute always renders the dashboard (never the landing page)
-//   • PrivateGuard never redirects to /login
-//   • /api/auth/me still fires normally
-//   → debug panel will show isAuthenticated: true once the session confirms
-//
-// This isolates session persistence from route-guard timing.
-// If you log in and the panel flips to isAuthenticated: true, the session
-// is working and the loop was purely a guard-timing issue (already fixed).
-export const DEV_SKIP_ROUTE_GUARDS = true;
+// Route-guard bypass — DISABLED (real fix is in place: SameSite=None + trust proxy).
+// Set to true temporarily to bypass redirects for debugging session persistence.
+export const DEV_SKIP_ROUTE_GUARDS = false;
