@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { analyzeScreenshot, confirmImport, type ExtractedData } from "@/services/importService";
 import { formatBRL } from "@/lib/utils";
+import { DEV_DISABLE_AUTH_FETCH } from "@/lib/dev-flags";
 import { ExtraEarningsSection } from "@/components/ExtraEarningsSection";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -71,12 +72,11 @@ export default function ImportPage() {
   const queryClient = useQueryClient();
   const isPro = me?.plan === "pro";
 
-  console.debug("[ImportPage]", { isAuthed: !!me, isPro, plan: me?.plan });
-
-  const [step, setStep] = useState<Step>("locked");
+  const [step, setStep] = useState<Step>(
+    DEV_DISABLE_AUTH_FETCH ? "upload" : "locked"
+  );
   useEffect(() => {
-    // Any authenticated user can import — PRO gate removed temporarily
-    if (me && step === "locked") setStep("upload");
+    if (!DEV_DISABLE_AUTH_FETCH && me && step === "locked") setStep("upload");
   }, [me, step]);
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(null);

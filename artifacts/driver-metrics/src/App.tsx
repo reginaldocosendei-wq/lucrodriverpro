@@ -152,13 +152,19 @@ function LoadingSpinner() {
 
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
 // "/" shows the landing page if unauthenticated, the dashboard if authenticated.
-// IMPORTANT: NO hard loading block here — landing page renders immediately.
 // Auth resolves in background; when user data arrives, swaps to dashboard.
+// DEV_DISABLE_AUTH_FETCH: skip the check entirely and show dashboard directly.
 function HomeRoute() {
   const { data: user } = useBootAuth();
 
-  // NO `if (isLoading && !user) return <LoadingSpinner />` — that was blocking
-  // the landing page from ever showing if auth was slow or stuck.
+  if (DEV_DISABLE_AUTH_FETCH) {
+    return (
+      <div style={appShellStyle}>
+        <Layout><Home /></Layout>
+      </div>
+    );
+  }
+
   return (
     <AnimatePresence mode="wait" initial={false}>
       {user ? (
@@ -215,35 +221,37 @@ function ImportRoute() {
 
 // ─── PRIVATE GUARD ────────────────────────────────────────────────────────────
 // Wraps private routes. Redirects to "/login" if not authenticated.
-// Has a 5-second timeout failsafe — if auth never resolves, forces redirect.
+// DEV_DISABLE_AUTH_FETCH: renders children directly — no redirect, no spinner.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useBootAuth();
   const [, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
-  // Failsafe: if /api/auth/me never resolves, stop waiting after 5 s.
+  // Always call effects — no conditional hook calls.
+  // When bypassing, these effects are inert (timeout sets state that is never read,
+  // redirect effect runs but the bypass branch returns before reaching it).
   useEffect(() => {
+    if (DEV_DISABLE_AUTH_FETCH) return;
     const t = setTimeout(() => setTimedOut(true), 5000);
     return () => clearTimeout(t);
   }, []);
 
-  // Only redirect once auth initialization is complete (isLoading === false).
-  // Never redirect while the /api/auth/me fetch is still in flight — that
-  // would kick unauthenticated-looking users to /login on slow connections
-  // even when their session cookie is perfectly valid.
   useEffect(() => {
+    if (DEV_DISABLE_AUTH_FETCH) return;
     const initialized = !isLoading || timedOut;
     if (initialized && !user) navigate("/login");
   }, [user, isLoading, timedOut, navigate]);
-  //            ↑ `location` intentionally excluded — it is not used in the
-  //              effect body and including it would cause a spurious re-run
-  //              (and potential redirect) on every internal navigation.
 
-  // While auth is still loading, show a neutral spinner rather than
-  // redirecting or flashing private content.
+  // Bypass: skip every auth check — render immediately.
+  if (DEV_DISABLE_AUTH_FETCH) {
+    return (
+      <div style={appShellStyle}>
+        <Layout>{children}</Layout>
+      </div>
+    );
+  }
+
   if (isLoading && !timedOut && !user) return <LoadingSpinner />;
-
-  // Auth settled with no user (or timed out): return null while navigate fires.
   if (!user) return null;
 
   return (
