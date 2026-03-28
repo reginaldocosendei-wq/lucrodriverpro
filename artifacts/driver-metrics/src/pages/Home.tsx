@@ -6,6 +6,8 @@ import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-
 import { motion, animate } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
+import { DailyAnalysisCard, DailyAnalysisEmpty } from "@/components/DailyAnalysisCard";
+import { analyzDay } from "@/lib/dailyAnalysis";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -99,25 +101,26 @@ export default function Home() {
   // ── Goal color ─────────────────────────────────────────────────────────────
   const gColor = goalPct >= 100 ? "#00ff88" : goalPct >= 70 ? "#4ade80" : goalPct >= 40 ? "#eab308" : "#ef4444";
 
-  // ── Smart insight ─────────────────────────────────────────────────────────
+  // ── Smart insight (legacy — kept for type compat) ─────────────────────────
   const insightStatus: InsightStatus =
     earnings <= 0 ? "idle"
     : profit <= 0 || marginPct < 15 ? "bad"
     : marginPct < 40 ? "average"
     : "good";
 
-  const pct = Math.round(marginPct);
-  const insightMessage =
-    insightStatus === "good"    ? t("home.insightGood",     { pct })
-    : insightStatus === "average" ? t("home.insightAverage", { pct })
-    : insightStatus === "bad"     ? profit <= 0 ? t("home.insightNegative") : t("home.insightBad", { pct })
-    : t("home.insightIdle");
-
-  const insightSuggestion =
-    insightStatus === "good"    ? t("home.suggestionGood")
-    : insightStatus === "average" ? t("home.suggestionAverage")
-    : insightStatus === "bad"     ? t("home.suggestionBad")
-    : t("home.suggestionIdle");
+  // ── Daily analysis (new rich engine) ──────────────────────────────────────
+  const dailyAnalysis = !isLoading ? analyzDay({
+    earnings,
+    costs,
+    trips,
+    km:            summary?.kmToday ?? null,
+    hours:         summary?.hoursToday ?? null,
+    rating:        summary?.ratingToday ?? null,
+    goalDaily:     summary?.goalDaily ?? 0,
+    earningsPerHourToday: summary?.earningsPerHourToday ?? null,
+    earningsPerTripToday: summary?.earningsPerTripToday ?? null,
+    earningsPerKmToday:   summary?.earningsPerKmToday ?? null,
+  }) : null;
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -313,7 +316,7 @@ export default function Home() {
 
 
       {/* ╔══════════════════════════════════════════════════════════════════
-          ║  3. INSIGHTS — Smart analysis
+          ║  3. ANÁLISE INTELIGENTE DO DIA
           ╚══════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
@@ -327,12 +330,10 @@ export default function Home() {
             <Skeleton h={18} w="85%" r={8} />
             <Skeleton h={14} w="70%" r={8} />
           </div>
+        ) : dailyAnalysis ? (
+          <DailyAnalysisCard analysis={dailyAnalysis} />
         ) : (
-          <SmartInsightCard
-            status={insightStatus}
-            message={insightMessage}
-            suggestion={insightSuggestion}
-          />
+          <DailyAnalysisEmpty />
         )}
       </motion.div>
 
