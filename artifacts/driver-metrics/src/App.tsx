@@ -154,21 +154,23 @@ function HomeRoute() {
 // Public route — accessible without auth.
 // Redirects to "/" if the user is already authenticated.
 // After successful login/register it navigates to "/".
+// DEV: auth redirect temporarily disabled for desktop nav testing
 function LoginRoute() {
   const { data: user, isLoading } = useGetMe();
   const [, navigate] = useLocation();
 
   console.debug("[LoginRoute]", { isLoading, isAuthed: !!user });
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      console.debug("[LoginRoute] already authenticated → redirecting to /");
-      navigate("/");
-    }
-  }, [user, isLoading, navigate]);
+  // DEV_BYPASS: redirect disabled
+  // useEffect(() => {
+  //   if (!isLoading && user) {
+  //     navigate("/");
+  //   }
+  // }, [user, isLoading, navigate]);
 
-  // While loading or about to redirect, show spinner
-  if ((isLoading && !user) || user) return <LoadingSpinner />;
+  // DEV_BYPASS: spinner for already-authed users disabled
+  // if ((isLoading && !user) || user) return <LoadingSpinner />;
+  if (isLoading && !user) return <LoadingSpinner />;
 
   return (
     <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
@@ -304,7 +306,8 @@ function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 1600);
+    // DEV_BYPASS: splash disabled for desktop nav testing — restore before shipping
+    const timer = setTimeout(() => setShowSplash(false), 0);
     return () => clearTimeout(timer);
   }, []);
 
