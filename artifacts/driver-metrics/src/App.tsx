@@ -137,7 +137,6 @@ const fadeProps = {
 
 const appShellStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 480,
   display: "flex",
   flexDirection: "column",
   height: "100dvh",

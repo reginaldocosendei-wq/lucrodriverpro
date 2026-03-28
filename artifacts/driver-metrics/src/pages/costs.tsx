@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 
 const costSchema = z.object({
   category: z.enum(["combustivel", "alimentacao", "manutencao", "aluguel", "outros"] as const),
@@ -91,6 +92,7 @@ export default function Costs() {
     }
   };
 
+  const isDesktop = useIsDesktop();
   const isFree = user?.plan !== "pro";
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
@@ -107,9 +109,18 @@ export default function Costs() {
   const costPercentage = dashboard?.earningsMonth ? Math.min(100, (totalCostsValue / dashboard.earningsMonth) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-10 relative">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-display font-bold">Custos</h2>
+    <div style={{ paddingBottom: 40 }}>
+
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 style={{ fontSize: isDesktop ? 28 : 24, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.02em", marginBottom: 4 }}>
+            Custos
+          </h2>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
+            Acompanhe seus gastos mensais
+          </p>
+        </div>
         {!isFree && (
           <Button onClick={() => setIsModalOpen(true)} className="gap-2" size="sm" variant="danger">
             <Plus size={18} /> Adicionar
@@ -117,136 +128,170 @@ export default function Costs() {
         )}
       </div>
 
-      {/* Hero Summary */}
-      <Card className="p-6 bg-gradient-to-br from-destructive/10 to-card border-destructive/20 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-destructive/10 rounded-full blur-3xl" />
-        <div className="text-center relative z-10">
-          <p className="text-sm font-bold text-destructive uppercase tracking-widest mb-2">Seus gastos do mês</p>
-          <h3 className="text-5xl font-display font-extrabold text-white tabular-nums mb-2">
-            {formatBRL(data?.totalMonth || 0)}
-          </h3>
-          <p className="text-sm text-muted-foreground font-medium">
-            = <span className="text-destructive font-bold">{costPercentage.toFixed(1)}%</span> do seu faturamento deste mês
-          </p>
-        </div>
-      </Card>
+      {/* ── Desktop: 2-col grid. Mobile: single column ────────────────────── */}
+      <div style={isDesktop
+        ? { display: "grid", gridTemplateColumns: "340px 1fr", gap: 24, alignItems: "start" }
+        : { display: "flex", flexDirection: "column", gap: 16 }
+      }>
 
-      {/* Breakdown Bar */}
-      {!isFree && totalCostsValue > 0 && (
-        <Card className="p-5">
-          <h4 className="text-sm font-bold text-muted-foreground mb-4">Como seu dinheiro foi gasto</h4>
-          <div className="h-4 w-full bg-black rounded-full overflow-hidden flex border border-white/5 mb-4">
-            {Object.entries(categoryTotals).map(([cat, amount]) => {
-              const pct = (amount / totalCostsValue) * 100;
-              if (pct === 0) return null;
-              return (
-                <div 
-                  key={cat} 
-                  className={`h-full ${categoryColors[cat]}`} 
-                  style={{ width: `${pct}%` }} 
-                  title={`${categoryNames[cat]}: ${formatBRL(amount)}`}
-                />
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap gap-4 text-xs font-medium text-muted-foreground">
-             {Object.entries(categoryTotals)
-               .sort((a,b) => b[1] - a[1])
-               .filter(([_, amount]) => amount > 0)
-               .map(([cat, amount]) => (
-                <div key={cat} className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${categoryColors[cat]}`} />
-                  <span className="capitalize">{categoryNames[cat]}</span>
-                  <span className="text-white ml-1">{((amount / totalCostsValue) * 100).toFixed(0)}%</span>
-                </div>
-             ))}
-          </div>
-        </Card>
-      )}
+        {/* ── Left column: Summary + breakdown ─────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Free Plan Paywall Overlay */}
-      {isFree ? (
-        <div className="relative mt-8">
-          {/* Fake content behind blur */}
-          <div className="space-y-3 opacity-30 blur-sm select-none pointer-events-none">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white/5" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-32 bg-white/10 rounded" />
-                    <div className="h-3 w-24 bg-white/5 rounded" />
-                  </div>
-                </div>
-                <div className="h-6 w-20 bg-destructive/20 rounded" />
-              </Card>
-            ))}
-          </div>
-          
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center mb-6 glow-gold shadow-2xl">
-              <Lock size={40} className="text-black" />
+          {/* Hero Summary */}
+          <Card className="p-6 bg-gradient-to-br from-destructive/10 to-card border-destructive/20 relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-32 h-32 bg-destructive/10 rounded-full blur-3xl" />
+            <div className="text-center relative z-10">
+              <p className="text-sm font-bold text-destructive uppercase tracking-widest mb-2">Seus gastos do mês</p>
+              <h3 className="text-5xl font-display font-extrabold text-white tabular-nums mb-2">
+                {formatBRL(data?.totalMonth || 0)}
+              </h3>
+              <p className="text-sm text-muted-foreground font-medium">
+                = <span className="text-destructive font-bold">{costPercentage.toFixed(1)}%</span> do seu faturamento deste mês
+              </p>
             </div>
-            <h3 className="text-2xl font-display font-bold text-white mb-2">Você está vendo apenas seu faturamento</h3>
-            <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
-              Faturamento engana. Descubra quanto realmente sobra no seu bolso após todos os custos com o Lucro Driver PRO.
-            </p>
-            <Link href="/reports">
-              <Button variant="gold" size="lg" className="px-10 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-                Desbloquear lucro real
-              </Button>
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3 mt-8">
-          <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-2">Histórico</h4>
-          {costs.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
-              <Wallet size={48} className="mx-auto mb-4 opacity-20" />
-              <p>Nenhum custo registrado este mês.</p>
-            </div>
-          ) : (
-            <AnimatePresence>
-              {costs.map((cost, i) => (
-                <motion.div
-                  key={cost.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Card className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors border-l-4 border-transparent hover:border-destructive/50">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
-                        {categoryIcons[cost.category]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-base">{cost.description}</p>
-                        <div className="flex items-center gap-2 text-[10px] font-bold tracking-wide text-muted-foreground uppercase mt-1">
-                          <span>{categoryNames[cost.category]}</span>
-                          <span className="w-1 h-1 rounded-full bg-white/20" />
-                          <span>{formatMonthDay(cost.date)}</span>
+          </Card>
+
+          {/* Breakdown Bar */}
+          {!isFree && totalCostsValue > 0 && (
+            <Card className="p-5">
+              <h4 className="text-sm font-bold text-muted-foreground mb-4">Como seu dinheiro foi gasto</h4>
+              <div className="h-4 w-full bg-black rounded-full overflow-hidden flex border border-white/5 mb-4">
+                {Object.entries(categoryTotals).map(([cat, amount]) => {
+                  const pct = (amount / totalCostsValue) * 100;
+                  if (pct === 0) return null;
+                  return (
+                    <div 
+                      key={cat} 
+                      className={`h-full ${categoryColors[cat]}`} 
+                      style={{ width: `${pct}%` }} 
+                      title={`${categoryNames[cat]}: ${formatBRL(amount)}`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-4 text-xs font-medium text-muted-foreground">
+                {Object.entries(categoryTotals)
+                  .sort((a,b) => b[1] - a[1])
+                  .filter(([_, amount]) => amount > 0)
+                  .map(([cat, amount]) => (
+                    <div key={cat} className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${categoryColors[cat]}`} />
+                      <span className="capitalize">{categoryNames[cat]}</span>
+                      <span className="text-white ml-1">{((amount / totalCostsValue) * 100).toFixed(0)}%</span>
+                    </div>
+                  ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Category totals (desktop sidebar) */}
+          {isDesktop && !isFree && totalCostsValue > 0 && (
+            <Card className="p-5">
+              <h4 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-widest">Por categoria</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {Object.entries(categoryTotals)
+                  .sort((a, b) => b[1] - a[1])
+                  .filter(([_, amount]) => amount > 0)
+                  .map(([cat, amount]) => (
+                    <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {categoryIcons[cat]}
                         </div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>{categoryNames[cat]}</span>
                       </div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f87171", fontVariantNumeric: "tabular-nums" }}>{formatBRL(amount)}</span>
                     </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <p className="font-display font-bold text-lg text-destructive tabular-nums">{formatBRL(cost.amount)}</p>
-                      <button 
-                        onClick={() => handleDelete(cost.id)}
-                        className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-white hover:bg-destructive rounded-lg transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  ))}
+              </div>
+            </Card>
           )}
         </div>
-      )}
+
+        {/* ── Right column: Cost list / paywall ────────────────────────── */}
+        <div>
+          {/* Free Plan Paywall Overlay */}
+          {isFree ? (
+            <div className="relative mt-2">
+              <div className="space-y-3 opacity-30 blur-sm select-none pointer-events-none">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-white/5" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 bg-white/10 rounded" />
+                        <div className="h-3 w-24 bg-white/5 rounded" />
+                      </div>
+                    </div>
+                    <div className="h-6 w-20 bg-destructive/20 rounded" />
+                  </Card>
+                ))}
+              </div>
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center mb-6 glow-gold shadow-2xl">
+                  <Lock size={40} className="text-black" />
+                </div>
+                <h3 className="text-2xl font-display font-bold text-white mb-2">Você está vendo apenas seu faturamento</h3>
+                <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
+                  Faturamento engana. Descubra quanto realmente sobra no seu bolso após todos os custos com o Lucro Driver PRO.
+                </p>
+                <Link href="/reports">
+                  <Button variant="gold" size="lg" className="px-10 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
+                    Desbloquear lucro real
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1 mb-4">Histórico</h4>
+              {costs.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
+                  <Wallet size={48} className="mx-auto mb-4 opacity-20" />
+                  <p>Nenhum custo registrado este mês.</p>
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {costs.map((cost, i) => (
+                    <motion.div
+                      key={cost.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
+                      <Card className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors border-l-4 border-transparent hover:border-destructive/50">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
+                            {categoryIcons[cost.category]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-base">{cost.description}</p>
+                            <div className="flex items-center gap-2 text-[10px] font-bold tracking-wide text-muted-foreground uppercase mt-1">
+                              <span>{categoryNames[cost.category]}</span>
+                              <span className="w-1 h-1 rounded-full bg-white/20" />
+                              <span>{formatMonthDay(cost.date)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <p className="font-display font-bold text-lg text-destructive tabular-nums">{formatBRL(cost.amount)}</p>
+                          <button 
+                            onClick={() => handleDelete(cost.id)}
+                            className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-white hover:bg-destructive rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {!isFree && (
         <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSubmitError(null); }} title="Adicionar Custo">
