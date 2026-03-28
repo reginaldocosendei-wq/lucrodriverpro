@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, copyFile } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -22,12 +22,11 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
-    // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
-    // Examples of unbundleable packages:
-    // - uses native modules and loads them dynamically (e.g. sharp)
-    // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
+    // connect-pg-simple reads table.sql at runtime via __dirname.
+    // Externalizing it preserves the module's real __dirname so the
+    // SQL file is found in node_modules, not in dist/.
     external: [
+      "connect-pg-simple",
       "*.node",
       "sharp",
       "better-sqlite3",
@@ -118,6 +117,19 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // Copy connect-pg-simple's table.sql into dist/ as a fallback for any
+  // code path that still resolves __dirname to the dist folder.
+  try {
+    const require = createRequire(import.meta.url);
+    const pgSimpleDir = path.dirname(require.resolve("connect-pg-simple"));
+    await copyFile(
+      path.join(pgSimpleDir, "table.sql"),
+      path.join(distDir, "table.sql"),
+    );
+  } catch (e) {
+    console.warn("Could not copy connect-pg-simple/table.sql:", e.message);
+  }
 }
 
 buildAll().catch((err) => {
