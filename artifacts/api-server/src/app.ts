@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import session from "express-session";
+import ConnectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
 import { WebhookHandlers } from "./webhookHandlers";
 import router from "./routes";
@@ -50,8 +51,19 @@ app.use(express.urlencoded({ extended: true, limit: "6mb" }));
 
 const isProd = process.env.NODE_ENV === "production";
 
+// ─── SESSION STORE ────────────────────────────────────────────────────────────
+// PostgreSQL-backed so sessions survive server restarts.
+// The `session` table is created automatically on first boot (createTableIfMissing).
+const PgStore = ConnectPgSimple(session);
+const sessionStore = new PgStore({
+  conString: process.env["DATABASE_URL"],
+  createTableIfMissing: true,
+  ttl: 7 * 24 * 60 * 60, // seconds — matches maxAge below
+});
+
 app.use(
   session({
+    store: sessionStore,
     secret: process.env["SESSION_SECRET"] ?? "lucro-driver-secret-2024",
     resave: false,
     saveUninitialized: false,
