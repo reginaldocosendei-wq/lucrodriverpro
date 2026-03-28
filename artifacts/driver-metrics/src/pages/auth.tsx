@@ -53,9 +53,6 @@ function AuthForm({
         console.debug("[AuthForm] login success → refreshing user cache");
         // Await invalidation so the user data is in cache BEFORE navigating
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        // DIAG: verify localStorage persists across navigation
-        localStorage.setItem("login_test", "ok");
-        console.debug("[AuthForm] login_test written to localStorage");
         onSuccess?.();
       },
       onError: (err: any) => {

@@ -75,8 +75,9 @@ export default function ImportPage() {
 
   const [step, setStep] = useState<Step>("locked");
   useEffect(() => {
-    if (isPro && step === "locked") setStep("upload");
-  }, [isPro, step]);
+    // Any authenticated user can import — PRO gate removed temporarily
+    if (me && step === "locked") setStep("upload");
+  }, [me, step]);
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
   const [dragOver, setDragOver]       = useState(false);

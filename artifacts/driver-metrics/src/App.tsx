@@ -150,40 +150,6 @@ function LoadingSpinner() {
   );
 }
 
-// ─── DIAG: localStorage persistence check ─────────────────────────────────────
-// Written in auth.tsx after login. Read here to verify it survived navigation.
-// Remove this component (and the setItem call in auth.tsx) once confirmed.
-function LocalStorageDiagBanner() {
-  const [visible, setVisible] = useState(true);
-  const [value] = useState(() => localStorage.getItem("login_test"));
-  // Only show when the flag has been set at least once this session
-  if (!visible || value === null) return null;
-  const ok = value === "ok";
-  return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-      padding: "10px 16px",
-      background: ok ? "rgba(0,200,100,0.92)" : "rgba(220,38,38,0.92)",
-      color: "#000",
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      fontSize: 13, fontWeight: 700, fontFamily: "monospace",
-      backdropFilter: "blur(6px)",
-    }}>
-      <span>
-        {ok
-          ? "✓ DIAG: localStorage ok — login_test=ok (persisted across navigation)"
-          : `✗ DIAG: localStorage CLEARED — login_test="${value}" (auth persistence broken)`}
-      </span>
-      <button
-        onClick={() => setVisible(false)}
-        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 900, padding: "0 4px" }}
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
 // "/" shows the landing page if unauthenticated, the dashboard if authenticated.
 // IMPORTANT: NO hard loading block here — landing page renders immediately.
@@ -194,24 +160,21 @@ function HomeRoute() {
   // NO `if (isLoading && !user) return <LoadingSpinner />` — that was blocking
   // the landing page from ever showing if auth was slow or stuck.
   return (
-    <>
-      <LocalStorageDiagBanner />
-      <AnimatePresence mode="wait" initial={false}>
-        {user ? (
-          <motion.div key="authed" {...fadeProps} style={appShellStyle}>
-            <Layout><Home /></Layout>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="landing"
-            {...fadeProps}
-            style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}
-          >
-            <AuthScreen />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    <AnimatePresence mode="wait" initial={false}>
+      {user ? (
+        <motion.div key="authed" {...fadeProps} style={appShellStyle}>
+          <Layout><Home /></Layout>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="landing"
+          {...fadeProps}
+          style={{ width: "100%", maxWidth: 480, height: "100dvh", overflowY: "auto", overflowX: "hidden" }}
+        >
+          <AuthScreen />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -371,7 +334,7 @@ function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 1600);
+    const timer = setTimeout(() => setShowSplash(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
