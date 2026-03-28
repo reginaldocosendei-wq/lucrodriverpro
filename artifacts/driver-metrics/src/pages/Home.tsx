@@ -225,7 +225,7 @@ export default function Home() {
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     style={{
-                      fontSize: "clamp(40px, 4vw, 60px)", fontWeight: 900, lineHeight: 1.0, color: pColor,
+                      fontSize: "clamp(28px, 4vw, 60px)", fontWeight: 900, lineHeight: 1.0, color: pColor,
                       fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1',
                       letterSpacing: "-0.03em", marginBottom: 10, whiteSpace: "nowrap",
                     }}

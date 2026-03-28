@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 
 export const BREAKPOINTS = {
-  tablet:  768,
-  desktop: 1024,
+  tablet:  640,
+  desktop: 768,
 } as const;
 
 function useMediaQuery(minWidth: number): boolean {
