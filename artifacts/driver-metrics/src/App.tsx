@@ -26,6 +26,7 @@ import Settings from "@/pages/settings";
 import AuthScreen from "@/pages/auth";
 import ImportTest from "@/pages/import-test";
 import LoginTest from "@/pages/login-test";
+import HealthCheck from "@/pages/health-check";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
@@ -126,13 +127,21 @@ function LoadingSpinner() {
 
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
 // "/" shows the landing page if unauthenticated, the dashboard if authenticated.
+// IMPORTANT: NO hard loading block here — landing page renders immediately.
+// Auth resolves in background; when user data arrives, swaps to dashboard.
 function HomeRoute() {
   const { data: user, isLoading } = useGetMe();
 
-  console.debug("[HomeRoute]", { isLoading, isAuthed: !!user });
+  // Boot log: on every render
+  console.log("AUTH INIT", { isLoading, isAuthed: !!user });
 
-  if (isLoading && !user) return <LoadingSpinner />;
+  // Boot log: on mount only
+  useEffect(() => {
+    console.log("HOME MOUNTED");
+  }, []);
 
+  // NO `if (isLoading && !user) return <LoadingSpinner />` — that was blocking
+  // the landing page from ever showing if auth was slow or stuck.
   return (
     <AnimatePresence mode="wait" initial={false}>
       {user ? (
@@ -161,7 +170,11 @@ function LoginRoute() {
   const { data: user, isLoading } = useGetMe();
   const [, navigate] = useLocation();
 
-  console.debug("[LoginRoute]", { isLoading, isAuthed: !!user });
+  console.log("AUTH INIT [LoginRoute]", { isLoading, isAuthed: !!user });
+
+  useEffect(() => {
+    console.log("HOME MOUNTED [LoginRoute]");
+  }, []);
 
   // DEV_BYPASS: redirect disabled
   // useEffect(() => {
@@ -170,14 +183,11 @@ function LoginRoute() {
   //   }
   // }, [user, isLoading, navigate]);
 
-  // DEV_BYPASS: spinner for already-authed users disabled
-  // if ((isLoading && !user) || user) return <LoadingSpinner />;
-  if (isLoading && !user) return <LoadingSpinner />;
-
+  // No spinner if auth is loading — show the form immediately (fail-safe)
   return (
     <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen startWithForm onSuccess={() => {
-        console.debug("[LoginRoute] login success → navigating to /");
+        console.log("[LoginRoute] login success → navigating to /");
         navigate("/");
       }} />
     </div>
@@ -203,18 +213,32 @@ function ImportRoute() {
 
 // ─── PRIVATE GUARD ────────────────────────────────────────────────────────────
 // Wraps private routes. Redirects to "/login" if not authenticated.
+// Has a 5-second timeout failsafe — if auth never resolves, forces redirect.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useGetMe();
   const [location, navigate] = useLocation();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Failsafe: if auth takes more than 5s, stop waiting and redirect
+  useEffect(() => {
+    const t = setTimeout(() => {
+      console.log("[PrivateGuard] AUTH TIMEOUT after 5s — forcing redirect to /login");
+      setTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      console.debug("[PrivateGuard] not authenticated → redirecting to /login", { from: location });
+    const ready = !isLoading || timedOut;
+    if (ready && !user) {
+      console.log("[PrivateGuard] not authenticated → /login", { from: location, timedOut });
       navigate("/login");
     }
-  }, [user, isLoading, navigate, location]);
+  }, [user, isLoading, timedOut, navigate, location]);
 
-  if (isLoading && !user) return <LoadingSpinner />;
+  // Show spinner only during normal load window (max 5s)
+  if ((isLoading && !timedOut) && !user) return <LoadingSpinner />;
+  // After timeout or if truly no user, return null while redirect fires
   if (!user) return null;
 
   return (
@@ -227,11 +251,14 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 function Router() {
   const [location] = useLocation();
-  console.debug("[Router] current location:", location);
+
+  // Boot log — fires on every navigation
+  console.log("ROUTER READY", { location });
 
   return (
     <Switch>
-      {/* ── DIAGNOSTIC test pages — completely public, no auth, no guards ── */}
+      {/* ── DIAGNOSTIC / health test pages — completely public ── */}
+      <Route path="/health-check" component={HealthCheck} />
       <Route path="/import-test" component={ImportTest} />
       <Route path="/login-test" component={LoginTest} />
 
@@ -309,6 +336,8 @@ function NativeEventListeners() {
 
 // ─── APP SHELL ────────────────────────────────────────────────────────────────
 function AppShell() {
+  console.log("APP START: AppShell rendered");
+
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {

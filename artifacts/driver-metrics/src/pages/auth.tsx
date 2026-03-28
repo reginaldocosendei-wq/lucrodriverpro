@@ -443,6 +443,28 @@ export default function AuthScreen({
         >
           {t("auth.trustLine")}
         </motion.p>
+
+        {/* DIAGNOSTIC: health check link */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.65, duration: 0.35 }}
+          style={{ marginTop: 20 }}
+        >
+          <button
+            onClick={() => {
+              console.log("HEALTH-CHECK BUTTON CLICKED");
+              navigate("/health-check");
+            }}
+            style={{
+              background: "transparent", border: "none",
+              color: "rgba(255,255,255,0.18)", fontSize: 10, fontWeight: 500,
+              cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.04em",
+              textTransform: "uppercase", padding: "4px 8px",
+            }}
+          >
+            App status ·
+          </button>
+        </motion.div>
       </motion.div>
     </div>
   );

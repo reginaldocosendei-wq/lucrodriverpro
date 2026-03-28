@@ -1,0 +1,93 @@
+Fix the desktop app boot/initialization issue in my app "Lucro Driver".
+
+GOAL:
+The app does not properly enter/open on desktop. It gets stuck on the first screen and never proceeds correctly.
+
+IMPORTANT:
+This is not just a button issue.
+Investigate the app initialization, router boot, auth boot, and first render flow.
+
+TASKS:
+
+1. APP BOOT DEBUG
+Add temporary console logs to these stages:
+- app startup
+- router initialization
+- auth initialization
+- home page mount
+- dashboard/import page mount
+
+Examples:
+console.log("APP START");
+console.log("ROUTER READY");
+console.log("AUTH INIT");
+console.log("HOME MOUNTED");
+
+2. CHECK FOR LOOPS
+Inspect for:
+- infinite useEffect loops
+- repeated redirects
+- repeated state updates on mount
+- auth loading never finishing
+
+3. AUTH INITIALIZATION
+If auth/session is loaded on startup:
+- make sure loading state finishes correctly
+- do not block public pages while auth is loading
+- do not redirect to Home repeatedly
+
+4. ROUTER
+Inspect router setup carefully.
+Ensure:
+- routes are defined correctly
+- app does not silently fallback to Home
+- desktop path handling works properly
+
+5. PUBLIC ROUTES
+Make sure these pages are public and can load without auth:
+- Home
+- Login
+- Import flow
+
+6. FAIL-SAFE LOADING
+If auth/session/data loading fails:
+- do not freeze app
+- do not keep spinning forever
+- continue to render public page safely
+
+7. TEMP TEST PAGE
+Create a plain public route:
+`/health-check`
+
+This page should show only:
+"APP IS RUNNING"
+
+Also add a visible button on Home:
+"Open Health Check"
+that goes directly to this page.
+
+If this works, the app shell/router is alive.
+
+8. CHECK DATA FETCHING
+Inspect any startup fetch calls:
+- current user
+- session
+- dashboard data
+- profile
+- metrics
+
+If any of these fail, do not block the whole app.
+
+9. REMOVE HARD BLOCKS
+Remove any code that says:
+- if no user, return null forever
+- if loading, keep spinner forever
+- redirect before initialization finishes
+
+10. FINAL RESULT
+On desktop:
+- app must boot correctly
+- public pages must open
+- no infinite loading
+- no redirect loop
+- no freeze on first screen

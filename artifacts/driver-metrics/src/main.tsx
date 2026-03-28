@@ -4,6 +4,12 @@ import { setBaseUrl } from "@workspace/api-client-react";
 import App from "./App";
 import "./index.css";
 
+console.log("APP START: main.tsx loaded", {
+  base: import.meta.env.BASE_URL,
+  mode: import.meta.env.MODE,
+  native: Capacitor.isNativePlatform(),
+});
+
 /* ── Capacitor: point API client at the remote server ─────────────────────── */
 const apiBaseOverride = import.meta.env.VITE_API_BASE_URL as string | undefined;
 if (apiBaseOverride) {
