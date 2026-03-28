@@ -357,7 +357,10 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // Always include credentials so session cookies are sent on both same-origin
+  // and cross-origin (Replit proxy) requests. Callers can override by passing
+  // credentials: "omit" explicitly in their options.
+  const response = await fetch(input, { credentials: "include", ...init, method, headers });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

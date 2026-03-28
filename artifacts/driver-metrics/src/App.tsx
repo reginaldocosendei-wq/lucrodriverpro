@@ -32,6 +32,9 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: false,
+      // Prevent constant background refetches while the user is navigating.
+      // Auth/user data is stable; 3 minutes is more than enough.
+      staleTime: 3 * 60 * 1000,
     },
   },
 });
@@ -106,9 +109,13 @@ const fadeProps = {
 };
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading, isError } = useGetMe();
+  const { data: user, isLoading } = useGetMe();
 
-  if (isLoading) {
+  // Show spinner only on the very first load (no cached data yet).
+  // If there is any cached user object, render immediately — this prevents
+  // the auth screen from flashing when a background refetch temporarily fails
+  // (e.g. cross-origin cookie rejection in the Replit proxy on desktop).
+  if (isLoading && !user) {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center">
         <div className="w-12 h-12 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -116,7 +123,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isAuthed = !isError && !!user;
+  const isAuthed = !!user;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
