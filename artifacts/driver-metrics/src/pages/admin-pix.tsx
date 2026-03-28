@@ -133,7 +133,7 @@ export default function AdminPixPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setActivate(p.id, "ok");
-      addToast("Acesso PRO ativado com sucesso.", "ok");
+      addToast("Pagamento confirmado e PRO ativado com sucesso.", "ok");
       setTimeout(() => { setActivate(p.id, "idle"); fetchPayments(); }, 1400);
     } catch (e: any) {
       setActivate(p.id, "err");
@@ -469,57 +469,32 @@ export default function AdminPixPage() {
                 {/* PENDING: Confirmar pagamento + Ativar PRO + Recusar */}
                 {p.status === "pending" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {/* Row 1: Confirmar + Ativar PRO */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {/* Confirmar pagamento */}
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => confirm(p)}
-                        disabled={cState === "loading" || aState === "loading"}
-                        style={{
-                          flex: 1, height: 42, borderRadius: 12, border: "none",
-                          background: cState === "ok" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
-                          color: cState === "ok" ? "#f9fafb" : "rgba(255,255,255,0.55)",
-                          fontWeight: 700, fontSize: 12,
-                          cursor: (cState === "loading" || aState === "loading") ? "not-allowed" : "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                          fontFamily: "inherit", transition: "all 0.2s ease",
-                        }}
-                      >
-                        {cState === "loading" ? (
-                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
-                        ) : cState === "ok" ? (
-                          <><Check size={13} strokeWidth={2.5} /> Confirmado</>
-                        ) : (
-                          <><Check size={13} strokeWidth={2} /> Confirmar pagamento</>
-                        )}
-                      </motion.button>
+                    {/* Primary CTA: Confirmar + Ativar PRO */}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => activatePro(p)}
+                      disabled={aState === "loading"}
+                      style={{
+                        width: "100%", height: 46, borderRadius: 13, border: "none",
+                        background: aState === "ok" ? "rgba(0,255,136,0.22)" : "#00ff88",
+                        color: aState === "ok" ? "#00ff88" : "#000",
+                        fontWeight: 800, fontSize: 14, letterSpacing: "-0.01em",
+                        cursor: aState === "loading" ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                        fontFamily: "inherit", transition: "all 0.2s ease",
+                        boxShadow: aState === "ok" ? "none" : "0 2px 14px rgba(0,255,136,0.18)",
+                      }}
+                    >
+                      {aState === "loading" ? (
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 16, height: 16, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.15)", borderTopColor: "#000" }} />
+                      ) : aState === "ok" ? (
+                        <><Check size={15} strokeWidth={2.8} /> Confirmado e PRO ativado!</>
+                      ) : (
+                        <><Check size={15} strokeWidth={2.8} /> Confirmar + Ativar PRO</>
+                      )}
+                    </motion.button>
 
-                      {/* Ativar PRO */}
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => activatePro(p)}
-                        disabled={aState === "loading" || cState === "loading"}
-                        style={{
-                          flex: 1, height: 42, borderRadius: 12, border: "none",
-                          background: aState === "ok" ? "rgba(0,255,136,0.2)" : "rgba(0,255,136,0.12)",
-                          color: "#00ff88", fontWeight: 700, fontSize: 12,
-                          cursor: (aState === "loading" || cState === "loading") ? "not-allowed" : "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                          fontFamily: "inherit", transition: "all 0.2s ease",
-                        }}
-                      >
-                        {aState === "loading" ? (
-                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88" }} />
-                        ) : aState === "ok" ? (
-                          <><Check size={13} strokeWidth={2.5} /> PRO ativado!</>
-                        ) : (
-                          <>⚡ Ativar PRO</>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    {/* Row 2: Recusar + Delete */}
+                    {/* Secondary: Recusar + Delete */}
                     <div style={{ display: "flex", gap: 8 }}>
                       <motion.button
                         whileTap={{ scale: 0.96 }}
