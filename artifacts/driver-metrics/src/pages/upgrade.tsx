@@ -166,7 +166,7 @@ export default function Upgrade() {
   return (
     <motion.div
       variants={stagger} initial="hidden" animate="show"
-      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40, maxWidth: isDesktop ? 680 : undefined, margin: "0 auto", width: "100%" }}
+      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40, width: "100%" }}
     >
 
       {/* ── Back button ─────────────────────────────────────────────────────── */}

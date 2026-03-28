@@ -150,7 +150,7 @@ export default function Settings() {
   };
 
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto", paddingBottom: 32 }}>
+    <div style={{ paddingBottom: 32 }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>

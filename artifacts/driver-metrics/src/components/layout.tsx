@@ -264,7 +264,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div style={{
           padding: isDesktop ? "12px 40px" : "14px 20px",
           display: "flex", alignItems: "center",
-          maxWidth: isDesktop ? 1180 : undefined,
+          maxWidth: isDesktop ? 1280 : undefined,
           margin: "0 auto", width: "100%",
           boxSizing: "border-box",
         }}>
