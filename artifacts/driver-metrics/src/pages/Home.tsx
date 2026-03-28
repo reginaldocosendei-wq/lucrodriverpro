@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
+import { DEV_DISABLE_DASHBOARD_PRELOAD } from "@/lib/dev-flags";
 import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
 import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-react";
@@ -74,12 +75,16 @@ function Skeleton({ h = 24, w = "100%", r = 8 }: { h?: number; w?: number | stri
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const [, navigate] = useLocation();
-  const { data: summary, isLoading } = useGetDashboardSummary();
+  // DEV_BYPASS: dashboard queries gated by DEV_DISABLE_DASHBOARD_PRELOAD
+  const { data: summary, isLoading } = useGetDashboardSummary(
+    DEV_DISABLE_DASHBOARD_PRELOAD ? { query: { enabled: false } } : undefined
+  );
   const { data: user } = useGetMe();
 
   // Lightweight fetch of recent daily history for trend analysis
   const { data: historyRaw } = useQuery<HistoryEntry[]>({
     queryKey: ["daily-summaries-history"],
+    enabled: !DEV_DISABLE_DASHBOARD_PRELOAD,
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.BASE_URL}api/daily-summaries`, { credentials: "include" });
       if (!res.ok) return [];

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
+import { DEV_DISABLE_AUTH_FETCH, DEV_DISABLE_DASHBOARD_PRELOAD } from "@/lib/dev-flags";
 import { AnimatePresence, motion } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
@@ -44,11 +45,37 @@ const queryClient = new QueryClient({
 // Module-level flags written by Router and HomeRoute, read by DebugPanel.
 const debugFlags = { routerMounted: false, homeMounted: false };
 
+// ─── AUTH BYPASS HOOK ──────────────────────────────────────────────────────────
+// Always calls useGetMe() (never conditional), but discards the result when
+// DEV_DISABLE_AUTH_FETCH is true, returning an instant settled-no-user response.
+// Flip the flag in src/lib/dev-flags.ts to re-enable real auth.
+type BootAuthResult = ReturnType<typeof useGetMe>;
+function useBootAuth(): BootAuthResult {
+  // When bypassed, pass enabled:false so the query never fires a network request.
+  // We always call the hook (rules of hooks), but the query stays dormant.
+  const real = useGetMe(
+    DEV_DISABLE_AUTH_FETCH ? { query: { enabled: false } } : undefined
+  );
+  if (DEV_DISABLE_AUTH_FETCH) {
+    // Override the return to a fully settled no-user state with zero loading
+    return {
+      ...real,
+      data: undefined,
+      isLoading: false,
+      isPending: false,
+      isFetching: false,
+      isSuccess: false,
+      isError: false,
+    } as BootAuthResult;
+  }
+  return real;
+}
+
 // ─── DEBUG PANEL ───────────────────────────────────────────────────────────────
 // Visible on desktop only (screen width ≥ 768 px). Remove before shipping.
 function DebugPanel() {
   const [location] = useLocation();
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading } = useBootAuth();
   const [tick, setTick] = useState(0);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
 
@@ -70,11 +97,20 @@ function DebugPanel() {
     </div>
   );
 
+  const bypassRow = (label: string, active: boolean) => (
+    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
+      <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, fontFamily: "monospace", fontStyle: "italic" }}>{label}</span>
+      <span style={{ fontSize: 9, fontFamily: "monospace", fontWeight: 700, color: active ? "#facc15" : "rgba(255,255,255,0.2)" }}>
+        {active ? "BYPASSED" : "live"}
+      </span>
+    </div>
+  );
+
   return (
     <div style={{
       position: "fixed", bottom: 12, right: 12, zIndex: 99999,
       background: "rgba(0,0,0,0.88)", border: "1px solid rgba(255,255,255,0.12)",
-      borderRadius: 10, padding: "10px 14px", minWidth: 230,
+      borderRadius: 10, padding: "10px 14px", minWidth: 240,
       backdropFilter: "blur(12px)", boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
       display: "flex", flexDirection: "column", gap: 5,
       pointerEvents: "none",
@@ -82,12 +118,21 @@ function DebugPanel() {
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>
         DEBUG PANEL
       </div>
+
+      {/* Live state */}
       {row("route",          location || "/")}
-      {row("auth",          user ? `✓ ${user.email ?? "logged in"}` : isLoading ? "loading…" : "anonymous", user ? true : isLoading ? undefined : false)}
+      {row("auth",          user ? `✓ ${(user as any).email ?? "logged in"}` : isLoading ? "loading…" : "anonymous", user ? true : isLoading ? undefined : false)}
       {row("isLoading",     String(isLoading),  !isLoading)}
       {row("router mounted", String(debugFlags.routerMounted), debugFlags.routerMounted)}
       {row("home mounted",   String(debugFlags.homeMounted),   debugFlags.homeMounted)}
-      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", marginTop: 3, fontFamily: "monospace" }}>
+
+      {/* Bypass flags */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 3, paddingTop: 5, display: "flex", flexDirection: "column", gap: 4 }}>
+        {bypassRow("auth fetch", DEV_DISABLE_AUTH_FETCH)}
+        {bypassRow("dashboard preload", DEV_DISABLE_DASHBOARD_PRELOAD)}
+      </div>
+
+      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", marginTop: 2, fontFamily: "monospace" }}>
         tick {tick}
       </div>
     </div>
@@ -184,7 +229,7 @@ function LoadingSpinner() {
 // IMPORTANT: NO hard loading block here — landing page renders immediately.
 // Auth resolves in background; when user data arrives, swaps to dashboard.
 function HomeRoute() {
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading } = useBootAuth();
 
   // Boot log: on every render
   console.log("AUTH INIT", { isLoading, isAuthed: !!user });
@@ -222,7 +267,7 @@ function HomeRoute() {
 // After successful login/register it navigates to "/".
 // DEV: auth redirect temporarily disabled for desktop nav testing
 function LoginRoute() {
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading } = useBootAuth();
   const [, navigate] = useLocation();
 
   console.log("AUTH INIT [LoginRoute]", { isLoading, isAuthed: !!user });
@@ -270,7 +315,7 @@ function ImportRoute() {
 // Wraps private routes. Redirects to "/login" if not authenticated.
 // Has a 5-second timeout failsafe — if auth never resolves, forces redirect.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading } = useBootAuth();
   const [location, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
