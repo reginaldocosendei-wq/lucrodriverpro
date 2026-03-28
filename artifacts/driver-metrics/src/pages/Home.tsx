@@ -10,6 +10,7 @@ import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
 import { DailyAnalysisCard, DailyAnalysisEmpty } from "@/components/DailyAnalysisCard";
 import { analyzDay, type HistoryEntry } from "@/lib/dailyAnalysis";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -156,10 +157,12 @@ export default function Home() {
   }) : null;
 
   // ═══════════════════════════════════════════════════════════════════════════
+  const isDesktop = useIsDesktop();
+
   return (
     <motion.div
       variants={container} initial="hidden" animate="show"
-      style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 112 }}
+      style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 20 : 16, paddingBottom: isDesktop ? 40 : 112 }}
     >
 
       {/* ── Greeting ──────────────────────────────────────────────────────── */}
@@ -172,6 +175,9 @@ export default function Home() {
         </div>
       </motion.div>
 
+
+      {/* ── Desktop row 1: Profit card | Metrics ──────────────────────────── */}
+      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
       {/* ╔══════════════════════════════════════════════════════════════════
           ║  1. LUCRO — Big profit number
@@ -356,6 +362,11 @@ export default function Home() {
         </div>
       </motion.div>
 
+      </div>{/* end desktop row 1 */}
+
+
+      {/* ── Desktop row 2: Daily Analysis | Goal ───────────────────────────── */}
+      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
       {/* ╔══════════════════════════════════════════════════════════════════
           ║  3. ANÁLISE INTELIGENTE DO DIA
@@ -379,6 +390,8 @@ export default function Home() {
         )}
       </motion.div>
 
+      {/* Right column of row 2: goal progress or no-goal prompt */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* ╔══════════════════════════════════════════════════════════════════
           ║  4. META — Goal progress bar
@@ -484,6 +497,12 @@ export default function Home() {
         </motion.div>
       )}
 
+      </div>{/* end right column row 2 */}
+      </div>{/* end desktop row 2 */}
+
+
+      {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
+      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
       {/* ── PRO upsell ──────────────────────────────────────────────────────── */}
       {isFree && !isLoading && (
@@ -528,29 +547,32 @@ export default function Home() {
         </Link>
       </motion.div>
 
+      </div>{/* end desktop row 3 */}
 
-      {/* ── FAB ─────────────────────────────────────────────────────────────── */}
-      <motion.div
-        onClick={() => navigate("/import")}
-        style={{
-          position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 680px) / 2 + 20px))",
-          zIndex: 50, cursor: "pointer",
-        }}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
-        whileTap={{ scale: 0.88 }}
-        whileHover={{ scale: 1.08 }}
-      >
-        <div style={{
-          width: 58, height: 58, borderRadius: "50%",
-          background: "#00ff88",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-        }}>
-          <Camera size={24} color="#000" strokeWidth={2.2} />
-        </div>
-      </motion.div>
+      {/* ── FAB (mobile only) ────────────────────────────────────────────────── */}
+      {!isDesktop && (
+        <motion.div
+          onClick={() => navigate("/import")}
+          style={{
+            position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 680px) / 2 + 20px))",
+            zIndex: 50, cursor: "pointer",
+          }}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
+          whileTap={{ scale: 0.88 }}
+          whileHover={{ scale: 1.08 }}
+        >
+          <div style={{
+            width: 58, height: 58, borderRadius: "50%",
+            background: "#00ff88",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+          }}>
+            <Camera size={24} color="#000" strokeWidth={2.2} />
+          </div>
+        </motion.div>
+      )}
 
     </motion.div>
   );

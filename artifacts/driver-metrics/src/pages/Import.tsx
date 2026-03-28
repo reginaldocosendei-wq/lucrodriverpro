@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 import { useLocation } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
 import {
@@ -71,6 +72,7 @@ export default function ImportPage() {
   const { data: me, isPending: authPending } = useGetMe();
   const queryClient = useQueryClient();
   const isPro = me?.plan === "pro";
+  const isDesktop = useIsDesktop();
 
   const [step, setStep] = useState<Step>(
     DEV_DISABLE_AUTH_FETCH ? "upload" : "locked"
@@ -199,7 +201,7 @@ export default function ImportPage() {
       </div>
 
       {/* ── Content ────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px 100px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "32px 48px 60px" : "24px 20px 100px" }}>
         <AnimatePresence mode="wait">
           <motion.div key={step} {...slide}>
 
@@ -229,7 +231,11 @@ export default function ImportPage() {
                 STEP 1 — UPLOAD
             ══════════════════════════════════════════════════════════════ */}
             {step === "upload" && (
-              <div>
+              <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 32, alignItems: "start", maxWidth: 900, margin: "0 auto" } : {}}>
+
+                {/* ── Left column: error + upload zone + CTA + file input ── */}
+                <div>
+
                 {/* Error banner */}
                 {error && (
                   <motion.div
@@ -328,17 +334,63 @@ export default function ImportPage() {
                   Enviar screenshot
                 </motion.button>
 
-                {/* Tip */}
-                <div style={{
-                  marginTop: 20, borderRadius: 16,
-                  background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)",
-                  padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10,
-                }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
-                    Abra o Uber, 99 ou InDrive, vá até o <strong style={{ color: "rgba(255,255,255,0.5)" }}>resumo de ganhos do dia</strong> e tire uma captura de tela.
-                  </p>
-                </div>
+                {/* Mobile-only tip */}
+                {!isDesktop && (
+                  <div style={{
+                    marginTop: 20, borderRadius: 16,
+                    background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)",
+                    padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10,
+                  }}>
+                    <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                      Abra o Uber, 99 ou InDrive, vá até o <strong style={{ color: "rgba(255,255,255,0.5)" }}>resumo de ganhos do dia</strong> e tire uma captura de tela.
+                    </p>
+                  </div>
+                )}
+
+                </div>{/* end left column */}
+
+                {/* ── Right column: instructions panel (desktop only) ── */}
+                {isDesktop && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{
+                      background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)",
+                      borderRadius: 20, padding: "24px 20px",
+                    }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 16 }}>
+                        Como funciona
+                      </p>
+                      {[
+                        { step: "1", icon: "📱", title: "Abra o app", desc: "Uber, 99 ou InDrive — vá ao resumo do dia" },
+                        { step: "2", icon: "📸", title: "Tire um print", desc: "Capture a tela com seus ganhos totais do dia" },
+                        { step: "3", icon: "🤖", title: "Nossa IA lê", desc: "Extraímos corridas, km, horas e valor automaticamente" },
+                        { step: "4", icon: "✅", title: "Confirme e salve", desc: "Revise os dados e registre seu dia em segundos" },
+                      ].map(({ step: s, icon, title, desc }) => (
+                        <div key={s} style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 14 }}>{icon}</span>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: "#f9fafb", marginBottom: 2 }}>{title}</p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>{desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{
+                      background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)",
+                      borderRadius: 16, padding: "14px 16px",
+                      display: "flex", alignItems: "flex-start", gap: 10,
+                    }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>🔒</span>
+                      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                        Suas imagens são processadas pela IA e <strong style={{ color: "rgba(255,255,255,0.5)" }}>nunca armazenadas</strong>. Apenas os dados extraídos são salvos.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
 

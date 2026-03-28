@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useT, LANG_OPTIONS, type Lang } from "@/lib/i18n";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type TrialUser = {
@@ -173,6 +174,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const logout               = useLogout();
   const queryClient          = useQueryClient();
   const { t }                = useT();
+  const isDesktop            = useIsDesktop();
   const u = user as TrialUser | undefined;
 
   const trialActive   = u?.trialActive === true;
@@ -324,9 +326,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         overflowY: "auto",
         overflowX: "hidden",
         width: "100%",
-        padding: "20px 16px 24px",
+        padding: isDesktop ? "28px 40px 32px" : "20px 16px 24px",
       }}>
-        <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
+        <div style={{ maxWidth: isDesktop ? 1100 : 680, margin: "0 auto", width: "100%" }}>
           {children}
         </div>
       </main>

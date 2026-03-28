@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 import {
   ChevronLeft, Calendar, Navigation, Clock, Star,
   Trash2, TrendingUp, AlertCircle, Plus, CheckCircle,
@@ -635,6 +636,7 @@ const cardVariants = {
 export default function RidesPage() {
   const queryClient = useQueryClient();
   const { t } = useT();
+  const isDesktop = useIsDesktop();
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [summaries, setSummaries] = useState<DailySummary[] | null>(null);
@@ -912,7 +914,7 @@ export default function RidesPage() {
       </div>
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "24px 40px 60px" : "20px 20px 100px" }}>
 
         {/* Loading */}
         {loading && (
@@ -967,10 +969,15 @@ export default function RidesPage() {
 
             {/* ── Records list ────────────────────────────────────────────── */}
             {filtered.length > 0 && (
-              <motion.div variants={listVariants} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <motion.div variants={listVariants} initial="hidden" animate="show"
+                style={isDesktop
+                  ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }
+                  : { display: "flex", flexDirection: "column", gap: 10 }
+                }
+              >
 
-                {/* Summary bar */}
-                <motion.div variants={cardVariants}>
+                {/* Summary bar — spans full width on desktop */}
+                <motion.div variants={cardVariants} style={isDesktop ? { gridColumn: "1 / -1" } : {}}>
                   <div style={{ background: "#111", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 4 }}>
                     {[
                       { label: filter === "today" ? t("common.today") : filter === "week" ? t("common.week") : filter === "month" ? t("common.month") : t("history.total"), value: formatBRL(totalEarnings), color: "#00ff88" },
@@ -985,8 +992,8 @@ export default function RidesPage() {
                   </div>
                 </motion.div>
 
-                {/* Section label */}
-                <motion.div variants={cardVariants}>
+                {/* Section label — spans full width on desktop */}
+                <motion.div variants={cardVariants} style={isDesktop ? { gridColumn: "1 / -1" } : {}}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", textTransform: "uppercase", margin: "6px 0 4px" }}>
                     {t("history.savedRecords")}
                   </p>

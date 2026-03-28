@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsDesktop } from "@/lib/useBreakpoint";
 import {
   Check, ArrowLeft, Shield, Zap, AlertTriangle,
   Clock, ChevronRight, TrendingUp, MapPin, Timer, Award,
@@ -41,6 +42,8 @@ export default function Upgrade() {
   const trialDaysLeft  = u?.trialDaysLeft ?? 7;
   const isExpiredParam = typeof window !== "undefined" && window.location.search.includes("expired=1");
   const showExpired    = trialExpired || isExpiredParam;
+
+  const isDesktop = useIsDesktop();
 
   // ── Dynamic plans by currency ────────────────────────────────────────────────
   const PLANS = useMemo(() => [
@@ -163,7 +166,7 @@ export default function Upgrade() {
   return (
     <motion.div
       variants={stagger} initial="hidden" animate="show"
-      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40 }}
+      style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40, maxWidth: isDesktop ? 680 : undefined, margin: "0 auto", width: "100%" }}
     >
 
       {/* ── Back button ─────────────────────────────────────────────────────── */}
@@ -175,6 +178,7 @@ export default function Upgrade() {
           <ArrowLeft size={16} /> {t("upgrade.back")}
         </button>
       </motion.div>
+
 
       {/* ══════════════════════════════════════════════════════════════
           HERO HEADER

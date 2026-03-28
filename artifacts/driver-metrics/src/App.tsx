@@ -152,35 +152,6 @@ function LoadingSpinner() {
   );
 }
 
-// ─── DEBUG PANEL (desktop only, temporary) ────────────────────────────────────
-function DebugPanel() {
-  const [location] = useLocation();
-  const { data: user, isLoading, isPending } = useBootAuth();
-  if (typeof window === "undefined" || window.innerWidth < 768) return null;
-  const row = (label: string, value: string, ok?: boolean) => (
-    <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "monospace" }}>{label}</span>
-      <span style={{ fontSize: 10, fontFamily: "monospace", fontWeight: 700, color: ok === undefined ? "#e5e7eb" : ok ? "#00ff88" : "#f87171" }}>{value}</span>
-    </div>
-  );
-  return (
-    <div style={{
-      position: "fixed", bottom: 12, right: 12, zIndex: 99999, pointerEvents: "none",
-      background: "rgba(0,0,0,0.88)", border: "1px solid rgba(255,255,255,0.12)",
-      borderRadius: 10, padding: "10px 14px", minWidth: 230,
-      backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", gap: 5,
-    }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>DEBUG</div>
-      {row("route",           location || "/")}
-      {row("authLoading",     String(isPending || isLoading), !(isPending || isLoading))}
-      {row("isAuthenticated", user ? "true" : "false", !!user)}
-      {row("email",           user ? (user as any).email ?? "—" : "none", !!user)}
-      {row("plan",            user ? (user as any).plan ?? "—" : "none", !!(user && (user as any).plan))}
-      {row("cookie",          "SameSite=None; Secure")}
-    </div>
-  );
-}
-
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
 // "/" shows the dashboard if authenticated, landing page if not.
 // Waits for auth to settle before deciding — prevents flashing landing page
@@ -329,7 +300,6 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <>
-    <DebugPanel />
     <Switch>
       {/* ── Public: login / register ── */}
       <Route path="/login" component={LoginRoute} />
