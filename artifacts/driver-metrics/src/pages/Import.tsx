@@ -73,12 +73,10 @@ export default function ImportPage() {
 
   console.debug("[ImportPage]", { isAuthed: !!me, isPro, plan: me?.plan });
 
-  // DEV_BYPASS: PRO check disabled for desktop nav testing — restore before shipping
-  // const [step, setStep] = useState<Step>("locked");
-  // useEffect(() => {
-  //   if (isPro && step === "locked") setStep("upload");
-  // }, [isPro, step]);
-  const [step, setStep] = useState<Step>("upload");
+  const [step, setStep] = useState<Step>("locked");
+  useEffect(() => {
+    if (isPro && step === "locked") setStep("upload");
+  }, [isPro, step]);
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
   const [dragOver, setDragOver]       = useState(false);

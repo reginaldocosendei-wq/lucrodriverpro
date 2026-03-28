@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
-import { DEV_DISABLE_AUTH_FETCH, DEV_DISABLE_DASHBOARD_PRELOAD } from "@/lib/dev-flags";
+import { DEV_DISABLE_AUTH_FETCH } from "@/lib/dev-flags";
 import { AnimatePresence, motion } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
@@ -25,9 +25,6 @@ import AdminPix from "@/pages/admin-pix";
 import AdminUsers from "@/pages/admin-users";
 import Settings from "@/pages/settings";
 import AuthScreen from "@/pages/auth";
-import ImportTest from "@/pages/import-test";
-import LoginTest from "@/pages/login-test";
-import HealthCheck from "@/pages/health-check";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
@@ -40,10 +37,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// ─── TEMPORARY DEBUG STATE ─────────────────────────────────────────────────────
-// Module-level flags written by Router and HomeRoute, read by DebugPanel.
-const debugFlags = { routerMounted: false, homeMounted: false };
 
 // ─── AUTH BYPASS HOOK ──────────────────────────────────────────────────────────
 // Always calls useGetMe() (never conditional), but discards the result when
@@ -71,73 +64,6 @@ function useBootAuth(): BootAuthResult {
   return real;
 }
 
-// ─── DEBUG PANEL ───────────────────────────────────────────────────────────────
-// Visible on desktop only (screen width ≥ 768 px). Remove before shipping.
-function DebugPanel() {
-  const [location] = useLocation();
-  const { data: user, isLoading } = useBootAuth();
-  const [tick, setTick] = useState(0);
-  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
-
-  // Repoll every 600 ms so flag changes from other components show up
-  useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 600);
-    return () => clearInterval(id);
-  }, []);
-
-  if (!isDesktop) return null;
-
-  const row = (label: string, value: string, ok?: boolean) => (
-    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
-      <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "monospace" }}>{label}</span>
-      <span style={{
-        fontSize: 10, fontFamily: "monospace", fontWeight: 700,
-        color: ok === undefined ? "#e5e7eb" : ok ? "#00ff88" : "#f87171",
-      }}>{value}</span>
-    </div>
-  );
-
-  const bypassRow = (label: string, active: boolean) => (
-    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
-      <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, fontFamily: "monospace", fontStyle: "italic" }}>{label}</span>
-      <span style={{ fontSize: 9, fontFamily: "monospace", fontWeight: 700, color: active ? "#facc15" : "rgba(255,255,255,0.2)" }}>
-        {active ? "BYPASSED" : "live"}
-      </span>
-    </div>
-  );
-
-  return (
-    <div style={{
-      position: "fixed", bottom: 12, right: 12, zIndex: 99999,
-      background: "rgba(0,0,0,0.88)", border: "1px solid rgba(255,255,255,0.12)",
-      borderRadius: 10, padding: "10px 14px", minWidth: 240,
-      backdropFilter: "blur(12px)", boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
-      display: "flex", flexDirection: "column", gap: 5,
-      pointerEvents: "none",
-    }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>
-        DEBUG PANEL
-      </div>
-
-      {/* Live state */}
-      {row("route",          location || "/")}
-      {row("auth",          user ? `✓ ${(user as any).email ?? "logged in"}` : isLoading ? "loading…" : "anonymous", user ? true : isLoading ? undefined : false)}
-      {row("isLoading",     String(isLoading),  !isLoading)}
-      {row("router mounted", String(debugFlags.routerMounted), debugFlags.routerMounted)}
-      {row("home mounted",   String(debugFlags.homeMounted),   debugFlags.homeMounted)}
-
-      {/* Bypass flags */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 3, paddingTop: 5, display: "flex", flexDirection: "column", gap: 4 }}>
-        {bypassRow("auth fetch", DEV_DISABLE_AUTH_FETCH)}
-        {bypassRow("dashboard preload", DEV_DISABLE_DASHBOARD_PRELOAD)}
-      </div>
-
-      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", marginTop: 2, fontFamily: "monospace" }}>
-        tick {tick}
-      </div>
-    </div>
-  );
-}
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -229,16 +155,7 @@ function LoadingSpinner() {
 // IMPORTANT: NO hard loading block here — landing page renders immediately.
 // Auth resolves in background; when user data arrives, swaps to dashboard.
 function HomeRoute() {
-  const { data: user, isLoading } = useBootAuth();
-
-  // Boot log: on every render
-  console.log("AUTH INIT", { isLoading, isAuthed: !!user });
-
-  // Boot log: on mount only
-  useEffect(() => {
-    console.log("HOME MOUNTED");
-    debugFlags.homeMounted = true;
-  }, []);
+  const { data: user } = useBootAuth();
 
   // NO `if (isLoading && !user) return <LoadingSpinner />` — that was blocking
   // the landing page from ever showing if auth was slow or stuck.
@@ -270,26 +187,15 @@ function LoginRoute() {
   const { data: user, isLoading } = useBootAuth();
   const [, navigate] = useLocation();
 
-  console.log("AUTH INIT [LoginRoute]", { isLoading, isAuthed: !!user });
-
   useEffect(() => {
-    console.log("HOME MOUNTED [LoginRoute]");
-  }, []);
+    if (!isLoading && user) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
 
-  // DEV_BYPASS: redirect disabled
-  // useEffect(() => {
-  //   if (!isLoading && user) {
-  //     navigate("/");
-  //   }
-  // }, [user, isLoading, navigate]);
-
-  // No spinner if auth is loading — show the form immediately (fail-safe)
   return (
     <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
-      <AuthScreen startWithForm onSuccess={() => {
-        console.log("[LoginRoute] login success → navigating to /");
-        navigate("/");
-      }} />
+      <AuthScreen startWithForm onSuccess={() => navigate("/")} />
     </div>
   );
 }
@@ -298,10 +204,6 @@ function LoginRoute() {
 // Semi-public route — accessible without auth.
 // The Import page handles its own locked/unlocked state internally.
 function ImportRoute() {
-  const { data: user } = useGetMe();
-
-  console.debug("[ImportRoute]", { isAuthed: !!user });
-
   return (
     <div style={appShellStyle}>
       <Layout>
@@ -319,21 +221,14 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
-  // Failsafe: if auth takes more than 5s, stop waiting and redirect
   useEffect(() => {
-    const t = setTimeout(() => {
-      console.log("[PrivateGuard] AUTH TIMEOUT after 5s — forcing redirect to /login");
-      setTimedOut(true);
-    }, 5000);
+    const t = setTimeout(() => setTimedOut(true), 5000);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
     const ready = !isLoading || timedOut;
-    if (ready && !user) {
-      console.log("[PrivateGuard] not authenticated → /login", { from: location, timedOut });
-      navigate("/login");
-    }
+    if (ready && !user) navigate("/login");
   }, [user, isLoading, timedOut, navigate, location]);
 
   // Show spinner only during normal load window (max 5s)
@@ -350,25 +245,8 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
 
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 function Router() {
-  const [location] = useLocation();
-
-  // Boot log — fires on every navigation
-  console.log("ROUTER READY", { location });
-
-  // Set router-mounted flag on first render
-  useEffect(() => {
-    debugFlags.routerMounted = true;
-  }, []);
-
   return (
-    <>
-    <DebugPanel />
     <Switch>
-      {/* ── DIAGNOSTIC / health test pages — completely public ── */}
-      <Route path="/health-check" component={HealthCheck} />
-      <Route path="/import-test" component={ImportTest} />
-      <Route path="/login-test" component={LoginTest} />
-
       {/* ── Public: login / register ── */}
       <Route path="/login" component={LoginRoute} />
 
@@ -415,7 +293,6 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
-    </>
   );
 }
 
@@ -444,13 +321,10 @@ function NativeEventListeners() {
 
 // ─── APP SHELL ────────────────────────────────────────────────────────────────
 function AppShell() {
-  console.log("APP START: AppShell rendered");
-
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // DEV_BYPASS: splash disabled for desktop nav testing — restore before shipping
-    const timer = setTimeout(() => setShowSplash(false), 0);
+    const timer = setTimeout(() => setShowSplash(false), 1600);
     return () => clearTimeout(timer);
   }, []);
 
