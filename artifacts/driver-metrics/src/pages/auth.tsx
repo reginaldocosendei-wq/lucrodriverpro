@@ -202,7 +202,7 @@ export default function AuthScreen() {
     <div style={{
       minHeight: "100dvh", background: "#080808",
       display: "flex", flexDirection: "column",
-      position: "relative", overflow: "hidden",
+      position: "relative",
     }}>
 
       {/* Top glow */}
@@ -325,49 +325,54 @@ export default function AuthScreen() {
           /* ── Form panel ── */
           <motion.div
             key="form"
-            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", zIndex: 2 }}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column",
+              justifyContent: "center", alignItems: "center",
+              position: "relative", zIndex: 2,
+              padding: "32px 24px calc(32px + env(safe-area-inset-bottom, 0px))",
+            }}
           >
-            {/* Compact headline */}
-            <div style={{ textAlign: "center", padding: "40px 28px 0" }}>
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.05, duration: 0.4 }} style={{ marginBottom: 20 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto" }}>
-                  <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
-                </div>
-              </motion.div>
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", marginBottom: 4 }}>
+            {/* Logo + brand */}
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.05, duration: 0.35 }}
+              style={{ textAlign: "center", marginBottom: 24 }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 13, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto 12px" }}>
+                <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+              </div>
+              <p style={{ fontSize: 20, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", margin: 0 }}>
                 Lucro <span style={{ color: "#00ff88" }}>Driver</span>
               </p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500, marginTop: 4 }}>
                 {t("auth.appSubtitle")}
               </p>
-            </div>
-
-            {/* Back */}
-            <div style={{ display: "flex", justifyContent: "center", padding: "18px 0 0" }}>
-              <button
-                onClick={() => setShowForm(false)}
-                style={{
-                  background: "transparent", border: "none", cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 4,
-                  color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-                }}
-              >
-                <ChevronDown size={14} />
-                {t("auth.goBack")}
-              </button>
-            </div>
+            </motion.div>
 
             {/* Form card */}
             <div style={{
-              background: "#111111", borderTop: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "28px 28px 0 0", padding: "28px 24px",
-              marginTop: 20,
-              paddingBottom: "calc(28px + env(safe-area-inset-bottom, 0px))",
+              width: "100%", maxWidth: 380,
+              background: "#111111",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 24, padding: "28px 24px 24px",
             }}>
               <AuthForm defaultMode={formMode} />
             </div>
+
+            {/* Back link */}
+            <button
+              onClick={() => setShowForm(false)}
+              style={{
+                marginTop: 20, background: "transparent", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+                color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+              }}
+            >
+              <ChevronDown size={13} />
+              {t("auth.goBack")}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

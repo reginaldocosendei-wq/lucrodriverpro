@@ -1,0 +1,70 @@
+Fix the home page navigation issue on desktop in my app "Lucro Driver".
+
+GOAL:
+The app opens on desktop, but the user gets stuck on the first screen.
+When clicking:
+- "Importar meu dia"
+- "Já tenho conta"
+the app should navigate correctly instead of staying on the same home page.
+
+IMPORTANT:
+This is not a full app loading issue.
+The problem is specifically the navigation from the Home page on desktop.
+
+CHECK AND FIX THE FOLLOWING:
+
+1. BUTTON ACTIONS
+Inspect the Home page buttons:
+- "Importar meu dia"
+- "Já tenho conta"
+
+Make sure each button has the correct action:
+- "Importar meu dia" should navigate to the import/upload flow or dashboard
+- "Já tenho conta" should navigate to the login page
+
+2. ROUTER / ROUTES
+Inspect the routing configuration.
+Ensure these routes exist and work:
+- /
+- /login
+- /import
+- /dashboard
+
+If the app uses different route names, make sure the buttons point to valid routes.
+
+3. PREVENT SELF-REDIRECT
+Check whether the buttons are accidentally redirecting back to "/".
+Remove any wrong href, wrong Link target, or wrong navigate("/") call.
+
+4. PROTECTED ROUTES
+Inspect auth/protected route logic.
+If the app is redirecting users back to Home because of missing auth state, fix the logic.
+
+Expected behavior:
+- public pages like import preview or login should open normally
+- only truly protected pages should require auth
+
+5. DESKTOP CLICK DEBUG
+Verify that button clicks are actually firing on desktop.
+If necessary:
+- add temporary console logs on click
+- confirm the handler runs
+
+6. OVERLAY / BLOCKING LAYER
+Check if an invisible layer is causing odd click behavior on desktop.
+Ensure decorative layers use:
+pointer-events: none;
+
+7. ROUTER MODE
+Check whether the app is using BrowserRouter or another router setup.
+Ensure desktop navigation works correctly without silently resetting to Home.
+
+8. FALLBACK / ERROR
+If route navigation fails, do not silently return to the Home page.
+Show a clear console error during development.
+
+9. FINAL RESULT
+On desktop:
+- clicking "Importar meu dia" must open the correct next page
+- clicking "Já tenho conta" must open login
+- the app must not stay stuck on the first screen
