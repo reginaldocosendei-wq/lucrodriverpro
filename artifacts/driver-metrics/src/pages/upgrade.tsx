@@ -429,9 +429,13 @@ export default function Upgrade() {
             />
           ) : (
             <>
-              <Zap size={20} strokeWidth={2.5} />
-              {t("upgrade.cta")}
-              <ChevronRight size={20} strokeWidth={2.5} />
+              <span style={{ position: "absolute", left: 22, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <Zap size={20} strokeWidth={2.5} />
+              </span>
+              <span style={{ position: "relative" }}>{t("upgrade.cta")}</span>
+              <span style={{ position: "absolute", right: 22, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <ChevronRight size={20} strokeWidth={2.5} />
+              </span>
             </>
           )}
         </motion.button>
