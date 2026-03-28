@@ -36,7 +36,7 @@ export async function confirmImport(data: {
   hours: number | null;
   rating: number | null;
   date?: string;
-}): Promise<{ message: string; summary: unknown }> {
+}): Promise<{ message: string; merged: boolean; summary: unknown }> {
   const BASE = getApiBase();
   const response = await fetch(`${BASE}/api/import/confirm`, {
     method: "POST",

@@ -151,30 +151,52 @@ router.post("/confirm", requireAuth, async (req, res) => {
       .where(and(eq(dailySummariesTable.userId, userId), eq(dailySummariesTable.date, summaryDate)))
       .limit(1);
 
-    const payload = {
-      userId,
-      date: summaryDate,
-      earnings: earningsNum,
-      trips: tripsNum,
-      platform: platform || "Outro",
-      kmDriven: resolvedKm != null ? parseBRLNumber(resolvedKm) : null,
-      hoursWorked: resolvedHours != null ? parseFloat(String(resolvedHours)) : null,
-      rating: rating != null ? parseFloat(String(rating)) : null,
-    };
+    const newKm      = resolvedKm    != null ? parseBRLNumber(resolvedKm)              : null;
+    const newHours   = resolvedHours != null ? parseFloat(String(resolvedHours))       : null;
+    const newRating  = rating        != null ? parseFloat(String(rating))              : null;
+    const newPlatform = platform || "Outro";
 
     let result;
+    let merged = false;
+
     if (existing.length > 0) {
+      const prev = existing[0];
+
+      // Accumulate sumable fields; keep latest rating; keep existing value if new is null
+      const mergedPayload = {
+        earnings:    prev.earnings    + earningsNum,
+        trips:       prev.trips       + tripsNum,
+        platform:    newPlatform      || prev.platform || "Outro",
+        kmDriven:    (prev.kmDriven   != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
+        hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
+        rating:      newRating ?? prev.rating,
+        updatedAt:   new Date(),
+      };
+
       result = await db
         .update(dailySummariesTable)
-        .set({ ...payload, updatedAt: new Date() })
-        .where(eq(dailySummariesTable.id, existing[0].id))
+        .set(mergedPayload)
+        .where(eq(dailySummariesTable.id, prev.id))
         .returning();
+      merged = true;
     } else {
-      result = await db.insert(dailySummariesTable).values(payload).returning();
+      result = await db.insert(dailySummariesTable).values({
+        userId,
+        date: summaryDate,
+        earnings: earningsNum,
+        trips: tripsNum,
+        platform: newPlatform,
+        kmDriven:    newKm,
+        hoursWorked: newHours,
+        rating:      newRating,
+      }).returning();
     }
 
     res.status(201).json({
-      message: "Resumo do dia salvo com sucesso",
+      message: merged
+        ? "Os dados deste dia foram somados com sucesso."
+        : "Registro salvo com sucesso.",
+      merged,
       summary: result[0],
     });
   } catch (err: any) {

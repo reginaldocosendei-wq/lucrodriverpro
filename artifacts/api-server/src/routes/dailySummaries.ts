@@ -88,30 +88,47 @@ router.post("/", requireAuth, async (req, res) => {
       .where(and(eq(dailySummariesTable.userId, userId), eq(dailySummariesTable.date, date)))
       .limit(1);
 
-    const payload = {
-      userId,
-      date,
-      earnings: parseFloat(earnings),
-      trips: parseInt(trips),
-      kmDriven: kmDriven != null ? parseFloat(kmDriven) : null,
-      hoursWorked: hoursWorked != null ? parseFloat(hoursWorked) : null,
-      rating: rating != null ? parseFloat(rating) : null,
-      platform: platform || null,
-      notes: notes || null,
-    };
+    const newEarnings   = parseFloat(earnings);
+    const newTrips      = parseInt(trips);
+    const newKm         = kmDriven    != null ? parseFloat(kmDriven)    : null;
+    const newHours      = hoursWorked != null ? parseFloat(hoursWorked) : null;
+    const newRating     = rating      != null ? parseFloat(rating)      : null;
+    const newPlatform   = platform || null;
+    const newNotes      = notes    || null;
 
     let result;
+    let merged = false;
+
     if (existing.length > 0) {
+      const prev = existing[0];
+
+      const mergedPayload = {
+        earnings:    prev.earnings    + newEarnings,
+        trips:       prev.trips       + newTrips,
+        platform:    newPlatform ?? prev.platform,
+        notes:       newNotes    ?? prev.notes,
+        kmDriven:    (prev.kmDriven    != null || newKm    != null) ? (prev.kmDriven    ?? 0) + (newKm    ?? 0) : null,
+        hoursWorked: (prev.hoursWorked != null || newHours != null) ? (prev.hoursWorked ?? 0) + (newHours ?? 0) : null,
+        rating:      newRating ?? prev.rating,
+        updatedAt:   new Date(),
+      };
+
       result = await db
         .update(dailySummariesTable)
-        .set({ ...payload, updatedAt: new Date() })
-        .where(eq(dailySummariesTable.id, existing[0].id))
+        .set(mergedPayload)
+        .where(eq(dailySummariesTable.id, prev.id))
         .returning();
+      merged = true;
     } else {
-      result = await db.insert(dailySummariesTable).values(payload).returning();
+      result = await db.insert(dailySummariesTable).values({
+        userId, date,
+        earnings: newEarnings, trips: newTrips,
+        kmDriven: newKm, hoursWorked: newHours,
+        rating: newRating, platform: newPlatform, notes: newNotes,
+      }).returning();
     }
 
-    res.status(201).json(result[0]);
+    res.status(201).json({ ...result[0], merged });
   } catch (err) {
     console.error("Create daily summary error:", err);
     res.status(500).json({ error: "Erro ao salvar resumo" });

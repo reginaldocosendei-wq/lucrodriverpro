@@ -79,6 +79,7 @@ export default function ImportPage() {
   const [dragOver, setDragOver]       = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [processingMsg, setProcessingMsg] = useState(0);
+  const [wasMerged, setWasMerged]     = useState<boolean>(false);
 
   // Extracted + editable fields
   const [editEarnings, setEditEarnings] = useState("");
@@ -134,7 +135,7 @@ export default function ImportPage() {
     setStep("confirm");
     setError(null);
     try {
-      await confirmImport({
+      const result = await confirmImport({
         earnings: parseFloat(editEarnings),
         trips: parseInt(editTrips),
         platform: editPlatform,
@@ -142,7 +143,9 @@ export default function ImportPage() {
         hours: editHours ? parseFloat(editHours) : null,
         rating: editRating ? parseFloat(editRating) : null,
       });
+      setWasMerged(result.merged);
       await queryClient.invalidateQueries({ queryKey: ["/api/daily-summaries"] });
+      await queryClient.invalidateQueries({ queryKey: ["daily-summaries-history"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       setStep("success");
     } catch (err: any) {
@@ -716,11 +719,26 @@ export default function ImportPage() {
                 </motion.div>
 
                 <p style={{ fontSize: 28, fontWeight: 900, color: "#f9fafb", marginBottom: 8, letterSpacing: "-0.02em" }}>
-                  Resumo salvo!
+                  {wasMerged ? "Somado com sucesso!" : "Resumo salvo!"}
                 </p>
-                <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginBottom: 32, lineHeight: 1.55 }}>
-                  Seus dados do dia foram importados com sucesso.
+                <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginBottom: wasMerged ? 12 : 32, lineHeight: 1.55 }}>
+                  {wasMerged
+                    ? "Os valores foram somados ao registro existente deste dia."
+                    : "Seus dados do dia foram importados com sucesso."
+                  }
                 </p>
+                {wasMerged && (
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                    background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.14)",
+                    borderRadius: 12, padding: "9px 14px", marginBottom: 24,
+                  }}>
+                    <span style={{ fontSize: 13 }}>➕</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#eab308" }}>
+                      Ganhos e corridas somados ao dia
+                    </span>
+                  </div>
+                )}
 
                 {/* Mini recap */}
                 <div style={{

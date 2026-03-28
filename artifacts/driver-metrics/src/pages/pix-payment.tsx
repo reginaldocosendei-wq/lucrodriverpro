@@ -8,13 +8,13 @@ import { getApiBase } from "@/lib/api";
 
 const BASE = getApiBase();
 
-// ─── CONFIG — replace these with the real PIX details ────────────────────────
-const PIX_KEY        = "contato@lucrodriver.com.br";
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const PIX_KEY        = "41999653965";
 const PIX_NAME       = "Lucro Driver";
-const PIX_CITY       = "Sao Paulo";
+const PIX_CITY       = "Curitiba";
 const PIX_AMOUNT     = "19.90";
 const PIX_TXID       = "LUCROPRO";
-const WHATSAPP_NUMBER = "5511999999999"; // ← replace with your WhatsApp number (country code + number, no spaces or symbols)
+const WHATSAPP_NUMBER = "5541999653965";
 
 // ─── PIX EMV GENERATOR ────────────────────────────────────────────────────────
 function tlv(id: string, value: string) {
@@ -293,24 +293,48 @@ export default function PixPaymentPage() {
                     whileTap={{ scale: 0.92 }}
                     onClick={copyKey}
                     style={{
-                      flexShrink: 0, height: 44, paddingInline: 18,
+                      flexShrink: 0, height: 44, paddingInline: 16,
                       borderRadius: 12,
                       border: keyCopied ? "1px solid rgba(0,255,136,0.25)" : "1px solid rgba(255,255,255,0.1)",
                       background: keyCopied ? "rgba(0,255,136,0.15)" : "rgba(255,255,255,0.07)",
                       color: keyCopied ? "#00ff88" : "rgba(255,255,255,0.6)",
-                      fontSize: 13, fontWeight: 700, cursor: "pointer",
-                      display: "flex", alignItems: "center", gap: 6,
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 5,
                       fontFamily: "inherit",
                       transition: "all 0.2s ease",
+                      whiteSpace: "nowrap",
                     } as React.CSSProperties}
                   >
                     {keyCopied
-                      ? <><Check size={14} strokeWidth={2.5} /> Copiado</>
-                      : <><Copy size={14} strokeWidth={2} /> Copiar</>
+                      ? <><Check size={13} strokeWidth={2.5} /> Copiado!</>
+                      : <><Copy size={13} strokeWidth={2} /> Copiar chave</>
                     }
                   </motion.button>
                 </div>
               </div>
+
+              {/* Copy confirmation toast */}
+              <AnimatePresence>
+                {keyCopied && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                    transition={{ duration: 0.22 }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: "rgba(0,255,136,0.06)",
+                      border: "1px solid rgba(0,255,136,0.14)",
+                      borderRadius: 12, padding: "10px 14px", marginBottom: 10,
+                    }}
+                  >
+                    <Check size={13} color="#00ff88" strokeWidth={2.5} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#00ff88" }}>
+                      Chave Pix copiada com sucesso.
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Copy full code (copia e cola) */}
               <motion.button
