@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
@@ -7,7 +8,7 @@ import { motion, animate } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
 import { DailyAnalysisCard, DailyAnalysisEmpty } from "@/components/DailyAnalysisCard";
-import { analyzDay } from "@/lib/dailyAnalysis";
+import { analyzDay, type HistoryEntry } from "@/lib/dailyAnalysis";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -75,6 +76,27 @@ export default function Home() {
   const [, navigate] = useLocation();
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: user } = useGetMe();
+
+  // Lightweight fetch of recent daily history for trend analysis
+  const { data: historyRaw } = useQuery<HistoryEntry[]>({
+    queryKey: ["daily-summaries-history"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/daily-summaries`, { credentials: "include" });
+      if (!res.ok) return [];
+      const data = await res.json() as Array<{
+        date: string; earnings: number; trips: number;
+        kmDriven?: number | null; hoursWorked?: number | null;
+      }>;
+      return data.slice(0, 10).map((d) => ({
+        date:        d.date,
+        earnings:    d.earnings,
+        trips:       d.trips,
+        kmDriven:    d.kmDriven ?? null,
+        hoursWorked: d.hoursWorked ?? null,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
   const { t } = useT();
 
   const isFree  = user?.plan !== "pro";
@@ -108,18 +130,22 @@ export default function Home() {
     : marginPct < 40 ? "average"
     : "good";
 
-  // ── Daily analysis (new rich engine) ──────────────────────────────────────
+  // ── Daily analysis (rich engine with history + all-time baselines) ────────
   const dailyAnalysis = !isLoading ? analyzDay({
     earnings,
     costs,
     trips,
-    km:            summary?.kmToday ?? null,
-    hours:         summary?.hoursToday ?? null,
-    rating:        summary?.ratingToday ?? null,
-    goalDaily:     summary?.goalDaily ?? 0,
+    km:            summary?.kmToday          ?? null,
+    hours:         summary?.hoursToday       ?? null,
+    rating:        summary?.ratingToday      ?? null,
+    goalDaily:     summary?.goalDaily        ?? 0,
     earningsPerHourToday: summary?.earningsPerHourToday ?? null,
     earningsPerTripToday: summary?.earningsPerTripToday ?? null,
-    earningsPerKmToday:   summary?.earningsPerKmToday ?? null,
+    earningsPerKmToday:   summary?.earningsPerKmToday   ?? null,
+    earningsPerHourAll:   summary?.earningsPerHourAll   ?? null,
+    earningsPerTripAll:   summary?.earningsPerTripAll   ?? null,
+    earningsPerKmAll:     summary?.earningsPerKmAll     ?? null,
+    history:              historyRaw ?? [],
   }) : null;
 
   // ═══════════════════════════════════════════════════════════════════════════

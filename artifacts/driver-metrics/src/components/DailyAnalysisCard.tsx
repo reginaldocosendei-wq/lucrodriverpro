@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { AlertTriangle, Lightbulb, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, XCircle } from "lucide-react";
+import { AlertTriangle, Lightbulb, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, XCircle, ArrowUp, ArrowDown } from "lucide-react";
 import type { DailyAnalysis, DayStatus } from "@/lib/dailyAnalysis";
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -75,18 +75,43 @@ export function DailyAnalysisCard({ analysis }: { analysis: DailyAnalysis }) {
 
       <div style={{ position: "relative", zIndex: 1, padding: "18px 18px 0" }}>
 
-        {/* ── Status badge + label ─────────────────────────────────────────── */}
+        {/* ── Status badge + trend + expand toggle ────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            background: cfg.bg,
-            border: `1px solid ${cfg.border}`,
-            borderRadius: 20, padding: "5px 12px",
-          }}>
-            {cfg.icon}
-            <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, letterSpacing: "0.05em" }}>
-              {cfg.label.toUpperCase()}
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {/* Status badge */}
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: cfg.bg,
+              border: `1px solid ${cfg.border}`,
+              borderRadius: 20, padding: "5px 12px",
+            }}>
+              {cfg.icon}
+              <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, letterSpacing: "0.05em" }}>
+                {cfg.label.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Trend pill */}
+            {analysis.trendPct !== null && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                background: analysis.trendPct >= 0 ? "rgba(0,255,136,0.06)" : "rgba(248,113,113,0.06)",
+                border: `1px solid ${analysis.trendPct >= 0 ? "rgba(0,255,136,0.14)" : "rgba(248,113,113,0.12)"}`,
+                borderRadius: 20, padding: "4px 10px",
+              }}>
+                {analysis.trendPct >= 0
+                  ? <ArrowUp size={10} color="#00ff88" strokeWidth={2.5} />
+                  : <ArrowDown size={10} color="#f87171" strokeWidth={2.5} />
+                }
+                <span style={{
+                  fontSize: 10, fontWeight: 800,
+                  color: analysis.trendPct >= 0 ? "#00ff88" : "#f87171",
+                  letterSpacing: "0.03em",
+                }}>
+                  {Math.abs(Math.round(analysis.trendPct))}% vs média
+                </span>
+              </div>
+            )}
           </div>
 
           {hasExtras && (
@@ -96,7 +121,7 @@ export function DailyAnalysisCard({ analysis }: { analysis: DailyAnalysis }) {
                 display: "flex", alignItems: "center", gap: 4,
                 background: "none", border: "none", cursor: "pointer",
                 color: "rgba(255,255,255,0.3)", fontSize: 11, fontWeight: 600,
-                fontFamily: "inherit",
+                fontFamily: "inherit", flexShrink: 0, marginLeft: 4,
               }}
             >
               {expanded ? "Menos" : "Detalhes"}
