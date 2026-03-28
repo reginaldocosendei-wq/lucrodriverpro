@@ -40,6 +40,60 @@ const queryClient = new QueryClient({
   },
 });
 
+// ─── TEMPORARY DEBUG STATE ─────────────────────────────────────────────────────
+// Module-level flags written by Router and HomeRoute, read by DebugPanel.
+const debugFlags = { routerMounted: false, homeMounted: false };
+
+// ─── DEBUG PANEL ───────────────────────────────────────────────────────────────
+// Visible on desktop only (screen width ≥ 768 px). Remove before shipping.
+function DebugPanel() {
+  const [location] = useLocation();
+  const { data: user, isLoading } = useGetMe();
+  const [tick, setTick] = useState(0);
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+
+  // Repoll every 600 ms so flag changes from other components show up
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 600);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!isDesktop) return null;
+
+  const row = (label: string, value: string, ok?: boolean) => (
+    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
+      <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "monospace" }}>{label}</span>
+      <span style={{
+        fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+        color: ok === undefined ? "#e5e7eb" : ok ? "#00ff88" : "#f87171",
+      }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 12, right: 12, zIndex: 99999,
+      background: "rgba(0,0,0,0.88)", border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: 10, padding: "10px 14px", minWidth: 230,
+      backdropFilter: "blur(12px)", boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+      display: "flex", flexDirection: "column", gap: 5,
+      pointerEvents: "none",
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>
+        DEBUG PANEL
+      </div>
+      {row("route",          location || "/")}
+      {row("auth",          user ? `✓ ${user.email ?? "logged in"}` : isLoading ? "loading…" : "anonymous", user ? true : isLoading ? undefined : false)}
+      {row("isLoading",     String(isLoading),  !isLoading)}
+      {row("router mounted", String(debugFlags.routerMounted), debugFlags.routerMounted)}
+      {row("home mounted",   String(debugFlags.homeMounted),   debugFlags.homeMounted)}
+      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", marginTop: 3, fontFamily: "monospace" }}>
+        tick {tick}
+      </div>
+    </div>
+  );
+}
+
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; errorMsg: string }
@@ -138,6 +192,7 @@ function HomeRoute() {
   // Boot log: on mount only
   useEffect(() => {
     console.log("HOME MOUNTED");
+    debugFlags.homeMounted = true;
   }, []);
 
   // NO `if (isLoading && !user) return <LoadingSpinner />` — that was blocking
@@ -255,7 +310,14 @@ function Router() {
   // Boot log — fires on every navigation
   console.log("ROUTER READY", { location });
 
+  // Set router-mounted flag on first render
+  useEffect(() => {
+    debugFlags.routerMounted = true;
+  }, []);
+
   return (
+    <>
+    <DebugPanel />
     <Switch>
       {/* ── DIAGNOSTIC / health test pages — completely public ── */}
       <Route path="/health-check" component={HealthCheck} />
@@ -308,6 +370,7 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 
