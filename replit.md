@@ -109,6 +109,14 @@ pnpm run cap:open
 - `rides.tsx` page renamed to "Resumos diários" — shows daily summary history list
 - `metricsService.ts` on backend: `aggregateMetrics()` computes all-time averages; `calculateDailyMetrics()` for single day
 
+### Desktop Responsive Layout
+- **Breakpoints**: `useIsTablet()` (768px) and `useIsDesktop()` (1024px) from `src/lib/useBreakpoint.ts`
+- **Layout.tsx**: Desktop (≥1024px) shows nav links in header center; hides bottom tab bar with `{!isDesktop && <nav>}`. Mobile shows bottom tab bar only.
+- **Header structure**: Wordmark (left, flexShrink:0) | DesktopNav center (flex:1, justifyContent:center) | Actions (right, flexShrink:0). maxWidth:1180, padding:12px 40px.
+- **Main content**: `padding: isDesktop ? "28px 40px 40px" : "20px 16px 24px"`, maxWidth: isDesktop ? 1100 : 680, centered.
+- **pages**: Home.tsx — 26px greeting heading + "Import" CTA button on desktop. rides.tsx — 2-col card grid on desktop. reports.tsx — `md:grid-cols-2` for charts. goals.tsx — `md:grid-cols-3` form fields.
+- **Bottom nav**: Only visible on mobile (`{!isDesktop && <nav>}`), 64px tall, spring animation for active tab.
+
 ### Known Patterns & Gotchas
 - `goals.tsx` useEffect: always use `const { reset } = form` (destructured), never put the whole `form` object in deps (causes infinite re-render)
 - `Import.tsx`: always initializes `step = "locked"`, transitions to `"entry"` via `useEffect([isPro, step])` when user data loads

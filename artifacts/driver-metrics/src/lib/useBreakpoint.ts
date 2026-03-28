@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
 
-const DESKTOP_BREAKPOINT = 1024;
+export const BREAKPOINTS = {
+  tablet:  768,
+  desktop: 1024,
+} as const;
 
-export function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= DESKTOP_BREAKPOINT
+function useMediaQuery(minWidth: number): boolean {
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= minWidth
   );
-
   useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    setIsDesktop(mq.matches);
+    const mq = window.matchMedia(`(min-width: ${minWidth}px)`);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    setMatches(mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  return isDesktop;
+  }, [minWidth]);
+  return matches;
 }
+
+export function useIsTablet():  boolean { return useMediaQuery(BREAKPOINTS.tablet);  }
+export function useIsDesktop(): boolean { return useMediaQuery(BREAKPOINTS.desktop); }

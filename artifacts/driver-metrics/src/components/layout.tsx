@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Globe, Settings } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Settings } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,15 @@ type TrialUser = {
   plan?: string;
   name?: string;
 };
+
+// ─── NAV ITEMS ────────────────────────────────────────────────────────────────
+const NAV_DEFS = [
+  { path: "/",        Icon: Home,     key: "nav.home" },
+  { path: "/rides",   Icon: Car,      key: "nav.rides" },
+  { path: "/costs",   Icon: Wallet,   key: "nav.costs" },
+  { path: "/goals",   Icon: Target,   key: "nav.goals" },
+  { path: "/reports", Icon: BarChart2, key: "nav.reports", isPro: true },
+];
 
 // ─── TRIAL BANNER ─────────────────────────────────────────────────────────────
 function TrialBanner({ days, onUpgrade, onDismiss }: { days: number; onUpgrade: () => void; onDismiss: () => void }) {
@@ -156,14 +165,57 @@ function LangPicker() {
   );
 }
 
-// ─── NAV ITEMS ────────────────────────────────────────────────────────────────
-const NAV_DEFS = [
-  { path: "/",        Icon: Home,     key: "nav.home" },
-  { path: "/rides",   Icon: Car,      key: "nav.rides" },
-  { path: "/costs",   Icon: Wallet,   key: "nav.costs" },
-  { path: "/goals",   Icon: Target,   key: "nav.goals" },
-  { path: "/reports", Icon: BarChart2, key: "nav.reports", isPro: true },
-];
+// ─── DESKTOP NAV LINKS ────────────────────────────────────────────────────────
+function DesktopNav({ location, plan, t }: { location: string; plan?: string; t: (k: string) => string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      {NAV_DEFS.map((nav) => {
+        const isActive = location === nav.path;
+        const { Icon } = nav;
+        return (
+          <Link key={nav.path} href={nav.path} style={{ textDecoration: "none" }}>
+            <motion.div
+              whileHover={{ background: isActive ? undefined : "rgba(255,255,255,0.04)" }}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "8px 14px", borderRadius: 12, cursor: "pointer",
+                background: isActive ? "rgba(0,255,136,0.08)" : "transparent",
+                border: `1px solid ${isActive ? "rgba(0,255,136,0.15)" : "transparent"}`,
+                transition: "background 0.15s ease, border-color 0.15s ease",
+                position: "relative",
+              }}
+            >
+              <Icon
+                size={15}
+                color={isActive ? "#00ff88" : "rgba(255,255,255,0.45)"}
+                strokeWidth={isActive ? 2.5 : 2}
+                style={{ filter: isActive ? "drop-shadow(0 0 4px rgba(0,255,136,0.5))" : "none", flexShrink: 0 }}
+              />
+              <span style={{
+                fontSize: 13, fontWeight: isActive ? 700 : 500,
+                color: isActive ? "#00ff88" : "rgba(255,255,255,0.5)",
+                whiteSpace: "nowrap",
+              }}>
+                {t(nav.key)}
+              </span>
+              {nav.isPro && plan !== "pro" && (
+                <span style={{
+                  fontSize: 8, fontWeight: 800, letterSpacing: "0.08em",
+                  color: "#eab308",
+                  background: "rgba(234,179,8,0.1)",
+                  border: "1px solid rgba(234,179,8,0.2)",
+                  padding: "1px 5px", borderRadius: 4,
+                }}>
+                  PRO
+                </span>
+              )}
+            </motion.div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LAYOUT
@@ -203,15 +255,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header style={{
         flexShrink: 0,
         zIndex: 40,
-        background: "rgba(8,8,8,0.95)",
+        background: "rgba(8,8,8,0.97)",
         backdropFilter: "blur(24px) saturate(1.8)",
         WebkitBackdropFilter: "blur(24px) saturate(1.8)",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         boxShadow: "0 1px 0 rgba(255,255,255,0.03), 0 4px 32px rgba(0,0,0,0.5)",
       }}>
-        <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Wordmark */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          padding: isDesktop ? "12px 40px" : "14px 20px",
+          display: "flex", alignItems: "center",
+          maxWidth: isDesktop ? 1180 : undefined,
+          margin: "0 auto", width: "100%",
+          boxSizing: "border-box",
+        }}>
+
+          {/* ── Wordmark ──────────────────────────────────────────────────── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 10,
               background: "linear-gradient(135deg, #00ff88, #00cc6a)",
@@ -240,8 +299,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* ── Desktop nav (center) ─────────────────────────────────────── */}
+          {isDesktop ? (
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", paddingLeft: 24, paddingRight: 24 }}>
+              <DesktopNav location={location} plan={u?.plan} t={t} />
+            </div>
+          ) : (
+            <div style={{ flex: 1 }} />
+          )}
+
+          {/* ── Actions ───────────────────────────────────────────────────── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {u?.plan !== "pro" && !trialExpired && (
               <Link href="/upgrade">
                 <motion.div
@@ -260,10 +328,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
 
-            {/* Language picker */}
             <LangPicker />
 
-            {/* Settings */}
             <Link href="/settings">
               <motion.div
                 whileTap={{ scale: 0.92 }}
@@ -326,121 +392,119 @@ export function Layout({ children }: { children: React.ReactNode }) {
         overflowY: "auto",
         overflowX: "hidden",
         width: "100%",
-        padding: isDesktop ? "28px 40px 32px" : "20px 16px 24px",
+        padding: isDesktop ? "28px 40px 40px" : "20px 16px 24px",
+        boxSizing: "border-box",
       }}>
         <div style={{ maxWidth: isDesktop ? 1100 : 680, margin: "0 auto", width: "100%" }}>
           {children}
         </div>
       </main>
 
-      {/* ── Bottom tab bar ──────────────────────────────────────────────────── */}
-      <nav style={{
-        flexShrink: 0,
-        zIndex: 50,
-        background: "rgba(8,8,8,0.97)",
-        backdropFilter: "blur(28px) saturate(1.8)",
-        WebkitBackdropFilter: "blur(28px) saturate(1.8)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        boxShadow: "0 -1px 0 rgba(255,255,255,0.03), 0 -8px 32px rgba(0,0,0,0.6)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-      }}>
-        <div style={{
-          height: 64,
-          display: "flex", alignItems: "stretch",
-          padding: "0 8px",
-          position: "relative",
+      {/* ── Bottom tab bar — mobile only ────────────────────────────────────── */}
+      {!isDesktop && (
+        <nav style={{
+          flexShrink: 0,
+          zIndex: 50,
+          background: "rgba(8,8,8,0.97)",
+          backdropFilter: "blur(28px) saturate(1.8)",
+          WebkitBackdropFilter: "blur(28px) saturate(1.8)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.03), 0 -8px 32px rgba(0,0,0,0.6)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}>
-          {NAV_DEFS.map((nav) => {
-            const isActive = location === nav.path;
-            const { Icon } = nav;
+          <div style={{
+            height: 64,
+            display: "flex", alignItems: "stretch",
+            padding: "0 8px",
+            position: "relative",
+          }}>
+            {NAV_DEFS.map((nav) => {
+              const isActive = location === nav.path;
+              const { Icon } = nav;
 
-            return (
-              <Link key={nav.path} href={nav.path} style={{ flex: 1, textDecoration: "none" }}>
-                <motion.div
-                  whileTap={{ scale: 0.88 }}
-                  style={{
-                    height: "100%",
-                    display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center",
-                    gap: 4, position: "relative",
-                    cursor: "pointer",
-                  }}
-                >
-                  {/* Active background pill */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="tab-active-bg"
-                      style={{
-                        position: "absolute",
-                        top: 10, left: "50%",
-                        x: "-50%",
-                        width: 48, height: 32,
-                        borderRadius: 12,
-                        background: "rgba(0,255,136,0.1)",
-                        border: "1px solid rgba(0,255,136,0.15)",
-                      }}
-                      transition={{ type: "spring", damping: 22, stiffness: 300 }}
-                    />
-                  )}
-
-                  {/* Icon */}
-                  <div style={{ position: "relative", zIndex: 1 }}>
-                    <motion.div
-                      animate={{ color: isActive ? "#00ff88" : "rgba(255,255,255,0.35)" }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Icon
-                        size={20}
-                        strokeWidth={isActive ? 2.5 : 2}
-                        color={isActive ? "#00ff88" : "rgba(255,255,255,0.35)"}
-                        style={{
-                          filter: isActive ? "drop-shadow(0 0 6px rgba(0,255,136,0.5))" : "none",
-                          transition: "filter 0.2s ease, color 0.2s ease",
-                        }}
-                      />
-                    </motion.div>
-
-                    {/* PRO dot */}
-                    {nav.isPro && u?.plan !== "pro" && (
-                      <div style={{
-                        position: "absolute", top: -3, right: -5,
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: "#eab308",
-                        boxShadow: "0 0 6px rgba(234,179,8,0.6)",
-                        border: "1.5px solid #080808",
-                      }} />
-                    )}
-                  </div>
-
-                  {/* Label — translated */}
-                  <motion.span
-                    animate={{ opacity: isActive ? 1 : 0.35, color: isActive ? "#00ff88" : "#fff" }}
-                    transition={{ duration: 0.2 }}
-                    style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", lineHeight: 1, position: "relative", zIndex: 1 }}
+              return (
+                <Link key={nav.path} href={nav.path} style={{ flex: 1, textDecoration: "none" }}>
+                  <motion.div
+                    whileTap={{ scale: 0.88 }}
+                    style={{
+                      height: "100%",
+                      display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center",
+                      gap: 4, position: "relative",
+                      cursor: "pointer",
+                    }}
                   >
-                    {t(nav.key)}
-                  </motion.span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="tab-active-bg"
+                        style={{
+                          position: "absolute",
+                          top: 10, left: "50%",
+                          x: "-50%",
+                          width: 48, height: 32,
+                          borderRadius: 12,
+                          background: "rgba(0,255,136,0.1)",
+                          border: "1px solid rgba(0,255,136,0.15)",
+                        }}
+                        transition={{ type: "spring", damping: 22, stiffness: 300 }}
+                      />
+                    )}
 
-                  {/* Active underline dot */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="tab-dot"
-                      style={{
-                        width: 4, height: 4, borderRadius: "50%",
-                        background: "#00ff88",
-                        boxShadow: "0 0 8px rgba(0,255,136,0.7)",
-                        position: "absolute",
-                        bottom: 6,
-                      }}
-                      transition={{ type: "spring", damping: 22, stiffness: 300 }}
-                    />
-                  )}
-                </motion.div>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+                    <div style={{ position: "relative", zIndex: 1 }}>
+                      <motion.div
+                        animate={{ color: isActive ? "#00ff88" : "rgba(255,255,255,0.35)" }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Icon
+                          size={20}
+                          strokeWidth={isActive ? 2.5 : 2}
+                          color={isActive ? "#00ff88" : "rgba(255,255,255,0.35)"}
+                          style={{
+                            filter: isActive ? "drop-shadow(0 0 6px rgba(0,255,136,0.5))" : "none",
+                            transition: "filter 0.2s ease, color 0.2s ease",
+                          }}
+                        />
+                      </motion.div>
+
+                      {nav.isPro && u?.plan !== "pro" && (
+                        <div style={{
+                          position: "absolute", top: -3, right: -5,
+                          width: 6, height: 6, borderRadius: "50%",
+                          background: "#eab308",
+                          boxShadow: "0 0 6px rgba(234,179,8,0.6)",
+                          border: "1.5px solid #080808",
+                        }} />
+                      )}
+                    </div>
+
+                    <motion.span
+                      animate={{ opacity: isActive ? 1 : 0.35, color: isActive ? "#00ff88" : "#fff" }}
+                      transition={{ duration: 0.2 }}
+                      style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", lineHeight: 1, position: "relative", zIndex: 1 }}
+                    >
+                      {t(nav.key)}
+                    </motion.span>
+
+                    {isActive && (
+                      <motion.div
+                        layoutId="tab-dot"
+                        style={{
+                          width: 4, height: 4, borderRadius: "50%",
+                          background: "#00ff88",
+                          boxShadow: "0 0 8px rgba(0,255,136,0.7)",
+                          position: "absolute",
+                          bottom: 6,
+                        }}
+                        transition={{ type: "spring", damping: 22, stiffness: 300 }}
+                      />
+                    )}
+                  </motion.div>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
     </div>
   );

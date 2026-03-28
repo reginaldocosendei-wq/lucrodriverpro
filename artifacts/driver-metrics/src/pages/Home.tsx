@@ -168,11 +168,29 @@ export default function Home() {
       {/* ── Greeting ──────────────────────────────────────────────────────── */}
       <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
+          <p style={{ fontSize: isDesktop ? 13 : 12, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
             {greeting}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
           </p>
-          <p style={{ fontSize: 18, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.015em" }}>{t("home.dashboard")}</p>
+          <p style={{ fontSize: isDesktop ? 26 : 18, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.02em" }}>
+            {t("home.dashboard")}
+          </p>
         </div>
+        {isDesktop && (
+          <Link href="/import">
+            <motion.div
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                background: "#00ff88", borderRadius: 14,
+                padding: "10px 20px",
+                boxShadow: "0 4px 20px rgba(0,255,136,0.3)",
+              }}
+            >
+              <Camera size={16} color="#000" strokeWidth={2.5} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#000" }}>{t("home.importDay")}</span>
+            </motion.div>
+          </Link>
+        )}
       </motion.div>
 
 
