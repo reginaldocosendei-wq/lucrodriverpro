@@ -1,0 +1,79 @@
+Fix the desktop dashboard layout in my app "Lucro Driver".
+
+PROBLEM:
+The recent desktop responsive change made the layout worse.
+Cards became too narrow, numbers are breaking into multiple lines, and the dashboard looks cramped.
+
+GOAL:
+Create a clean, wide, professional desktop dashboard layout while preserving the current mobile layout exactly as it is.
+
+IMPORTANT:
+- Do NOT change mobile
+- Fix desktop only
+- Do NOT compress cards into narrow columns
+- Prioritize readability and spacing
+
+REQUIREMENTS:
+
+1. MOBILE PRESERVATION
+Keep the mobile dashboard exactly as it is now.
+
+2. DESKTOP BREAKPOINT
+Only apply new layout rules on desktop screens (for example above 1024px).
+
+3. DESKTOP CONTAINER
+Use a wider desktop container such as:
+- max-width around 1200px to 1400px
+- centered layout
+- comfortable horizontal padding
+
+4. DASHBOARD STRUCTURE ON DESKTOP
+Organize the dashboard into proper desktop sections:
+
+TOP ROW:
+- Main profit card on the left (wide)
+- Indicators section on the right (grid of small cards)
+
+SECOND ROW:
+- Daily analysis card on the left
+- Daily goal card on the right
+
+OPTIONAL THIRD ROW:
+- Import button / secondary actions below, full width if needed
+
+5. MAIN PROFIT CARD
+The main profit card must be significantly wider on desktop.
+Large currency values must never wrap into multiple lines.
+Example values like:
+- R$ 475,72
+- R$ 1.250,90
+must remain clean and readable.
+
+6. INDICATOR CARDS
+The indicators must not be squeezed into tiny vertical cards.
+Use a proper horizontal or 3-column grid with enough width.
+
+7. TEXT SAFETY
+Prevent line breaks in important numeric values.
+Use proper font scaling and spacing.
+Do not allow currency values to split across lines.
+
+8. CARD SPACING
+Use consistent gap spacing between desktop cards.
+No overlapping.
+No cramped sections.
+
+9. ONLY FIX DESKTOP DASHBOARD
+Do not touch:
+- mobile layout
+- login flow
+- import flow
+- auth logic
+
+10. FINAL RESULT
+Desktop dashboard should feel like a real web app:
+- wide
+- readable
+- balanced
+- premium
+- clean

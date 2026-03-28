@@ -214,7 +214,7 @@ export default function Home() {
               : "radial-gradient(ellipse,rgba(239,68,68,0.08) 0%,transparent 70%)",
           }} />
 
-          <div style={{ position: "relative", zIndex: 2, padding: "24px 20px" }}>
+          <div style={{ position: "relative", zIndex: 2, padding: isDesktop ? "32px 32px" : "24px 20px" }}>
             {/* Label */}
             <p style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
@@ -232,7 +232,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontSize: "clamp(32px, 7vw, 44px)",
+                  fontSize: "clamp(32px, 5vw, 52px)",
                   fontWeight: 900,
                   lineHeight: 1.0,
                   color: pColor,
@@ -240,8 +240,7 @@ export default function Home() {
                   fontFeatureSettings: '"tnum" 1',
                   letterSpacing: "-0.02em",
                   marginBottom: 10,
-                  wordBreak: "break-word",
-                  overflowWrap: "break-word",
+                  whiteSpace: "nowrap",
                 }}
               >
                 <Counter value={profit} />
@@ -324,15 +323,20 @@ export default function Home() {
           {t("home.indicators")}
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        {/* Mobile: 3-column grid · Desktop: vertical stack with horizontal tiles */}
+        <div style={isDesktop
+          ? { display: "flex", flexDirection: "column", gap: 10 }
+          : { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }
+        }>
           {/* Corridas */}
           <MetricTile
             icon={<Car size={15} color="#60a5fa" />}
             label={t("home.rides")}
             accent="#60a5fa"
             loading={isLoading}
+            horizontal={isDesktop}
             value={isLoading ? null : (
-              <span style={{ fontSize: 34, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em" }}>
+              <span style={{ fontSize: isDesktop ? 28 : 34, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                 {trips}
               </span>
             )}
@@ -344,13 +348,12 @@ export default function Home() {
             label={t("home.perHour")}
             accent="#c084fc"
             loading={isLoading}
+            horizontal={isDesktop}
             value={isLoading ? null : rph != null ? (
-              <>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {rph.toFixed(0)}
-                </span>
-              </>
+              <span style={{ fontSize: isDesktop ? 22 : 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: isDesktop ? 13 : 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
+                {rph.toFixed(0)}
+              </span>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
                 {t("home.enterHours")}
@@ -364,13 +367,12 @@ export default function Home() {
             label={t("home.perKm")}
             accent="#fb923c"
             loading={isLoading}
+            horizontal={isDesktop}
             value={isLoading ? null : rpkm != null ? (
-              <>
+              <span style={{ fontSize: isDesktop ? 22 : 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {rpkm.toFixed(2)}
-                </span>
-              </>
+                {rpkm.toFixed(2)}
+              </span>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
                 {t("home.enterKm")}
@@ -439,10 +441,10 @@ export default function Home() {
                     {t("home.earnedToday")}
                   </p>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em", wordBreak: "break-word", overflowWrap: "break-word" }}>
+                    <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                       {formatBRL(earnings)}
                     </span>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, whiteSpace: "nowrap" }}>
                       {t("home.of")} {formatBRL(goalDaily)}
                     </span>
                   </div>
@@ -598,14 +600,64 @@ export default function Home() {
 
 // ─── METRIC TILE ──────────────────────────────────────────────────────────────
 function MetricTile({
-  icon, label, accent, value, loading,
+  icon, label, accent, value, loading, horizontal = false,
 }: {
   icon: React.ReactNode;
   label: string;
   accent: string;
   value: React.ReactNode;
   loading?: boolean;
+  horizontal?: boolean;
 }) {
+  if (horizontal) {
+    // ── Desktop: icon+label left · value right ──────────────────────────────
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          background: "#0e0e0e",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderLeft: `3px solid ${accent}`,
+          borderRadius: 16,
+          padding: "14px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          position: "relative", overflow: "hidden",
+        }}
+      >
+        {/* Left: icon + label */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+            background: `${accent}14`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {icon}
+          </div>
+          <span style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+            textTransform: "uppercase" as const, color: "rgba(255,255,255,0.35)",
+          }}>
+            {label}
+          </span>
+        </div>
+
+        {/* Right: value */}
+        <div style={{ flexShrink: 0 }}>
+          {loading
+            ? <Skeleton h={26} w={72} r={8} />
+            : value
+          }
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── Mobile: vertical card ──────────────────────────────────────────────────
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
