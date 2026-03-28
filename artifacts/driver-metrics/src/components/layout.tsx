@@ -395,7 +395,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         padding: isDesktop ? "28px 40px 40px" : "20px 16px 24px",
         boxSizing: "border-box",
       }}>
-        <div style={{ maxWidth: isDesktop ? 1280 : 680, margin: "0 auto", width: "100%" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%" }}>
           {children}
         </div>
       </main>
