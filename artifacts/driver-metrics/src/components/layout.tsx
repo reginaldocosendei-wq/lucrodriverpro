@@ -326,7 +326,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         width: "100%",
         padding: "20px 16px 24px",
       }}>
-        {children}
+        <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
+          {children}
+        </div>
       </main>
 
       {/* ── Bottom tab bar ──────────────────────────────────────────────────── */}

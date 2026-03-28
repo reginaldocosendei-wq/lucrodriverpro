@@ -68,7 +68,7 @@ function ScanPreview({ src }: { src: string }) {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ImportPage() {
   const [, navigate] = useLocation();
-  const { data: me } = useGetMe();
+  const { data: me, isPending: authPending } = useGetMe();
   const queryClient = useQueryClient();
   const isPro = me?.plan === "pro";
 
@@ -76,8 +76,10 @@ export default function ImportPage() {
     DEV_DISABLE_AUTH_FETCH ? "upload" : "locked"
   );
   useEffect(() => {
-    if (!DEV_DISABLE_AUTH_FETCH && me && step === "locked") setStep("upload");
-  }, [me, step]);
+    if (DEV_DISABLE_AUTH_FETCH) return;
+    if (authPending) return;
+    if (me && step === "locked") setStep("upload");
+  }, [me, authPending, step]);
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -202,14 +204,25 @@ export default function ImportPage() {
           <motion.div key={step} {...slide}>
 
             {/* ══════════════════════════════════════════════════════════════
-                LOCKED
+                LOCKED / LOADING AUTH
             ══════════════════════════════════════════════════════════════ */}
             {step === "locked" && (
-              <LockedView
-                isAuthed={!!me}
-                onUpgrade={() => navigate("/upgrade")}
-                onSignUp={() => navigate("/login")}
-              />
+              authPending ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320, gap: 16 }}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+                    style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88" }}
+                  />
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Carregando...</p>
+                </div>
+              ) : (
+                <LockedView
+                  isAuthed={!!me}
+                  onUpgrade={() => navigate("/upgrade")}
+                  onSignUp={() => navigate("/login")}
+                />
+              )
             )}
 
             {/* ══════════════════════════════════════════════════════════════

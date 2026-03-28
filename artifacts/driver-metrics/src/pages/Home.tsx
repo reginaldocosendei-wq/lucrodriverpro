@@ -533,7 +533,7 @@ export default function Home() {
       <motion.div
         onClick={() => navigate("/import")}
         style={{
-          position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 480px) / 2 + 20px))",
+          position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 680px) / 2 + 20px))",
           zIndex: 50, cursor: "pointer",
         }}
         initial={{ scale: 0, opacity: 0 }}
