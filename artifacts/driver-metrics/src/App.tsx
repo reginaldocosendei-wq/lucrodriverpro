@@ -218,22 +218,32 @@ function ImportRoute() {
 // Has a 5-second timeout failsafe — if auth never resolves, forces redirect.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useBootAuth();
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
+  // Failsafe: if /api/auth/me never resolves, stop waiting after 5 s.
   useEffect(() => {
     const t = setTimeout(() => setTimedOut(true), 5000);
     return () => clearTimeout(t);
   }, []);
 
+  // Only redirect once auth initialization is complete (isLoading === false).
+  // Never redirect while the /api/auth/me fetch is still in flight — that
+  // would kick unauthenticated-looking users to /login on slow connections
+  // even when their session cookie is perfectly valid.
   useEffect(() => {
-    const ready = !isLoading || timedOut;
-    if (ready && !user) navigate("/login");
-  }, [user, isLoading, timedOut, navigate, location]);
+    const initialized = !isLoading || timedOut;
+    if (initialized && !user) navigate("/login");
+  }, [user, isLoading, timedOut, navigate]);
+  //            ↑ `location` intentionally excluded — it is not used in the
+  //              effect body and including it would cause a spurious re-run
+  //              (and potential redirect) on every internal navigation.
 
-  // Show spinner only during normal load window (max 5s)
-  if ((isLoading && !timedOut) && !user) return <LoadingSpinner />;
-  // After timeout or if truly no user, return null while redirect fires
+  // While auth is still loading, show a neutral spinner rather than
+  // redirecting or flashing private content.
+  if (isLoading && !timedOut && !user) return <LoadingSpinner />;
+
+  // Auth settled with no user (or timed out): return null while navigate fires.
   if (!user) return null;
 
   return (
