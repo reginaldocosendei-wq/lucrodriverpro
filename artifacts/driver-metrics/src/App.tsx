@@ -155,8 +155,7 @@ function LoadingSpinner() {
 // ─── DEBUG PANEL (desktop only, temporary) ────────────────────────────────────
 function DebugPanel() {
   const [location] = useLocation();
-  const { data: user, isLoading } = useBootAuth();
-  const lsTest = typeof window !== "undefined" ? localStorage.getItem("login_test") : null;
+  const { data: user, isLoading, isPending } = useBootAuth();
   if (typeof window === "undefined" || window.innerWidth < 768) return null;
   const row = (label: string, value: string, ok?: boolean) => (
     <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
@@ -172,11 +171,12 @@ function DebugPanel() {
       backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", gap: 5,
     }}>
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 2 }}>DEBUG</div>
-      {row("route",          location || "/")}
-      {row("authLoading",    String(isLoading),  !isLoading)}
+      {row("route",           location || "/")}
+      {row("authLoading",     String(isPending || isLoading), !(isPending || isLoading))}
       {row("isAuthenticated", user ? "true" : "false", !!user)}
-      {row("currentUser",    user ? (user as any).email ?? "yes" : "none", !!user)}
-      {row("login_test",     lsTest ?? "(not set)", lsTest === "ok")}
+      {row("email",           user ? (user as any).email ?? "—" : "none", !!user)}
+      {row("plan",            user ? (user as any).plan ?? "—" : "none", !!(user && (user as any).plan))}
+      {row("cookie",          "SameSite=None; Secure")}
     </div>
   );
 }
