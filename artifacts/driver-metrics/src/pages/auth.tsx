@@ -281,10 +281,7 @@ export default function AuthScreen() {
             >
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  console.log("[AUTH] CTA button clicked — opening register form. No route navigation — form shows in-place.");
-                  setFormMode("register"); setShowForm(true);
-                }}
+                onClick={() => { setFormMode("register"); setShowForm(true); }}
                 style={{
                   width: "100%", height: 58, borderRadius: 18, border: "none",
                   background: "#00ff88", color: "#000",
@@ -301,10 +298,7 @@ export default function AuthScreen() {
 
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  console.log("[AUTH] 'Já tenho conta' clicked — opening login form. No route navigation — form shows in-place.");
-                  setFormMode("login"); setShowForm(true);
-                }}
+                onClick={() => { setFormMode("login"); setShowForm(true); }}
                 style={{
                   marginTop: 12, width: "100%", height: 50, borderRadius: 14,
                   background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",

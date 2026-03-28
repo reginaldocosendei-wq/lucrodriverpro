@@ -257,7 +257,6 @@ export default function Home() {
             {!isLoading && earnings <= 0 && (
               <Link href="/import">
                 <div
-                  onClick={() => console.log("[HOME] Camera CTA clicked → navigating to /import. Current path:", window.location.pathname)}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
                     background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.15)",
@@ -498,7 +497,6 @@ export default function Home() {
         <Link href="/import">
           <motion.div
             whileTap={{ scale: 0.97 }}
-            onClick={() => console.log("[HOME] Import card clicked → navigating to /import. Current path:", window.location.pathname)}
             style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}
           >
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(0,255,136,0.09),rgba(0,204,106,0.04))", pointerEvents: "none" }} />
@@ -519,11 +517,7 @@ export default function Home() {
 
       {/* ── FAB ─────────────────────────────────────────────────────────────── */}
       <motion.div
-        onClick={() => {
-          console.log("[HOME] FAB clicked → calling navigate('/import'). Current path:", window.location.pathname);
-          navigate("/import");
-          console.log("[HOME] FAB → navigate() called. Path after call:", window.location.pathname);
-        }}
+        onClick={() => navigate("/import")}
         style={{
           position: "fixed", bottom: 92, right: "max(20px, calc((100vw - 480px) / 2 + 20px))",
           zIndex: 50, cursor: "pointer",

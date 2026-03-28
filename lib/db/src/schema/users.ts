@@ -12,6 +12,7 @@ export const usersTable = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   trialStartDate: timestamp("trial_start_date"),
   saveModeReplace: boolean("save_mode_replace").notNull().default(false),
+  activatedAt: timestamp("activated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

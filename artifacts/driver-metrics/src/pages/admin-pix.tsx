@@ -24,6 +24,8 @@ interface PixPayment {
   rejectedAt:  string | null;
   proofUrl:    string | null;
   notes:       string | null;
+  userPlan:    string | null;
+  activatedAt: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -72,7 +74,8 @@ export default function AdminPixPage() {
   const [loading, setLoading]         = useState(true);
   const [access, setAccess]           = useState<"ok" | "denied" | "loading">("loading");
   const [toasts, setToasts]           = useState<Toast[]>([]);
-  const [actionStates, setActionStates] = useState<Record<number, ActionState>>({});
+  const [confirmStates,  setConfirmStates]  = useState<Record<number, ActionState>>({});
+  const [activateStates, setActivateStates] = useState<Record<number, ActionState>>({});
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const addToast = (msg: string, type: "ok" | "err") => {
@@ -81,8 +84,8 @@ export default function AdminPixPage() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-  const setAction = (id: number, state: ActionState) =>
-    setActionStates((prev) => ({ ...prev, [id]: state }));
+  const setConfirm  = (id: number, s: ActionState) => setConfirmStates((p)  => ({ ...p, [id]: s }));
+  const setActivate = (id: number, s: ActionState) => setActivateStates((p) => ({ ...p, [id]: s }));
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -105,35 +108,54 @@ export default function AdminPixPage() {
 
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
 
+  // ── Confirm payment only (does NOT activate PRO) ────────────────────────────
   const confirm = async (p: PixPayment) => {
-    setAction(p.id, "loading");
+    setConfirm(p.id, "loading");
     try {
-      const res = await fetch(`${BASE}/api/admin/pix/${p.id}/confirm`, { method: "POST", credentials: "include" });
+      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/confirm`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setAction(p.id, "ok");
-      addToast("Pagamento confirmado. Acesso PRO ativado.", "ok");
-      setTimeout(() => { setAction(p.id, "idle"); fetchPayments(); }, 1200);
+      setConfirm(p.id, "ok");
+      addToast("Pagamento confirmado.", "ok");
+      setTimeout(() => { setConfirm(p.id, "idle"); fetchPayments(); }, 1200);
     } catch (e: any) {
-      setAction(p.id, "err");
-      addToast(e.message ?? "Não foi possível processar este pagamento.", "err");
-      setTimeout(() => setAction(p.id, "idle"), 2000);
+      setConfirm(p.id, "err");
+      addToast(e.message ?? "Não foi possível confirmar este pagamento.", "err");
+      setTimeout(() => setConfirm(p.id, "idle"), 2000);
     }
   };
 
-  const reject = async (p: PixPayment) => {
-    setAction(p.id, "loading");
+  // ── Activate PRO (also auto-confirms payment if still pending) ───────────────
+  const activatePro = async (p: PixPayment) => {
+    setActivate(p.id, "loading");
     try {
-      const res = await fetch(`${BASE}/api/admin/pix/${p.id}/reject`, { method: "POST", credentials: "include" });
+      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/activate-pro`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setAction(p.id, "ok");
-      addToast("Pagamento recusado.", "ok");
-      setTimeout(() => { setAction(p.id, "idle"); fetchPayments(); }, 1200);
+      setActivate(p.id, "ok");
+      addToast("Acesso PRO ativado com sucesso.", "ok");
+      setTimeout(() => { setActivate(p.id, "idle"); fetchPayments(); }, 1400);
     } catch (e: any) {
-      setAction(p.id, "err");
+      setActivate(p.id, "err");
+      addToast(e.message ?? "Não foi possível ativar o acesso PRO.", "err");
+      setTimeout(() => setActivate(p.id, "idle"), 2000);
+    }
+  };
+
+  // ── Reject ───────────────────────────────────────────────────────────────────
+  const reject = async (p: PixPayment) => {
+    setConfirm(p.id, "loading");
+    try {
+      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/reject`, { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setConfirm(p.id, "ok");
+      addToast("Pagamento recusado.", "ok");
+      setTimeout(() => { setConfirm(p.id, "idle"); fetchPayments(); }, 1200);
+    } catch (e: any) {
+      setConfirm(p.id, "err");
       addToast(e.message ?? "Erro ao recusar pagamento.", "err");
-      setTimeout(() => setAction(p.id, "idle"), 2000);
+      setTimeout(() => setConfirm(p.id, "idle"), 2000);
     }
   };
 
@@ -352,9 +374,11 @@ export default function AdminPixPage() {
         {/* ── Payment cards ───────────────────────────────────────────────── */}
         <AnimatePresence>
           {!loading && payments.map((p, i) => {
-            const cfg    = STATUS_CONFIG[p.status as Status] ?? STATUS_CONFIG.pending;
-            const Icon   = cfg.icon;
-            const aState = actionStates[p.id] ?? "idle";
+            const cfg     = STATUS_CONFIG[p.status as Status] ?? STATUS_CONFIG.pending;
+            const Icon    = cfg.icon;
+            const cState  = confirmStates[p.id]  ?? "idle";
+            const aState  = activateStates[p.id] ?? "idle";
+            const isPro   = p.userPlan === "pro";
 
             return (
               <motion.div
@@ -440,78 +464,151 @@ export default function AdminPixPage() {
                   )}
                 </div>
 
-                {/* Action buttons */}
+                {/* ── Action buttons ─────────────────────────────────── */}
+
+                {/* PENDING: Confirmar pagamento + Ativar PRO + Recusar */}
                 {p.status === "pending" && (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {/* Confirm */}
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => confirm(p)}
-                      disabled={aState === "loading"}
-                      style={{
-                        flex: 1, height: 42, borderRadius: 12, border: "none",
-                        background: aState === "ok" ? "rgba(0,255,136,0.2)" : "rgba(0,255,136,0.12)",
-                        color: "#00ff88", fontWeight: 700, fontSize: 13,
-                        cursor: aState === "loading" ? "not-allowed" : "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                        fontFamily: "inherit", transition: "all 0.2s ease",
-                      }}
-                    >
-                      {aState === "loading" ? (
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid rgba(0,255,136,0.2)", borderTopColor: "#00ff88" }} />
-                      ) : aState === "ok" ? (
-                        <><Check size={14} strokeWidth={2.5} /> Confirmado</>
-                      ) : (
-                        <><Check size={14} strokeWidth={2.5} /> Confirmar &amp; Ativar PRO</>
-                      )}
-                    </motion.button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {/* Row 1: Confirmar + Ativar PRO */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {/* Confirmar pagamento */}
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => confirm(p)}
+                        disabled={cState === "loading" || aState === "loading"}
+                        style={{
+                          flex: 1, height: 42, borderRadius: 12, border: "none",
+                          background: cState === "ok" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+                          color: cState === "ok" ? "#f9fafb" : "rgba(255,255,255,0.55)",
+                          fontWeight: 700, fontSize: 12,
+                          cursor: (cState === "loading" || aState === "loading") ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontFamily: "inherit", transition: "all 0.2s ease",
+                        }}
+                      >
+                        {cState === "loading" ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
+                        ) : cState === "ok" ? (
+                          <><Check size={13} strokeWidth={2.5} /> Confirmado</>
+                        ) : (
+                          <><Check size={13} strokeWidth={2} /> Confirmar pagamento</>
+                        )}
+                      </motion.button>
 
-                    {/* Reject */}
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => reject(p)}
-                      disabled={aState === "loading"}
-                      style={{ width: 42, height: 42, borderRadius: 12, border: "none", background: "rgba(239,68,68,0.08)", color: "#f87171", cursor: aState === "loading" ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", flexShrink: 0 }}
-                    >
-                      <X size={16} strokeWidth={2.5} />
-                    </motion.button>
+                      {/* Ativar PRO */}
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => activatePro(p)}
+                        disabled={aState === "loading" || cState === "loading"}
+                        style={{
+                          flex: 1, height: 42, borderRadius: 12, border: "none",
+                          background: aState === "ok" ? "rgba(0,255,136,0.2)" : "rgba(0,255,136,0.12)",
+                          color: "#00ff88", fontWeight: 700, fontSize: 12,
+                          cursor: (aState === "loading" || cState === "loading") ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontFamily: "inherit", transition: "all 0.2s ease",
+                        }}
+                      >
+                        {aState === "loading" ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88" }} />
+                        ) : aState === "ok" ? (
+                          <><Check size={13} strokeWidth={2.5} /> PRO ativado!</>
+                        ) : (
+                          <>⚡ Ativar PRO</>
+                        )}
+                      </motion.button>
+                    </div>
 
-                    {/* Delete */}
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => remove(p)}
-                      style={{ width: 42, height: 42, borderRadius: 12, border: "none", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", flexShrink: 0 }}
-                    >
-                      <Trash2 size={14} strokeWidth={2} />
-                    </motion.button>
+                    {/* Row 2: Recusar + Delete */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => reject(p)}
+                        disabled={cState === "loading" || aState === "loading"}
+                        style={{
+                          flex: 1, height: 36, borderRadius: 10, border: "none",
+                          background: "rgba(239,68,68,0.07)", color: "#f87171",
+                          fontSize: 12, fontWeight: 700,
+                          cursor: (cState === "loading" || aState === "loading") ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        <X size={13} strokeWidth={2.5} /> Recusar
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => remove(p)}
+                        style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                      >
+                        <Trash2 size={13} strokeWidth={2} />
+                      </motion.button>
+                    </div>
                   </div>
                 )}
 
+                {/* CONFIRMED: show PRO status + optional Ativar PRO */}
                 {p.status === "confirmed" && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <CheckCircle size={14} color="#00ff88" strokeWidth={2} />
-                      <span style={{ fontSize: 12, color: "rgba(0,255,136,0.7)", fontWeight: 600 }}>
-                        PRO ativado {p.confirmedAt ? fmtDate(p.confirmedAt) : ""}
-                      </span>
-                    </div>
-                    <motion.button whileTap={{ scale: 0.96 }} onClick={() => remove(p)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isPro ? (
+                      /* PRO already active */
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7 }}>
+                        <CheckCircle size={14} color="#00ff88" strokeWidth={2} />
+                        <span style={{ fontSize: 12, color: "rgba(0,255,136,0.7)", fontWeight: 600 }}>
+                          PRO ativo{p.activatedAt ? ` · ${fmtDate(p.activatedAt)}` : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      /* Confirmed but PRO not yet activated */
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => activatePro(p)}
+                        disabled={aState === "loading"}
+                        style={{
+                          flex: 1, height: 40, borderRadius: 11, border: "none",
+                          background: aState === "ok" ? "rgba(0,255,136,0.2)" : "rgba(0,255,136,0.1)",
+                          color: "#00ff88", fontWeight: 700, fontSize: 13,
+                          cursor: aState === "loading" ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontFamily: "inherit", transition: "all 0.2s ease",
+                        }}
+                      >
+                        {aState === "loading" ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88" }} />
+                        ) : aState === "ok" ? (
+                          <><Check size={13} strokeWidth={2.5} /> PRO ativado!</>
+                        ) : (
+                          <>⚡ Ativar PRO</>
+                        )}
+                      </motion.button>
+                    )}
+                    <motion.button whileTap={{ scale: 0.96 }} onClick={() => remove(p)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Trash2 size={13} strokeWidth={2} />
                     </motion.button>
                   </div>
                 )}
 
+                {/* REJECTED */}
                 {p.status === "rejected" && (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <AlertTriangle size={13} color="#f87171" strokeWidth={2} />
                       <span style={{ fontSize: 12, color: "rgba(248,113,113,0.7)", fontWeight: 600 }}>
-                        Recusado {p.rejectedAt ? fmtDate(p.rejectedAt) : ""}
+                        Recusado{p.rejectedAt ? ` · ${fmtDate(p.rejectedAt)}` : ""}
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <motion.button whileTap={{ scale: 0.96 }} onClick={() => confirm(p)} style={{ height: 34, paddingInline: 12, borderRadius: 10, border: "none", background: "rgba(0,255,136,0.08)", color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                        Ativar PRO
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => activatePro(p)}
+                        disabled={aState === "loading"}
+                        style={{ height: 34, paddingInline: 12, borderRadius: 10, border: "none", background: "rgba(0,255,136,0.08)", color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: aState === "loading" ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}
+                      >
+                        {aState === "loading" ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }} style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid rgba(0,255,136,0.15)", borderTopColor: "#00ff88" }} />
+                        ) : (
+                          <>⚡ Ativar PRO</>
+                        )}
                       </motion.button>
                       <motion.button whileTap={{ scale: 0.96 }} onClick={() => remove(p)} style={{ width: 34, height: 34, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Trash2 size={13} strokeWidth={2} />
