@@ -87,7 +87,7 @@ export default function Upgrade() {
   // ── Stripe checkout ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
     if (!user) {
-      navigate("/auth");
+      navigate("/login");
       return;
     }
     setIsLoading(true);

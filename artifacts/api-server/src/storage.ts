@@ -21,6 +21,7 @@ export class Storage {
       stripeCustomerId?: string;
       stripeSubscriptionId?: string;
       plan?: string;
+      trialStartDate?: string | null;
     },
   ) {
     const [user] = await db

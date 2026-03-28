@@ -102,6 +102,9 @@ router.post("/sync-plan", requireAuth, async (req: any, res) => {
     const updated = await storage.updateUserStripeInfo(user.id, {
       plan: newPlan,
       ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+      // Clear trialStartDate so computeEffectivePlan treats this as a paid PRO,
+      // not a trial — critical for users who pay after their trial expires.
+      ...(newPlan === "pro" ? { trialStartDate: null } : {}),
     });
 
     res.json({ plan: updated.plan });

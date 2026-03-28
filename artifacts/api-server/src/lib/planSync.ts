@@ -71,13 +71,17 @@ export async function syncStripeStatusForUser(
     const shouldBePro = ["active", "trialing"].includes(sub.status);
     const targetPlan  = shouldBePro ? "pro" : "free";
 
-    if (user.plan !== targetPlan) {
+    // Update when plan needs to change, OR when plan is already PRO but
+    // trialStartDate is still set — that causes computeEffectivePlan to
+    // misread a paid subscription as an expired trial (returns "free").
+    const needsClear = targetPlan === "pro" && !!user.trialStartDate;
+    if (user.plan !== targetPlan || needsClear) {
       const [updated] = await db
         .update(usersTable)
         .set({ plan: targetPlan, ...(targetPlan === "pro" ? { trialStartDate: null } : {}) })
         .where(eq(usersTable.id, user.id))
         .returning();
-      console.log(`[PlanSync] ${user.email}: ${user.plan} → ${targetPlan} (Stripe: ${sub.status})`);
+      console.log(`[PlanSync] ${user.email}: ${user.plan} → ${targetPlan} (Stripe: ${sub.status}${needsClear ? ", cleared trialStartDate" : ""})`);
       return updated;
     }
   } catch {
