@@ -130,7 +130,7 @@ export default function Costs() {
 
       {/* ── Desktop: 2-col grid. Mobile: single column ────────────────────── */}
       <div style={isDesktop
-        ? { display: "grid", gridTemplateColumns: "340px 1fr", gap: 24, alignItems: "start" }
+        ? { display: "grid", gridTemplateColumns: "minmax(300px, 1fr) minmax(0, 2fr)", gap: 24, alignItems: "start" }
         : { display: "flex", flexDirection: "column", gap: 16 }
       }>
 

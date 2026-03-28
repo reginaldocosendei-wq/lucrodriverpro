@@ -231,7 +231,7 @@ export default function ImportPage() {
                 STEP 1 — UPLOAD
             ══════════════════════════════════════════════════════════════ */}
             {step === "upload" && (
-              <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 32, alignItems: "start", maxWidth: 900, margin: "0 auto" } : {}}>
+              <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 32, alignItems: "start" } : {}}>
 
                 {/* ── Left column: error + upload zone + CTA + file input ── */}
                 <div>
