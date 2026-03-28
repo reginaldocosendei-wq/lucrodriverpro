@@ -194,12 +194,9 @@ export default function Home() {
       </motion.div>
 
 
-      {/* ── Desktop row 1: Profit card | Metrics ──────────────────────────── */}
-      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
-
-      {/* ╔══════════════════════════════════════════════════════════════════
-          ║  1. LUCRO — Big profit number
-          ╚══════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════
+           ROW 1 — LUCRO (full width on desktop, standalone)
+          ══════════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
         <div style={{ position: "relative", borderRadius: 24, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
           {/* Base */}
@@ -208,113 +205,169 @@ export default function Home() {
           {/* Glow */}
           <div style={{
             position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)",
-            width: 400, height: 240, pointerEvents: "none",
+            width: isDesktop ? 600 : 400, height: 240, pointerEvents: "none",
             background: profitPos
               ? "radial-gradient(ellipse,rgba(0,255,136,0.09) 0%,transparent 70%)"
               : "radial-gradient(ellipse,rgba(239,68,68,0.08) 0%,transparent 70%)",
           }} />
 
-          <div style={{ position: "relative", zIndex: 2, padding: isDesktop ? "32px 32px" : "24px 20px" }}>
-            {/* Label */}
-            <p style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 8,
-            }}>
-              {t("home.profitCard")}
-            </p>
-
-            {/* Big number */}
-            {isLoading ? (
-              <Skeleton h={44} w={180} r={10} />
-            ) : (
-              <motion.p
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  fontSize: "clamp(32px, 5vw, 52px)",
-                  fontWeight: 900,
-                  lineHeight: 1.0,
-                  color: pColor,
-                  fontVariantNumeric: "tabular-nums",
-                  fontFeatureSettings: '"tnum" 1',
-                  letterSpacing: "-0.02em",
-                  marginBottom: 10,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Counter value={profit} />
-              </motion.p>
-            )}
-
-            {/* Earnings · costs */}
-            {!isLoading && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>
-                  {t("home.earned")}{" "}
-                  <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(totalEarnings)}</span>
-                  <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
-                  <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
-                </p>
-                {extras > 0 && (
-                  <p style={{ fontSize: 11, color: "rgba(74,222,128,0.7)", fontWeight: 600, marginTop: 4 }}>
-                    App {formatBRL(earnings)} + extras {formatBRL(extras)}
+          <div style={{ position: "relative", zIndex: 2, padding: isDesktop ? "36px 40px" : "24px 20px" }}>
+            {isDesktop ? (
+              /* ── Desktop: side-by-side layout inside the card ── */
+              <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
+                {/* Left: big number block */}
+                <div style={{ flex: "0 0 auto" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 10 }}>
+                    {t("home.profitCard")}
                   </p>
+                  {isLoading ? (
+                    <Skeleton h={56} w={240} r={10} />
+                  ) : (
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                      style={{
+                        fontSize: 56, fontWeight: 900, lineHeight: 1.0, color: pColor,
+                        fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1',
+                        letterSpacing: "-0.03em", marginBottom: 10, whiteSpace: "nowrap",
+                      }}
+                    >
+                      <Counter value={profit} />
+                    </motion.p>
+                  )}
+                  {!isLoading && (
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>
+                      {t("home.earned")}{" "}
+                      <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(totalEarnings)}</span>
+                      <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
+                      <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
+
+                {/* Right: margin bar + extras + empty state */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {!isLoading && totalEarnings > 0 && (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>{t("home.margin")}</span>
+                        <span style={{ fontSize: 18, fontWeight: 900, color: pColor, fontVariantNumeric: "tabular-nums" }}>
+                          {Math.round(Math.abs(marginPct))}%
+                        </span>
+                      </div>
+                      <div style={{ height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden", display: "flex" }}>
+                        <motion.div
+                          style={{ height: "100%", background: "rgba(239,68,68,0.65)", borderRadius: "999px 0 0 999px" }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0)}%` }}
+                          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+                        />
+                        <motion.div
+                          style={{ height: "100%", background: pColor, borderRadius: "0 999px 999px 0" }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(0, profitPos ? marginPct : 0)}%` }}
+                          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
+                        />
+                      </div>
+                      {extras > 0 && (
+                        <p style={{ fontSize: 11, color: "rgba(74,222,128,0.7)", fontWeight: 600, marginTop: 10 }}>
+                          App {formatBRL(earnings)} + extras {formatBRL(extras)}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {!isLoading && earnings <= 0 && (
+                    <Link href="/import">
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.15)", borderRadius: 12, padding: "10px 14px" }}>
+                        <Camera size={14} color="#00ff88" />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#00ff88" }}>{t("home.importDay")}</span>
+                      </div>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* ── Mobile: stacked layout (original) ── */
+              <>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 8 }}>
+                  {t("home.profitCard")}
+                </p>
+                {isLoading ? (
+                  <Skeleton h={44} w={180} r={10} />
+                ) : (
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    style={{
+                      fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 900, lineHeight: 1.0, color: pColor,
+                      fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1',
+                      letterSpacing: "-0.02em", marginBottom: 10, whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Counter value={profit} />
+                  </motion.p>
                 )}
-              </div>
-            )}
-
-            {/* Margin bar */}
-            {!isLoading && totalEarnings > 0 && (
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{t("home.margin")}</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: pColor }}>
-                    {Math.round(Math.abs(marginPct))}%
-                  </span>
-                </div>
-                {/* Stacked bar: costs + profit */}
-                <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden", display: "flex" }}>
-                  <motion.div
-                    style={{ height: "100%", background: "rgba(239,68,68,0.65)", borderRadius: "999px 0 0 999px" }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0)}%` }}
-                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-                  />
-                  <motion.div
-                    style={{ height: "100%", background: pColor, borderRadius: "0 999px 999px 0" }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.max(0, profitPos ? marginPct : 0)}%` }}
-                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {!isLoading && earnings <= 0 && (
-              <Link href="/import">
-                <div
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
-                    background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.15)",
-                    borderRadius: 12, padding: "10px 14px",
-                  }}
-                >
-                  <Camera size={14} color="#00ff88" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#00ff88" }}>{t("home.importDay")}</span>
-                </div>
-              </Link>
+                {!isLoading && (
+                  <div style={{ marginBottom: 20 }}>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>
+                      {t("home.earned")}{" "}
+                      <span style={{ color: "#f9fafb", fontWeight: 700 }}>{formatBRL(totalEarnings)}</span>
+                      <span style={{ color: "rgba(255,255,255,0.2)" }}> · {t("home.spent")} </span>
+                      <span style={{ color: "rgba(239,68,68,0.85)", fontWeight: 700 }}>{formatBRL(costs)}</span>
+                    </p>
+                    {extras > 0 && (
+                      <p style={{ fontSize: 11, color: "rgba(74,222,128,0.7)", fontWeight: 600, marginTop: 4 }}>
+                        App {formatBRL(earnings)} + extras {formatBRL(extras)}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!isLoading && totalEarnings > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{t("home.margin")}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: pColor }}>{Math.round(Math.abs(marginPct))}%</span>
+                    </div>
+                    <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden", display: "flex" }}>
+                      <motion.div
+                        style={{ height: "100%", background: "rgba(239,68,68,0.65)", borderRadius: "999px 0 0 999px" }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0)}%` }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+                      />
+                      <motion.div
+                        style={{ height: "100%", background: pColor, borderRadius: "0 999px 999px 0" }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(0, profitPos ? marginPct : 0)}%` }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {!isLoading && earnings <= 0 && (
+                  <Link href="/import">
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.15)", borderRadius: 12, padding: "10px 14px" }}>
+                      <Camera size={14} color="#00ff88" />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#00ff88" }}>{t("home.importDay")}</span>
+                    </div>
+                  </Link>
+                )}
+              </>
             )}
           </div>
         </div>
       </motion.div>
 
 
-      {/* ╔══════════════════════════════════════════════════════════════════
-          ║  2. MÉTRICAS — trips · per hour · per km
-          ╚══════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════
+           ROW 2 — MÉTRICAS (own full-width row on desktop: 3 equal columns)
+          ══════════════════════════════════════════════════════════════════════ */}
       <motion.div variants={item}>
-        {/* Row label */}
         <p style={{
           fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
           color: "rgba(255,255,255,0.25)", textTransform: "uppercase",
@@ -323,20 +376,16 @@ export default function Home() {
           {t("home.indicators")}
         </p>
 
-        {/* Mobile: 3-column grid · Desktop: vertical stack with horizontal tiles */}
-        <div style={isDesktop
-          ? { display: "flex", flexDirection: "column", gap: 10 }
-          : { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }
-        }>
+        {/* Always 3-column grid — on desktop each tile gets ~413px */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {/* Corridas */}
           <MetricTile
             icon={<Car size={15} color="#60a5fa" />}
             label={t("home.rides")}
             accent="#60a5fa"
             loading={isLoading}
-            horizontal={isDesktop}
             value={isLoading ? null : (
-              <span style={{ fontSize: isDesktop ? 28 : 34, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 34, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
                 {trips}
               </span>
             )}
@@ -348,12 +397,13 @@ export default function Home() {
             label={t("home.perHour")}
             accent="#c084fc"
             loading={isLoading}
-            horizontal={isDesktop}
             value={isLoading ? null : rph != null ? (
-              <span style={{ fontSize: isDesktop ? 22 : 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: isDesktop ? 13 : 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                {rph.toFixed(0)}
-              </span>
+              <>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
+                <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                  {rph.toFixed(0)}
+                </span>
+              </>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
                 {t("home.enterHours")}
@@ -367,12 +417,13 @@ export default function Home() {
             label={t("home.perKm")}
             accent="#fb923c"
             loading={isLoading}
-            horizontal={isDesktop}
             value={isLoading ? null : rpkm != null ? (
-              <span style={{ fontSize: isDesktop ? 22 : 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+              <>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>R$</span>
-                {rpkm.toFixed(2)}
-              </span>
+                <span style={{ fontSize: 26, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                  {rpkm.toFixed(2)}
+                </span>
+              </>
             ) : (
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500, lineHeight: 1.4 }}>
                 {t("home.enterKm")}
@@ -382,10 +433,10 @@ export default function Home() {
         </div>
       </motion.div>
 
-      </div>{/* end desktop row 1 */}
 
-
-      {/* ── Desktop row 2: Daily Analysis | Goal ───────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+           ROW 3 — Daily Analysis | Goal  (desktop: 3fr 2fr)
+          ══════════════════════════════════════════════════════════════════════ */}
       <div style={isDesktop ? { display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
       {/* ╔══════════════════════════════════════════════════════════════════
@@ -600,64 +651,14 @@ export default function Home() {
 
 // ─── METRIC TILE ──────────────────────────────────────────────────────────────
 function MetricTile({
-  icon, label, accent, value, loading, horizontal = false,
+  icon, label, accent, value, loading,
 }: {
   icon: React.ReactNode;
   label: string;
   accent: string;
   value: React.ReactNode;
   loading?: boolean;
-  horizontal?: boolean;
 }) {
-  if (horizontal) {
-    // ── Desktop: icon+label left · value right ──────────────────────────────
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          background: "#0e0e0e",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderLeft: `3px solid ${accent}`,
-          borderRadius: 16,
-          padding: "14px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          position: "relative", overflow: "hidden",
-        }}
-      >
-        {/* Left: icon + label */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-            background: `${accent}14`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            {icon}
-          </div>
-          <span style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
-            textTransform: "uppercase" as const, color: "rgba(255,255,255,0.35)",
-          }}>
-            {label}
-          </span>
-        </div>
-
-        {/* Right: value */}
-        <div style={{ flexShrink: 0 }}>
-          {loading
-            ? <Skeleton h={26} w={72} r={8} />
-            : value
-          }
-        </div>
-      </motion.div>
-    );
-  }
-
-  // ── Mobile: vertical card ──────────────────────────────────────────────────
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -668,18 +669,17 @@ function MetricTile({
         border: "1px solid rgba(255,255,255,0.07)",
         borderTop: `3px solid ${accent}`,
         borderRadius: 16,
-        padding: "16px 12px",
+        padding: "16px 14px",
         display: "flex", flexDirection: "column",
         alignItems: "flex-start", gap: 10,
-        minHeight: 104,
+        minHeight: 100,
         position: "relative", overflow: "hidden",
       }}
     >
-
       {/* Icon + label */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{
-          width: 24, height: 24, borderRadius: 7,
+          width: 26, height: 26, borderRadius: 8,
           background: `${accent}14`,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -694,7 +694,7 @@ function MetricTile({
       </div>
 
       {/* Value */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2, minWidth: 0, maxWidth: "100%", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 2, minWidth: 0, maxWidth: "100%" }}>
         {loading
           ? <Skeleton h={30} w={60} r={8} />
           : value
