@@ -49,11 +49,11 @@ function AuthForm({
     setErrorMsg("");
     loginMutation.mutate({ data }, {
       onSuccess: async () => {
-        // Clear any error state from the initial unauthenticated load, then
-        // force a fresh /api/auth/me call. We wait for this to resolve so
-        // the user object is in cache BEFORE we navigate — HomeRoute will
-        // render the dashboard immediately with no flash.
-        await queryClient.resetQueries({ queryKey: ["/api/auth/me"] });
+        // refetchQueries (not resetQueries) waits for the network round-trip
+        // to complete before resolving. That guarantees the user object is in
+        // the React Query cache BEFORE navigate("/") fires, so HomeRoute sees
+        // an authenticated user immediately and never flashes the landing page.
+        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },
       onError: (err: any) => {
@@ -69,7 +69,7 @@ function AuthForm({
     console.debug("[AuthForm] submitting register", { email: data.email });
     registerMutation.mutate({ data }, {
       onSuccess: async () => {
-        await queryClient.resetQueries({ queryKey: ["/api/auth/me"] });
+        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },
       onError: (err: any) => {

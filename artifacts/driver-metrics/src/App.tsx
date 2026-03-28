@@ -50,16 +50,18 @@ function useBootAuth(): BootAuthResult {
     DEV_DISABLE_AUTH_FETCH ? { query: { enabled: false } } : undefined
   );
   if (DEV_DISABLE_AUTH_FETCH) {
-    // Override the return to a fully settled no-user state with zero loading
+    // Override the return to a fully settled no-user state with zero loading.
+    // isPending must be false so HomeRoute/PrivateGuard treat auth as resolved.
     return {
       ...real,
       data: undefined,
+      status: "success" as const,
       isLoading: false,
       isPending: false,
       isFetching: false,
-      isSuccess: false,
+      isSuccess: true,
       isError: false,
-    } as BootAuthResult;
+    } as unknown as BootAuthResult;
   }
   return real;
 }
@@ -184,7 +186,7 @@ function DebugPanel() {
 // Waits for auth to settle before deciding — prevents flashing landing page
 // when a returning user loads the app with a valid session.
 function HomeRoute() {
-  const { data: user, isLoading } = useBootAuth();
+  const { data: user, isLoading, isPending } = useBootAuth();
 
   if (DEV_DISABLE_AUTH_FETCH) {
     return (
@@ -194,10 +196,12 @@ function HomeRoute() {
     );
   }
 
-  // While auth is in flight: show a neutral spinner.
-  // Without this guard, a returning user briefly sees the landing page
-  // before the session resolves, which can look like a login loop.
-  if (isLoading) return <LoadingSpinner />;
+  // Show spinner while auth is settling.
+  // isPending = status==="pending" (TanStack Query v5) — covers both the
+  // initial fetch AND the brief idle-pending gap after resetQueries/refetchQueries
+  // where isLoading is false but data is still undefined. Without isPending,
+  // HomeRoute would briefly render the landing page causing a visual loop.
+  if (isPending || isLoading) return <LoadingSpinner />;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -257,24 +261,27 @@ function ImportRoute() {
 // Wraps private routes. Redirects to "/login" if not authenticated.
 // DEV_DISABLE_AUTH_FETCH: renders children directly — no redirect, no spinner.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading } = useBootAuth();
+  const { data: user, isLoading, isPending } = useBootAuth();
   const [, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
-  // Always call effects — no conditional hook calls.
-  // When bypassing, these effects are inert (timeout sets state that is never read,
-  // redirect effect runs but the bypass branch returns before reaching it).
+  // Timeout safety valve: if auth has not settled within 8s, treat as
+  // unauthenticated so the user is not stuck on a spinner forever.
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH) return;
-    const t = setTimeout(() => setTimedOut(true), 5000);
+    const t = setTimeout(() => setTimedOut(true), 8000);
     return () => clearTimeout(t);
   }, []);
 
+  // Redirect to /login only once auth has fully settled AND user is absent.
+  // "settled" means: not loading, not pending (data is no longer in-flight),
+  // OR the safety timeout fired. This prevents kicking the user out while the
+  // /api/auth/me refetch is still in progress after login.
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH) return;
-    const initialized = !isLoading || timedOut;
-    if (initialized && !user) navigate("/login");
-  }, [user, isLoading, timedOut, navigate]);
+    const settled = (!isPending && !isLoading) || timedOut;
+    if (settled && !user) navigate("/login");
+  }, [user, isLoading, isPending, timedOut, navigate]);
 
   // Bypass: skip every auth check — render immediately.
   if (DEV_DISABLE_AUTH_FETCH) {
@@ -285,7 +292,8 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isLoading && !timedOut && !user) return <LoadingSpinner />;
+  // Show spinner while auth is settling (covers isPending idle gap too).
+  if ((isPending || isLoading) && !timedOut && !user) return <LoadingSpinner />;
   if (!user) return null;
 
   return (
