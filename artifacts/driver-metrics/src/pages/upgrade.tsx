@@ -522,23 +522,40 @@ export default function Upgrade() {
           TRUST BADGES
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 10,
+          alignItems: "stretch",
+          marginBottom: 16,
+        }}>
           {TRUST.map(({ icon, label, sub }) => (
             <div
               key={label}
-              style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 16,
+                padding: "14px 8px 12px",
+                textAlign: "center",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+              }}
             >
-              <p style={{ fontSize: 22, marginBottom: 6 }}>{icon}</p>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", lineHeight: 1.3, marginBottom: 3 }}>{label}</p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", lineHeight: 1.3 }}>{sub}</p>
+              <p style={{ fontSize: 21, marginBottom: 8, lineHeight: 1 }}>{icon}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", lineHeight: 1.35, marginBottom: 4 }}>{label}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.42)", lineHeight: 1.4 }}>{sub}</p>
             </div>
           ))}
         </div>
 
         {/* Security line */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 0" }}>
-          <Shield size={13} color="rgba(255,255,255,0.2)" />
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0 4px" }}>
+          <Shield size={12} color="rgba(255,255,255,0.32)" />
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textAlign: "center" }}>
             {t("upgrade.security")}
           </p>
         </div>
