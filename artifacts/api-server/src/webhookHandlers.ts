@@ -36,18 +36,31 @@ export class WebhookHandlers {
       if (!customerId) return;
 
       switch (event.type) {
-        // Subscription paid / checkout complete → PRO
+        // New subscription created → PRO
+        case "customer.subscription.created":
+          await syncPlanByStripeCustomer(customerId, obj.status ?? "active");
+          break;
+
+        // Checkout paid → PRO
         case "checkout.session.completed":
           if (obj.payment_status === "paid") {
             await syncPlanByStripeCustomer(customerId, "active");
           }
           break;
 
+        // Recurring invoice paid → keep PRO
         case "invoice.payment_succeeded":
           await syncPlanByStripeCustomer(customerId, "active");
           break;
 
-        // Subscription state changed — map Stripe status directly
+        // Recurring invoice failed → downgrade gracefully
+        case "invoice.payment_failed":
+          console.warn(`[PlanSync] payment_failed for customer ${customerId} — keeping current plan until Stripe cancels`);
+          // Do NOT downgrade immediately — Stripe retries and will eventually
+          // fire customer.subscription.updated/deleted when it gives up.
+          break;
+
+        // Subscription state changed or cancelled → sync directly
         case "customer.subscription.updated":
         case "customer.subscription.deleted":
           await syncPlanByStripeCustomer(customerId, obj.status ?? "canceled");

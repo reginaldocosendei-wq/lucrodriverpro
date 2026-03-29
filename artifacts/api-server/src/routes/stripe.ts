@@ -205,9 +205,15 @@ router.get("/subscription", requireAuth, async (req: any, res) => {
   }
 });
 
-// Simulation endpoint — bypasses Stripe and sets plan=pro directly in the DB.
-// Used to validate the product without real payments.
+// Simulation endpoint — dev/staging only. Bypasses Stripe and sets plan=pro directly.
+// BLOCKED in production unless ENABLE_SIMULATE_UPGRADE=true is explicitly set.
 router.post("/simulate-upgrade", requireAuth, async (req: any, res) => {
+  const isProd   = process.env.NODE_ENV === "production";
+  const allowed  = !isProd || process.env.ENABLE_SIMULATE_UPGRADE === "true";
+  if (!allowed) {
+    return res.status(403).json({ error: "Não disponível em produção" });
+  }
+
   try {
     const userId = req.session.userId as number;
     const user = await storage.updateUserStripeInfo(userId, {

@@ -1,0 +1,125 @@
+Restore and professionalize the Stripe payment automation in my app "Lucro Driver".
+
+GOAL:
+Re-enable real automatic payment flow with Stripe in a clean, stable, production-ready way.
+
+IMPORTANT:
+- We previously had Stripe working
+- Do NOT create a fake upgrade flow as the main solution anymore
+- Keep the UI already working
+- Focus on backend/payment architecture and automation
+- Keep a manual fallback path if Stripe is temporarily unavailable
+
+======================================
+1. RESTORE REAL STRIPE CHECKOUT
+======================================
+
+When the user clicks "Começar agora":
+- create a real Stripe Checkout session from the backend
+- redirect the user to Stripe Checkout
+- use the selected plan/pricing correctly
+
+If multiple plans exist (monthly/yearly), support the selected plan properly.
+
+======================================
+2. SUCCESS / CANCEL ROUTES
+======================================
+
+Configure proper success and cancel routes.
+
+After successful payment:
+- user returns to the app
+- app shows success feedback
+- backend confirms the subscription status
+
+After cancel:
+- user returns safely
+- app does not activate PRO
+- show graceful UI state
+
+======================================
+3. STRIPE WEBHOOK
+======================================
+
+Implement or restore a proper Stripe webhook endpoint.
+
+Handle at least these events:
+- checkout.session.completed
+- customer.subscription.created
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_succeeded
+- invoice.payment_failed
+
+======================================
+4. ACTIVATE PRO AUTOMATICALLY
+======================================
+
+After successful Stripe payment/subscription:
+- set user.isPro = true
+- set user.plan = "PRO"
+- set subscriptionStatus = "active"
+- save Stripe customer/subscription references if needed
+
+Do this automatically from the backend/webhook.
+Do not depend on frontend-only state.
+
+======================================
+5. SINGLE SOURCE OF TRUTH
+======================================
+
+The frontend must not be the source of truth for PRO activation.
+
+Use backend/database as source of truth for:
+- isPro
+- plan
+- subscriptionStatus
+- renewal/cancellation state
+
+======================================
+6. STRIPE STATE SYNC
+======================================
+
+Ensure that when the user logs in again:
+- the app reads actual backend subscription state
+- PRO access remains correct
+- no fake local-only plan activation remains
+
+======================================
+7. CLEAN UP OLD TEMP LOGIC
+======================================
+
+Remove or isolate temporary fake upgrade logic that instantly activates PRO on click.
+
+Keep temporary simulation only behind an explicit development flag if needed.
+Do not let production depend on fake upgrade activation.
+
+======================================
+8. MANUAL FALLBACK
+======================================
+
+If Stripe fails or is unavailable:
+- show a clear fallback option
+- keep Pix/manual alternative available
+- do not leave the user stuck on an error-only screen
+
+======================================
+9. ERROR HANDLING
+======================================
+
+Replace generic "Erro ao processar" behavior with better handling:
+- show loading while creating checkout
+- show clear message if checkout creation fails
+- show fallback if Stripe is unavailable
+
+======================================
+10. FINAL RESULT
+======================================
+
+The final flow must be:
+- click upgrade
+- open Stripe Checkout
+- pay
+- webhook confirms
+- PRO activated automatically
+- user returns with access correctly enabled

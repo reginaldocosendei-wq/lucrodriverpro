@@ -10,6 +10,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { getApiBase } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { DEV_SKIP_STRIPE_CHECKOUT } from "@/lib/dev-flags";
 
 const BASE = getApiBase();
 
@@ -89,44 +90,104 @@ export default function Upgrade() {
     { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
   ], [t]);
 
-  // ── Simulate upgrade (real Stripe wired in later) ───────────────────────────
+  // ── Stripe checkout ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
     if (!user) {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       return;
     }
 
+    // ── Dev-only bypass: skips Stripe and activates PRO instantly ────────────
+    // Controlled by DEV_SKIP_STRIPE_CHECKOUT in dev-flags.ts — must be false in prod.
+    if (DEV_SKIP_STRIPE_CHECKOUT) {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const r = await fetch(`${BASE}/api/stripe/simulate-upgrade`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!r.ok) throw new Error("simulate failed");
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        navigate("/?upgraded=1");
+      } catch {
+        setError(t("upgrade.errorGeneral"));
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // ── Production path: real Stripe Checkout ─────────────────────────────────
     setIsLoading(true);
     setError(null);
-    console.log("[upgrade] simulate — userId:", (user as any)?.id, "plan selected:", selected);
+    console.log("[upgrade] start — plan:", selected, "userId:", (user as any)?.id);
 
     try {
-      const res = await fetch(`${BASE}/api/stripe/simulate-upgrade`, {
-        method: "POST",
+      // Step 1: load products + prices from backend
+      const productsRes = await fetch(`${BASE}/api/stripe/products-with-prices`, {
         credentials: "include",
       });
+      if (!productsRes.ok) {
+        setError(t("upgrade.errorGeneral"));
+        return;
+      }
+      const { data: products } = await productsRes.json() as { data: any[] };
+      if (!Array.isArray(products) || products.length === 0) {
+        setError(t("upgrade.errorNoPlans"));
+        return;
+      }
 
-      console.log("[upgrade] simulate-upgrade status:", res.status);
+      // Step 2: match price to selected plan + user currency
+      const product     = products[0];
+      const interval    = selected === "monthly" ? "month" : "year";
+      const targetCurr  = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
+      const price =
+        product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
+        product.prices?.find((p: any) => p.recurring?.interval === interval);
+      if (!price) {
+        setError(t("upgrade.errorNoPlan"));
+        return;
+      }
+      console.log("[upgrade] resolved price:", price.id, "interval:", interval, "currency:", targetCurr);
 
-      if (res.status === 401) {
+      // Step 3: create Stripe Checkout session
+      const origin     = window.location.origin;
+      const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          priceId:    price.id,
+          successUrl: `${origin}${basePath}/checkout/success`,
+          cancelUrl:  `${origin}${basePath}/checkout/cancel`,
+        }),
+      });
+
+      if (checkoutRes.status === 401) {
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/login");
         return;
       }
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError((data as any).error ?? t("upgrade.errorGeneral"));
+      const checkoutData = await checkoutRes.json();
+      if (!checkoutRes.ok || !checkoutData.url) {
+        // Use machine-readable code for actionable messages
+        if (checkoutData.code === "stripe_auth") {
+          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
+        } else {
+          setError(t("upgrade.errorGeneral"));
+        }
         return;
       }
 
-      // Refresh session so all UI reflects the new PRO plan immediately.
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      console.log("[upgrade] simulate success → navigating home");
-      navigate("/?upgraded=1");
+      // Step 4: hand off to Stripe-hosted checkout
+      console.log("[upgrade] → redirecting to Stripe checkout");
+      window.location.href = checkoutData.url;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[upgrade] simulate error:", msg);
+      console.error("[upgrade] error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
