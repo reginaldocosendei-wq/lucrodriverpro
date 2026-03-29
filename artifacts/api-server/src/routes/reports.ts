@@ -91,13 +91,18 @@ router.get("/earnings", requireAuth, async (req, res) => {
       // No real data for this day — return nulls so the chart skips the point
       return { date, earnings: null, costs: null, profit: null, trips: 0 };
     }
-    return {
-      date,
-      earnings: Math.round(v.earnings * 100) / 100,
-      costs:    Math.round(v.costs    * 100) / 100,
-      profit:   Math.round((v.earnings - v.costs) * 100) / 100,
-      trips:    v.trips,
-    };
+
+    const earnings = Math.round(v.earnings * 100) / 100;
+    const costs    = Math.round(v.costs    * 100) / 100;
+
+    // Profit is only meaningful when the driver actually earned something.
+    // Without earnings, fixed-cost quota would produce a misleading negative
+    // default, so we emit null instead — the chart line simply has no point.
+    const profit = earnings > 0
+      ? Math.round((earnings - costs) * 100) / 100
+      : null;
+
+    return { date, earnings, costs, profit, trips: v.trips };
   });
 
   // ── 2. By Platform — total earnings per platform across ALL history ─────────
