@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, dailySummariesTable, ridesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { paymentService } from "../paymentService";
 
 const router = Router();
 
@@ -80,6 +81,22 @@ router.delete("/purge-test-data", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[DEV] purge error:", err);
     res.status(500).json({ error: "Erro ao remover registros de teste" });
+  }
+});
+
+// ── POST /api/dev/simulate-upgrade ───────────────────────────────────────────
+// Instantly activates PRO for the logged-in user without going through Stripe.
+// The router-level guard above already returns 404 in production — this handler
+// is only reachable in development / staging environments.
+router.post("/simulate-upgrade", requireAuth, async (req, res) => {
+  const userId = req.session.userId!;
+  try {
+    await paymentService.activateProAccess(userId);
+    console.log("[DEV] simulate-upgrade — userId=%d → PRO", userId);
+    res.json({ ok: true, plan: "pro" });
+  } catch (err: any) {
+    console.error("[DEV] simulate-upgrade error:", err?.message);
+    res.status(500).json({ error: "Erro ao ativar PRO (dev)" });
   }
 });
 

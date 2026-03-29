@@ -103,7 +103,7 @@ export default function Upgrade() {
       setIsLoading(true);
       setError(null);
       try {
-        const r = await fetch(`${BASE}/api/stripe/simulate-upgrade`, {
+        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, {
           method: "POST",
           credentials: "include",
         });

@@ -163,24 +163,4 @@ router.get("/subscription", requireAuth, async (req: any, res) => {
   }
 });
 
-// ── POST /simulate-upgrade ────────────────────────────────────────────────────
-// Dev/staging only — bypasses Stripe and activates PRO instantly.
-// Blocked in production unless ENABLE_SIMULATE_UPGRADE=true is set.
-router.post("/simulate-upgrade", requireAuth, async (req: any, res) => {
-  const isProd  = process.env.NODE_ENV === "production";
-  const allowed = !isProd || process.env.ENABLE_SIMULATE_UPGRADE === "true";
-  if (!allowed) {
-    return res.status(403).json({ error: "Não disponível em produção" });
-  }
-
-  try {
-    await paymentService.activateProAccess(req.session.userId);
-    console.log("[simulate-upgrade] userId=%d → PRO", req.session.userId);
-    res.json({ ok: true, plan: "pro" });
-  } catch (err: any) {
-    console.error("[simulate-upgrade]", err?.message);
-    res.status(500).json({ error: "Erro ao ativar PRO" });
-  }
-});
-
 export default router;
