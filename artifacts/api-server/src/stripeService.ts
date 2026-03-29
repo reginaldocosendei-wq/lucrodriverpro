@@ -19,7 +19,10 @@ export class StripeService {
     const stripe = await getUncachableStripeClient();
     return stripe.checkout.sessions.create({
       customer: customerId,
-      payment_method_types: ["card"],
+      // Omit payment_method_types — Stripe Checkout auto-selects enabled
+      // methods from the account's dashboard (card, PIX, boleto, etc.).
+      // payment_method_types restricts too aggressively; automatic_payment_methods
+      // is only valid for PaymentIntents, not CheckoutSessions.
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       success_url: successUrl,

@@ -76,8 +76,14 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
 
     res.json({ url: session.url });
   } catch (err: any) {
-    console.error("checkout error:", err);
-    res.status(500).json({ error: "Erro ao criar sessão de pagamento" });
+    console.error("checkout error:", err?.message ?? err);
+    // Surface a machine-readable code so the frontend can react precisely.
+    const code =
+      err?.type === "StripeAuthenticationError" ? "stripe_auth" :
+      err?.type === "StripeInvalidRequestError"  ? "stripe_invalid" :
+      err?.code === "resource_missing"            ? "stripe_invalid" :
+      "stripe_error";
+    res.status(500).json({ error: "Erro ao criar sessão de pagamento", code });
   }
 });
 

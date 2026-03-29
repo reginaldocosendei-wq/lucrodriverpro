@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsDesktop } from "@/lib/useBreakpoint";
 import {
@@ -10,6 +11,7 @@ import { Link, useLocation } from "wouter";
 import { Capacitor } from "@capacitor/core";
 import { getApiBase } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { DEV_SKIP_STRIPE_CHECKOUT } from "@/lib/dev-flags";
 
 const BASE = getApiBase();
 
@@ -28,6 +30,7 @@ const fadeUp = {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Upgrade() {
   const { data: user }             = useGetMe();
+  const queryClient                = useQueryClient();
   const [, navigate]               = useLocation();
   const [selected, setSelected]    = useState<"monthly" | "yearly">("monthly");
   const [isLoading, setIsLoading]  = useState(false);
@@ -86,13 +89,25 @@ export default function Upgrade() {
 
   // ── Stripe checkout ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
+    // Guard: PrivateGuard guarantees user is loaded before this page renders.
+    // If user somehow disappeared (background refetch failure), re-validate.
     if (!user) {
-      navigate("/login");
+      // Force a fresh auth check — if it fails PrivateGuard will redirect.
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       return;
     }
+
+    // ── Dev bypass: skip Stripe and jump straight to success page ────────────
+    if (DEV_SKIP_STRIPE_CHECKOUT) {
+      navigate("/checkout/success");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+
     try {
+      // ── Step 1: load products ──────────────────────────────────────────────
       const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
       if (!productsRes.ok) {
         setError(t("upgrade.errorGeneral"));
@@ -104,17 +119,22 @@ export default function Upgrade() {
         return;
       }
 
-      const product      = productsData.data[0];
-      const interval     = selected === "monthly" ? "month" : "year";
-      const targetCurr   = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
+      // ── Step 2: resolve price ──────────────────────────────────────────────
+      const product    = productsData.data[0];
+      const interval   = selected === "monthly" ? "month" : "year";
+      const targetCurr = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
 
-      // Try currency-specific price first, then fall back to any matching interval
+      // Try exact currency match first, then fall back to any matching interval.
       const price =
         product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
         product.prices?.find((p: any) => p.recurring?.interval === interval);
 
-      if (!price) { setError(t("upgrade.errorNoPlan")); return; }
+      if (!price) {
+        setError(t("upgrade.errorNoPlan"));
+        return;
+      }
 
+      // ── Step 3: create Stripe checkout session ────────────────────────────
       const origin      = window.location.origin;
       const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
         method:  "POST",
@@ -126,11 +146,23 @@ export default function Upgrade() {
           cancelUrl:  `${origin}${BASE}/checkout/cancel`,
         }),
       });
+
+      // Session expired while on this page → force re-login.
+      if (checkoutRes.status === 401) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        navigate("/login");
+        return;
+      }
+
       const checkoutData = await checkoutRes.json();
+
       if (!checkoutRes.ok || !checkoutData.url) {
+        // Stripe config error — surface a clear message.
         setError(t("upgrade.errorGeneral"));
         return;
       }
+
+      // ── Step 4: redirect to Stripe-hosted checkout ────────────────────────
       if (Capacitor.isNativePlatform()) {
         window.open(checkoutData.url, "_system");
       } else {
