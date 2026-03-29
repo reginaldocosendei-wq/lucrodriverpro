@@ -12,27 +12,75 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
-// List products with prices (public — used for the upgrade page)
+// Build a products+prices map from DB rows (same shape as the Stripe-API fallback)
+function buildProductsMapFromRows(rows: any[]) {
+  const productsMap = new Map<string, any>();
+  for (const row of rows) {
+    if (!productsMap.has(row.product_id as string)) {
+      productsMap.set(row.product_id as string, {
+        id: row.product_id,
+        name: row.product_name,
+        description: row.product_description,
+        prices: [],
+      });
+    }
+    if (row.price_id) {
+      productsMap.get(row.product_id as string).prices.push({
+        id: row.price_id,
+        unitAmount: row.unit_amount,
+        currency: row.currency,
+        recurring: row.recurring,
+      });
+    }
+  }
+  return productsMap;
+}
+
+// List products with prices (public — used for the upgrade page).
+// Primary source: stripe.* DB tables (populated by the sync backfill).
+// Fallback: live Stripe API — handles the case where the DB tables haven't
+// been populated yet (e.g. right after a fresh production deploy).
 router.get("/products-with-prices", async (_req, res) => {
   try {
-    const rows = await storage.listProductsWithPrices();
+    // ── Primary: DB lookup ────────────────────────────────────────────────
+    let rows: any[] = [];
+    let dbError: string | null = null;
+    try {
+      rows = await storage.listProductsWithPrices();
+    } catch (err: any) {
+      // stripe schema may not exist yet in this environment
+      dbError = err?.message ?? String(err);
+      console.warn("products-with-prices DB error (will fallback to Stripe API):", dbError);
+    }
 
+    if (rows.length > 0) {
+      return res.json({ data: Array.from(buildProductsMapFromRows(rows).values()) });
+    }
+
+    // ── Fallback: live Stripe API ─────────────────────────────────────────
+    // Triggered when: DB query failed (schema absent) OR rows are empty
+    // (schema exists but backfill hasn't run yet).
+    const prices = await stripeService.listPricesWithProducts();
     const productsMap = new Map<string, any>();
-    for (const row of rows) {
-      if (!productsMap.has(row.product_id as string)) {
-        productsMap.set(row.product_id as string, {
-          id: row.product_id,
-          name: row.product_name,
-          description: row.product_description,
+    for (const price of prices) {
+      const product = typeof price.product === "object" && price.product !== null
+        ? (price.product as any)
+        : null;
+      if (!product || product.deleted || !product.active) continue;
+      if (!productsMap.has(product.id)) {
+        productsMap.set(product.id, {
+          id: product.id,
+          name: product.name,
+          description: product.description ?? null,
           prices: [],
         });
       }
-      if (row.price_id) {
-        productsMap.get(row.product_id as string).prices.push({
-          id: row.price_id,
-          unitAmount: row.unit_amount,
-          currency: row.currency,
-          recurring: row.recurring,
+      if (price.active) {
+        productsMap.get(product.id).prices.push({
+          id: price.id,
+          unitAmount: price.unit_amount,
+          currency: price.currency,
+          recurring: price.recurring,
         });
       }
     }

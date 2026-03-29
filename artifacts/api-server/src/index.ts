@@ -10,6 +10,15 @@ async function initStripe() {
   }
 
   try {
+    // Always run schema migrations so stripe.* tables exist in every
+    // environment (dev + production). Without this the tables are only
+    // created when the `dev` script runs; the production `start` script
+    // skips migrations, leaving the stripe schema absent and causing every
+    // /api/stripe/products-with-prices call to throw a SQL error.
+    const { runMigrations } = await import("stripe-replit-sync");
+    await runMigrations({ databaseUrl });
+    logger.info("Stripe migrations complete");
+
     logger.info("Initializing Stripe sync...");
     const stripeSync = await getStripeSync();
 

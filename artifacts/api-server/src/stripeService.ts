@@ -30,6 +30,18 @@ export class StripeService {
     });
   }
 
+  // Direct Stripe API fetch — used as fallback when the stripe.* DB tables
+  // haven't been populated yet (e.g. right after first production deploy).
+  async listPricesWithProducts() {
+    const stripe = await getUncachableStripeClient();
+    const prices = await stripe.prices.list({
+      active: true,
+      expand: ["data.product"],
+      limit: 100,
+    });
+    return prices.data;
+  }
+
   async createCustomerPortalSession(customerId: string, returnUrl: string) {
     const stripe = await getUncachableStripeClient();
     return stripe.billingPortal.sessions.create({
