@@ -28,16 +28,29 @@ function requireAuth(req: any, res: any, next: any) {
 
 // ── POST /api/create-checkout ─────────────────────────────────────────────────
 router.post("/", requireAuth, async (req: any, res) => {
+  const userId = req.session.userId;
+  console.log("[create-checkout] request received — userId:", userId, "priceId:", PRICE_ID);
+
   try {
     const { url } = await paymentService.createCheckoutSession(
-      req.session.userId,
+      userId,
       PRICE_ID,
       SUCCESS_URL,
       CANCEL_URL,
     );
+    console.log("[create-checkout] session created — userId:", userId, "url:", url);
     res.json({ url });
   } catch (err: any) {
-    console.error("[create-checkout]", err?.message);
+    console.error("[create-checkout] ERROR —", {
+      userId,
+      priceId:  PRICE_ID,
+      message:  err?.message,
+      type:     err?.type,
+      code:     err?.code,
+      param:    err?.param,
+      raw:      err?.raw?.message,
+      stack:    err?.stack?.split("\n").slice(0, 4).join(" | "),
+    });
 
     const code =
       err?.type === "StripeAuthenticationError" ? "stripe_auth"    :
