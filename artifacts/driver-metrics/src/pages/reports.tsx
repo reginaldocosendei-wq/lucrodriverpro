@@ -57,14 +57,19 @@ function EmptyChart({ message = "Sem dados suficientes para exibir este gráfico
 }
 
 // ─── Chart card wrapper — overflow visible so tooltips are never clipped ───────
-function ChartCard({ title, height = 260, children }: { title: string; height?: number; children: React.ReactNode }) {
+function ChartCard({ title, subtitle, height = 260, children }: {
+  title: string; subtitle?: string; height?: number; children: React.ReactNode
+}) {
   return (
     <div style={{
       background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
       borderRadius: 20, padding: "24px 20px 20px",
       overflow: "visible",
     }}>
-      <p style={{ fontSize: 16, fontWeight: 800, color: "#f9fafb", marginBottom: 20, letterSpacing: "-0.01em" }}>{title}</p>
+      <p style={{ fontSize: 16, fontWeight: 800, color: "#f9fafb", marginBottom: subtitle ? 6 : 20, letterSpacing: "-0.01em" }}>{title}</p>
+      {subtitle && (
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 16, fontWeight: 500 }}>{subtitle}</p>
+      )}
       <div style={{ height, width: "100%" }}>
         {children}
       </div>
@@ -221,20 +226,19 @@ export default function Reports() {
   const byPlatform  = (reports as any).byPlatform  as any[] ?? [];
   const byDayOfWeek = (reports as any).byDayOfWeek as any[] ?? [];
 
-  // hasDailyData: at least one real earnings point in the last 30 days.
-  // This is intentionally separate from byPlatform so a user with only
-  // historical data (outside the window) doesn't get an invisible line chart.
-  const hasDailyData    = daily.some((d: any) => d.earnings !== null && d.earnings > 0);
+  // Strip null-earnings days so Recharts receives a clean array where every
+  // consecutive pair of entries has real values and can be connected by a line.
+  // With nulls in the array and connectNulls=false, non-adjacent real points
+  // are treated as isolated dots — no line is drawn between them.
+  const dailyPoints: any[] = daily.filter((d: any) => d.earnings !== null && d.earnings > 0);
+
+  const hasDailyData    = dailyPoints.length > 0;
+  const singleDay       = dailyPoints.length === 1;
+  const fewRecords      = dailyPoints.length > 1 && dailyPoints.length < 5;
+
   const hasAnyEarnings  = hasDailyData || byPlatform.length > 0;
   const hasPlatformData = byPlatform.length > 0;
   const hasDayData      = byDayOfWeek.some((d: any) => d.earnings > 0);
-
-  // Diagnostic logs — visible in browser console
-  console.log(
-    `[Reports] daily: ${daily.length} pts | with data: ${daily.filter((d: any) => d.earnings !== null).length}`,
-    '\nfirst:', daily[0],
-    '\nlast:',  daily[daily.length - 1],
-  );
 
   const axisStyle = { fill: "#6b7280", fontSize: 10, fontWeight: 600 } as const;
   const gridColor = "rgba(255,255,255,0.05)";
@@ -292,12 +296,56 @@ export default function Reports() {
       )}
 
       {/* ── Evolução Diária ───────────────────────────────────────────────── */}
-      <ChartCard title="📈 Evolução Diária — Últimos 30 dias" height={300}>
+      <ChartCard
+        title="📈 Evolução Diária — Últimos 30 dias"
+        subtitle={fewRecords ? "Adicione mais dias para visualizar a evolução completa" : undefined}
+        height={singleDay ? 200 : 300}
+      >
         {!hasDailyData ? (
           <EmptyChart message="Nenhum ganho registrado nos últimos 30 dias. Importe corridas ou adicione dados manualmente." />
+
+        ) : singleDay ? (
+          /* ── Single day: polished stat card instead of a near-empty chart ── */
+          <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20 }}>
+            <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>
+              {fmtDate(dailyPoints[0].date)} · 1 dia registrado
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              {([
+                { label: "Ganhos",     value: dailyPoints[0].earnings, color: "#00ff88" },
+                { label: "Custos",     value: dailyPoints[0].costs,    color: "#ef4444" },
+                ...(dailyPoints[0].profit !== null
+                  ? [{ label: "Lucro Real", value: dailyPoints[0].profit, color: "#3b82f6" }]
+                  : []),
+              ] as { label: string; value: number; color: string }[]).map(({ label, value, color }) => (
+                <div key={label} style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${color}33`,
+                  borderRadius: 16, padding: "14px 20px", textAlign: "center", minWidth: 96,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "center", marginBottom: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: "0.07em" }}>
+                      {label.toUpperCase()}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 19, fontWeight: 900, color, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                    {formatBRL(value ?? 0)}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>
+              Adicione mais dias para visualizar a evolução completa
+            </p>
+          </div>
+
         ) : (
+          /* ── 2+ days: LineChart over the filtered (null-free) points ──────── */
+          /* dailyPoints contains only real days — no nulls — so every adjacent  */
+          /* pair is connected by a line without needing connectNulls trickery.  */
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={daily} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <LineChart data={dailyPoints} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
               <XAxis
                 dataKey="date"
@@ -318,12 +366,9 @@ export default function Reports() {
               />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 2 }} />
               <Legend wrapperStyle={{ paddingTop: 16, fontSize: 12, fontWeight: 600 }} iconType="circle" />
-              {/* dot must be an object (not false) so isolated single-day points
-                  render as visible dots even without an adjacent non-null neighbour.
-                  connectNulls={false} keeps gaps between non-consecutive days. */}
-              <Line type="monotone" dataKey="earnings" name="Ganhos"     stroke="#00ff88" strokeWidth={2.5} dot={{ r: 2.5, fill: "#00ff88",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="costs"    name="Custos"     stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5, fill: "#ef4444",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 2.5, fill: "#3b82f6",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="earnings" name="Ganhos"     stroke="#00ff88" strokeWidth={2.5} dot={{ r: 2.5, fill: "#00ff88", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="costs"    name="Custos"     stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5, fill: "#ef4444", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 2.5, fill: "#3b82f6", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

@@ -193,16 +193,6 @@ router.get("/earnings", requireAuth, async (req, res) => {
     };
   });
 
-  // Temporary diagnostic — remove once charts confirmed working
-  const nonNullDays = daily.filter(d => d.earnings !== null);
-  console.log(
-    `[reports/earnings] userId=${userId}` +
-    ` | summaries=${summaries.length} extras=${extras.length} variableCosts=${variableCosts.length}` +
-    ` | activeDates=${activeDates.size} | nonNullDays=${nonNullDays.length}` +
-    ` | first=${nonNullDays[0]?.date ?? "—"} last=${nonNullDays[nonNullDays.length - 1]?.date ?? "—"}` +
-    ` | platforms=${byPlatform.length}`
-  );
-
   res.json({ daily, byPlatform, byDayOfWeek });
 });
 
