@@ -205,4 +205,21 @@ router.get("/subscription", requireAuth, async (req: any, res) => {
   }
 });
 
+// Simulation endpoint — bypasses Stripe and sets plan=pro directly in the DB.
+// Used to validate the product without real payments.
+router.post("/simulate-upgrade", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.session.userId as number;
+    const user = await storage.updateUserStripeInfo(userId, {
+      plan: "pro",
+      trialStartDate: null,
+    });
+    console.log("[simulate-upgrade] userId=%d → plan=pro", userId);
+    res.json({ ok: true, plan: user?.plan ?? "pro" });
+  } catch (err: any) {
+    console.error("[simulate-upgrade] error:", err);
+    res.status(500).json({ error: "Erro ao ativar PRO" });
+  }
+});
+
 export default router;

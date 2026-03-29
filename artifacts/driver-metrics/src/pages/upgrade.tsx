@@ -91,101 +91,44 @@ export default function Upgrade() {
     { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
   ], [t]);
 
-  // ── Stripe checkout ──────────────────────────────────────────────────────────
+  // ── Simulate upgrade (real Stripe wired in later) ───────────────────────────
   const handleUpgrade = async () => {
-    // Guard: PrivateGuard guarantees user is loaded before this page renders.
-    // If user somehow disappeared (background refetch failure), re-validate.
     if (!user) {
-      // Force a fresh auth check — if it fails PrivateGuard will redirect.
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      return;
-    }
-
-    // ── Dev bypass: skip Stripe and jump straight to success page ────────────
-    if (DEV_SKIP_STRIPE_CHECKOUT) {
-      navigate("/checkout/success");
       return;
     }
 
     setIsLoading(true);
     setError(null);
-
-    // [DEBUG] Log upgrade attempt context
-    console.log("[upgrade] attempt — plan:", selected, "user:", { id: (user as any)?.id, email: (user as any)?.email, plan: (user as any)?.plan });
+    console.log("[upgrade] simulate — userId:", (user as any)?.id, "plan selected:", selected);
 
     try {
-      // ── Step 1: load products ──────────────────────────────────────────────
-      const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
-      console.log("[upgrade] step1 products-with-prices status:", productsRes.status);
-      if (!productsRes.ok) {
-        setError(t("upgrade.errorGeneral"));
-        return;
-      }
-      const productsData = await productsRes.json();
-      console.log("[upgrade] step1 products:", productsData.data?.length, "items", productsData.data?.flatMap((p: any) => p.prices).map((p: any) => `${p.id}/${p.currency}/${p.recurring?.interval}`));
-      if (!Array.isArray(productsData.data) || productsData.data.length === 0) {
-        setError(t("upgrade.errorNoPlans"));
-        return;
-      }
-
-      // ── Step 2: resolve price ──────────────────────────────────────────────
-      const product    = productsData.data[0];
-      const interval   = selected === "monthly" ? "month" : "year";
-      const targetCurr = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
-
-      // Try exact currency match first, then fall back to any matching interval.
-      const price =
-        product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
-        product.prices?.find((p: any) => p.recurring?.interval === interval);
-
-      console.log("[upgrade] step2 resolved price:", price?.id, "interval:", interval, "currency:", targetCurr);
-      if (!price) {
-        setError(t("upgrade.errorNoPlan"));
-        return;
-      }
-
-      // ── Step 3: create Stripe checkout session ────────────────────────────
-      const origin      = window.location.origin;
-      const payload = {
-        priceId:    price.id,
-        successUrl: `${origin}${BASE}/checkout/success`,
-        cancelUrl:  `${origin}${BASE}/checkout/cancel`,
-      };
-      console.log("[upgrade] step3 checkout payload:", payload);
-      const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${BASE}/api/stripe/simulate-upgrade`, {
+        method: "POST",
         credentials: "include",
-        body: JSON.stringify(payload),
       });
-      console.log("[upgrade] step3 checkout status:", checkoutRes.status);
 
-      // Session expired while on this page → force re-login.
-      if (checkoutRes.status === 401) {
+      console.log("[upgrade] simulate-upgrade status:", res.status);
+
+      if (res.status === 401) {
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/login");
         return;
       }
 
-      const checkoutData = await checkoutRes.json();
-      console.log("[upgrade] step3 checkout response:", checkoutRes.ok ? { url: checkoutData.url?.slice(0, 60) } : checkoutData);
-
-      if (!checkoutRes.ok || !checkoutData.url) {
-        // Stripe config error — surface a clear message.
-        setError(t("upgrade.errorGeneral"));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError((data as any).error ?? t("upgrade.errorGeneral"));
         return;
       }
 
-      // ── Step 4: redirect to Stripe-hosted checkout ────────────────────────
-      console.log("[upgrade] step4 redirecting to Stripe →", checkoutData.url.slice(0, 60));
-      if (Capacitor.isNativePlatform()) {
-        window.open(checkoutData.url, "_system");
-      } else {
-        window.location.href = checkoutData.url;
-      }
+      // Refresh session so all UI reflects the new PRO plan immediately.
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      console.log("[upgrade] simulate success → navigating home");
+      navigate("/?upgraded=1");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[upgrade] caught error:", msg);
+      console.error("[upgrade] simulate error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
