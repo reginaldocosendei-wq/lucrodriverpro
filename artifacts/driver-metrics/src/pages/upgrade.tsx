@@ -8,10 +8,8 @@ import {
   Clock, ChevronRight, TrendingUp, MapPin, Timer, Award,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { Capacitor } from "@capacitor/core";
 import { getApiBase } from "@/lib/api";
 import { useT } from "@/lib/i18n";
-import { DEV_SKIP_STRIPE_CHECKOUT } from "@/lib/dev-flags";
 
 const BASE = getApiBase();
 

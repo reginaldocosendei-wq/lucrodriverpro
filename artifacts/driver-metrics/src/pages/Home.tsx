@@ -4,8 +4,8 @@ import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { DEV_DISABLE_DASHBOARD_PRELOAD } from "@/lib/dev-flags";
 import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
-import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap } from "lucide-react";
-import { motion, animate } from "framer-motion";
+import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap, Check, X } from "lucide-react";
+import { motion, animate, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
 import { DailyAnalysisCard, DailyAnalysisEmpty } from "@/components/DailyAnalysisCard";
@@ -76,6 +76,20 @@ function Skeleton({ h = 24, w = "100%", r = 8 }: { h?: number; w?: number | stri
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const [, navigate] = useLocation();
+
+  // ── Upgrade success banner ────────────────────────────────────────────────
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  useEffect(() => {
+    if (window.location.search.includes("upgraded=1")) {
+      setShowUpgradeBanner(true);
+      // Clean the URL so the banner doesn't re-appear on refresh.
+      window.history.replaceState({}, "", window.location.pathname);
+      // Auto-dismiss after 6 seconds.
+      const t = setTimeout(() => setShowUpgradeBanner(false), 6000);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   // DEV_BYPASS: dashboard queries gated by DEV_DISABLE_DASHBOARD_PRELOAD
   const { data: summary, isLoading } = useGetDashboardSummary(
     DEV_DISABLE_DASHBOARD_PRELOAD ? { query: { enabled: false } } : undefined
@@ -164,6 +178,55 @@ export default function Home() {
       variants={container} initial="hidden" animate="show"
       style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 20 : 16, paddingBottom: isDesktop ? 40 : 112 }}
     >
+
+      {/* ── Upgrade success banner ───────────────────────────────────────── */}
+      <AnimatePresence>
+        {showUpgradeBanner && (
+          <motion.div
+            key="upgrade-banner"
+            initial={{ opacity: 0, y: -12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 12,
+              background: "linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,200,100,0.1) 100%)",
+              border: "1px solid rgba(0,255,136,0.3)",
+              borderRadius: 18,
+              padding: "14px 16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: "rgba(0,255,136,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <Check size={16} color="#00ff88" strokeWidth={2.5} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#00ff88", lineHeight: 1.3 }}>
+                  Upgrade ativado com sucesso!
+                </p>
+                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 1 }}>
+                  Bem-vindo ao Lucro Driver PRO. Aproveite todos os recursos.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowUpgradeBanner(false)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                color: "rgba(255,255,255,0.4)", padding: 4, flexShrink: 0,
+                display: "flex", alignItems: "center",
+              }}
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Greeting ──────────────────────────────────────────────────────── */}
       <motion.div variants={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
