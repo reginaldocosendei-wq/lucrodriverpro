@@ -1,11 +1,13 @@
 /**
  * POST /api/create-checkout
  *
- * Simple checkout endpoint with a fixed price ID and fixed redirect URLs.
- * Uses the same PaymentService as /api/stripe/checkout — no duplicate logic.
+ * Creates a Stripe Checkout session in subscription mode for the monthly plan.
+ * Uses paymentService (which calls stripeClient) — the secret key is NEVER
+ * sent to the browser.
  *
- * Designed for the monthly R$19.90 plan.
- * The secret key is never exposed; it stays server-side via paymentService.
+ * Secret key resolution order (see stripeClient.ts):
+ *   1. STRIPE_SECRET_KEY env var  (direct — works anywhere)
+ *   2. Replit Stripe connector    (managed credentials fallback)
  */
 
 import { Router } from "express";
@@ -18,9 +20,16 @@ const PRICE_ID    = "price_1TFI4jHmFPfQQx";
 const SUCCESS_URL = "https://lucrodriver.com/success";
 const CANCEL_URL  = "https://lucrodriver.com/cancel";
 
+// Startup confirmation — printed once when the module is first imported
+console.log("[create-checkout] route registered — POST /api/create-checkout");
+console.log("[create-checkout] price:", PRICE_ID);
+console.log("[create-checkout] success_url:", SUCCESS_URL);
+console.log("[create-checkout] cancel_url:", CANCEL_URL);
+
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req: any, res: any, next: any) {
   if (!req.session?.userId) {
+    console.warn("[create-checkout] rejected — no session (401)");
     return res.status(401).json({ error: "Autenticação necessária" });
   }
   next();
@@ -29,27 +38,28 @@ function requireAuth(req: any, res: any, next: any) {
 // ── POST /api/create-checkout ─────────────────────────────────────────────────
 router.post("/", requireAuth, async (req: any, res) => {
   const userId = req.session.userId;
-  console.log("[create-checkout] request received — userId:", userId, "priceId:", PRICE_ID);
+  console.log(`[create-checkout] ▶ request — userId=${userId} priceId=${PRICE_ID}`);
 
   try {
+    console.log("[create-checkout] calling paymentService.createCheckoutSession...");
     const { url } = await paymentService.createCheckoutSession(
       userId,
       PRICE_ID,
       SUCCESS_URL,
       CANCEL_URL,
     );
-    console.log("[create-checkout] session created — userId:", userId, "url:", url);
+    console.log(`[create-checkout] ✓ session created — userId=${userId} url=${url}`);
     res.json({ url });
   } catch (err: any) {
-    console.error("[create-checkout] ERROR —", {
+    console.error("[create-checkout] ✗ ERROR:", {
       userId,
       priceId:  PRICE_ID,
       message:  err?.message,
       type:     err?.type,
       code:     err?.code,
       param:    err?.param,
-      raw:      err?.raw?.message,
-      stack:    err?.stack?.split("\n").slice(0, 4).join(" | "),
+      rawMsg:   err?.raw?.message,
+      stack:    err?.stack?.split("\n").slice(0, 5).join(" | "),
     });
 
     const code =
