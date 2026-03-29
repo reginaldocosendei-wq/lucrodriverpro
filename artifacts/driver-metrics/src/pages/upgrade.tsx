@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,10 @@ export default function Upgrade() {
   const [isLoading, setIsLoading]  = useState(false);
   const [error, setError]          = useState<string | null>(null);
   const { t, currency }            = useT();
+
+  // Clear any stale error whenever this page is (re-)mounted.
+  // This prevents a previous failure from showing on the next visit.
+  useEffect(() => { setError(null); }, []);
 
   const isBRL = currency === "BRL";
 
