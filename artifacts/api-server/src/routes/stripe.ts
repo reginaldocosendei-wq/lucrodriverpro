@@ -78,8 +78,12 @@ router.get("/products-with-prices", async (_req, res) => {
     }
     res.json({ data: Array.from(map.values()) });
   } catch (err: any) {
-    console.error("[products-with-prices]", err?.message);
-    res.status(500).json({ error: "Erro ao buscar produtos" });
+    console.error("[products-with-prices]", err?.message, err?.type);
+    const code =
+      err?.type === "StripeAuthenticationError" ? "stripe_auth"    :
+      err?.type === "StripeInvalidRequestError"  ? "stripe_invalid" :
+      "stripe_error";
+    res.status(500).json({ error: "Erro ao buscar produtos", code });
   }
 });
 

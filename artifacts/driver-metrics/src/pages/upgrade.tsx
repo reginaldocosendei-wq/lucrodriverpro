@@ -118,13 +118,25 @@ export default function Upgrade() {
 
     setIsLoading(true);
     setError(null);
-    console.log("[handleCheckout] start — userId:", (user as any)?.id);
+    console.log("[handleCheckout] start — userId:", (user as any)?.id, "currency:", currency);
+
+    // Confirmed Stripe price IDs for the monthly plan
+    const PRICE_BRL = "price_1TEbgtDnebKxBIG0kxMNHyH5";
+    const priceId   = PRICE_BRL; // use BRL price; for USD Stripe will handle conversion
+
+    // Dynamic success/cancel URLs — use the current origin so they work in
+    // both the Replit dev environment and the production domain.
+    const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const origin     = window.location.origin;
+    const successUrl = `${origin}${basePath}/checkout/success`;
+    const cancelUrl  = `${origin}${basePath}/checkout/cancel`;
 
     try {
       const res = await fetch(`${BASE}/api/create-checkout`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, successUrl, cancelUrl }),
       });
 
       if (res.status === 401) {
@@ -134,9 +146,13 @@ export default function Upgrade() {
       }
 
       const data = await res.json();
+      console.log("[handleCheckout] response:", res.status, data?.code ?? "(ok)");
+
       if (!res.ok || !data.url) {
         if (data.code === "stripe_auth") {
           setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
+        } else if (data.code === "stripe_invalid") {
+          setError("Plano não encontrado. Entre em contato com o suporte.");
         } else {
           setError(t("upgrade.errorGeneral"));
         }
@@ -147,7 +163,7 @@ export default function Upgrade() {
       window.location.href = data.url;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[handleCheckout] error:", msg);
+      console.error("[handleCheckout] fetch error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
@@ -193,7 +209,12 @@ export default function Upgrade() {
         credentials: "include",
       });
       if (!productsRes.ok) {
-        setError(t("upgrade.errorGeneral"));
+        const errBody = await productsRes.json().catch(() => ({}));
+        if (errBody?.code === "stripe_auth") {
+          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
+        } else {
+          setError(t("upgrade.errorGeneral"));
+        }
         return;
       }
       const { data: products } = await productsRes.json() as { data: any[] };
