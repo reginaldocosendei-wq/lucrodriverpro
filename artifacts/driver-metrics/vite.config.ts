@@ -20,12 +20,44 @@ if (!isBuild && (Number.isNaN(port) || port <= 0)) {
 // BASE_PATH is required for Replit dev server; defaults to "/" for Android/Capacitor builds
 const basePath = process.env.BASE_PATH ?? "/";
 
+// ─── Domain redirect plugin ────────────────────────────────────────────────────
+// In production, redirect any request that arrives on the .replit.app hostname
+// to the custom domain with a 301.  Runs in both `vite dev` (server) and
+// `vite preview` (preview) servers so the redirect fires regardless of the
+// serving mode used by the deployment.
+const CUSTOM_DOMAIN = "lucrodriverpro.com";
+
+function domainRedirectPlugin() {
+  const addMiddleware = (server: { middlewares: { use: Function } }) => {
+    server.middlewares.use((req: any, res: any, next: Function) => {
+      const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+      if (!isProduction) return next();
+
+      const host = (req.headers?.host ?? "").toLowerCase();
+      if (!host || host === CUSTOM_DOMAIN || host.endsWith(`.${CUSTOM_DOMAIN}`)) {
+        return next();
+      }
+
+      const location = `https://${CUSTOM_DOMAIN}${req.url ?? "/"}`;
+      res.writeHead(301, { Location: location });
+      res.end();
+    });
+  };
+
+  return {
+    name: "domain-redirect",
+    configureServer:        addMiddleware,
+    configurePreviewServer: addMiddleware,
+  };
+}
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    domainRedirectPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

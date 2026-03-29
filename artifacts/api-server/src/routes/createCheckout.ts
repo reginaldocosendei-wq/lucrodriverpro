@@ -22,10 +22,9 @@ const router = Router();
 // These come from the project Stripe account and are used as defaults.
 // The frontend may override by sending { priceId } in the request body.
 const MONTHLY_PRICE_BRL_ID = "price_1TEbgtDnebKxBIG0kxMNHyH5";
-const MONTHLY_PRICE_USD_ID = "price_1TEbgtDnebKxBIG0kxMNHyH5"; // same fallback if USD ID unknown
 
-// Production custom domain — used as success/cancel URL base in production.
-const PROD_DOMAIN = "https://lucrodriver.com";
+// Production custom domain — used as last-resort fallback for success/cancel URLs.
+const PROD_DOMAIN = "https://lucrodriverpro.com";
 
 console.log("[create-checkout] route loaded — POST /api/create-checkout");
 console.log("[create-checkout] default BRL price:", MONTHLY_PRICE_BRL_ID);
@@ -51,10 +50,12 @@ router.post("/", requireAuth, async (req: any, res) => {
   } = req.body ?? {};
 
   // Build success/cancel URLs:
-  //  - Frontend-provided: highest priority (includes SPA base path)
-  //  - Request host: works in all Replit environments (dev + prod)
-  //  - Production domain: last resort for when host is unavailable
-  const origin     = `https://${req.headers.host}`;
+  //  1. Frontend-provided (highest priority — includes SPA base path)
+  //  2. Request host (works in all Replit environments: dev + prod)
+  //  3. PROD_DOMAIN (lucrodriverpro.com) — last resort
+  const origin     = req.headers.host
+    ? `https://${req.headers.host}`
+    : PROD_DOMAIN;
   const successUrl = clientSuccess || `${origin}/checkout/success`;
   const cancelUrl  = clientCancel  || `${origin}/checkout/cancel`;
 

@@ -37,6 +37,26 @@ app.post(
   },
 );
 
+// ─── DOMAIN REDIRECT (production only) ───────────────────────────────────────
+// Registered AFTER the Stripe webhook handler so that webhook callbacks from
+// Stripe (which don't follow redirects) are never affected.
+// Any other request arriving on the .replit.app URL is permanently redirected
+// to the custom domain with HTTPS preserved.
+const CUSTOM_DOMAIN = "lucrodriverpro.com";
+
+app.use((req, res, next) => {
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  if (!isProduction) return next();
+
+  const host = (req.headers.host ?? "").toLowerCase();
+  if (!host || host === CUSTOM_DOMAIN || host.endsWith(`.${CUSTOM_DOMAIN}`)) {
+    return next(); // already on the custom domain
+  }
+
+  // Preserve the full path + query string in the redirect target.
+  return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.url}`);
+});
+
 // ─── GENERAL MIDDLEWARE ───────────────────────────────────────────────────────
 app.use(
   pinoHttp({
