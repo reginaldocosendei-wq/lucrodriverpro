@@ -31,15 +31,15 @@ const fadeUp = {
 export default function Upgrade() {
   const { data: user }             = useGetMe();
   const queryClient                = useQueryClient();
-  const [, navigate]               = useLocation();
+  const [location, navigate]       = useLocation();
   const [selected, setSelected]    = useState<"monthly" | "yearly">("monthly");
   const [isLoading, setIsLoading]  = useState(false);
   const [error, setError]          = useState<string | null>(null);
   const { t, currency }            = useT();
 
-  // Clear any stale error whenever this page is (re-)mounted.
-  // This prevents a previous failure from showing on the next visit.
-  useEffect(() => { setError(null); }, []);
+  // Clear error on every navigation to this page — handles both fresh mounts
+  // and SPA re-visits where the component may have stayed in the tree.
+  useEffect(() => { setError(null); }, [location]);
 
   const isBRL = currency === "BRL";
 
