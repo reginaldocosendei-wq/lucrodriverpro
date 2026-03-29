@@ -50,6 +50,48 @@ function Bar({
   );
 }
 
+// ─── SUMMARY ROW — label / value / thin animated bar ─────────────────────────
+function SummaryRow({
+  label, sublabel, prefix, value, valueColor, barPct, barColor, barDelay = 0,
+}: {
+  label: string;
+  sublabel?: string;
+  prefix?: string;
+  value: string;
+  valueColor: string;
+  barPct: number;
+  barColor: string;
+  barDelay?: number;
+}) {
+  const clamped = Math.min(100, Math.max(0, barPct));
+  return (
+    <div style={{ paddingBottom: 13 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+        <div>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontWeight: 500, lineHeight: 1 }}>{label}</span>
+          {sublabel && (
+            <span style={{ display: "block", fontSize: 9, color: "rgba(129,140,248,0.5)", fontWeight: 600, marginTop: 2, letterSpacing: "0.04em" }}>
+              {sublabel}
+            </span>
+          )}
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 800, color: valueColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
+          {prefix && <span style={{ opacity: 0.65, marginRight: 1 }}>{prefix} </span>}
+          {value}
+        </span>
+      </div>
+      <div style={{ height: 3, background: "rgba(255,255,255,0.04)", borderRadius: 2, overflow: "hidden" }}>
+        <motion.div
+          style={{ height: "100%", borderRadius: 2, background: barColor }}
+          initial={{ width: 0 }}
+          animate={{ width: `${clamped}%` }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: barDelay }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── STAGGER ─────────────────────────────────────────────────────────────────
 const container = {
   hidden: { opacity: 0 },
@@ -743,90 +785,110 @@ export default function Home() {
           : { display: "flex", flexDirection: "column", gap: 16 }
         }>
 
-          {/* ── Profit breakdown ──────────────────────────────────────────── */}
+          {/* ── Daily financial breakdown ─────────────────────────────────── */}
           {totalEarnings > 0 && (
             <motion.div variants={item}>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
-                Resumo financeiro
+                Resumo do dia
               </p>
-              <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* Faturamento */}
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Faturamento do dia</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(totalEarnings)}</span>
-                  </div>
-                  <Bar pct={100} color="rgba(255,255,255,0.12)" height={5} delay={0} />
+              <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, overflow: "hidden" }}>
+
+                {/* ── Rows ──────────────────────────────────────────────────── */}
+                <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 0 }}>
+
+                  {/* Faturamento */}
+                  <SummaryRow
+                    label="Faturamento"
+                    value={formatBRL(totalEarnings)}
+                    valueColor="#f9fafb"
+                    barPct={100}
+                    barColor="rgba(255,255,255,0.1)"
+                    barDelay={0}
+                  />
+
+                  {/* Custos variáveis — shown when user has any variable costs today */}
+                  {variableCostsToday > 0 && (
+                    <SummaryRow
+                      label="Custos variáveis"
+                      prefix="−"
+                      value={formatBRL(variableCostsToday)}
+                      valueColor="#ef4444"
+                      barPct={(variableCostsToday / totalEarnings) * 100}
+                      barColor="rgba(239,68,68,0.55)"
+                      barDelay={0.1}
+                    />
+                  )}
+
+                  {/* Cota fixa diária — shown only when user has fixed monthly costs */}
+                  {dailyFixedCostQuota > 0 && (
+                    <SummaryRow
+                      label="Cota fixa diária"
+                      sublabel={`${formatBRL(fixedMonthlyTotal)}/mês`}
+                      prefix="−"
+                      value={formatBRL(dailyFixedCostQuota)}
+                      valueColor="#818cf8"
+                      barPct={(dailyFixedCostQuota / totalEarnings) * 100}
+                      barColor="rgba(99,102,241,0.45)"
+                      barDelay={0.18}
+                    />
+                  )}
+
+                  {/* Divider before profit */}
+                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 0 0" }} />
                 </div>
-                {/* Custos variáveis */}
-                {variableCostsToday > 0 && (
+
+                {/* ── Profit row — separate band ─────────────────────────── */}
+                <div style={{
+                  padding: "14px 20px",
+                  background: profitPos ? "rgba(0,255,136,0.04)" : "rgba(239,68,68,0.04)",
+                  borderTop: `1px solid ${profitPos ? "rgba(0,255,136,0.08)" : "rgba(239,68,68,0.08)"}`,
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                }}>
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos variáveis</span>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(variableCostsToday)}</span>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", marginBottom: 2, letterSpacing: "0.04em" }}>
+                      Lucro real
+                    </p>
+                    {/* Thin profit bar below the label */}
+                    <div style={{ width: 80, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(0, profitPos ? Math.min(100, marginPct) : 0)}%` }}
+                        transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
+                        style={{ height: "100%", background: pColor, borderRadius: 2 }}
+                      />
                     </div>
-                    <Bar pct={totalEarnings > 0 ? (variableCostsToday / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
                   </div>
-                )}
-                {/* Custos variáveis (fallback: legacy costs field) — shown only if new field is zero but legacy has data */}
-                {variableCostsToday === 0 && costs > 0 && (
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos do dia</span>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(costs)}</span>
-                    </div>
-                    <Bar pct={totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
-                  </div>
-                )}
-                {/* Custos fixos (cota diária) — only shown when user has fixed monthly costs */}
-                {dailyFixedCostQuota > 0 && (
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos fixos (dia)</span>
-                        <span style={{
-                          fontSize: 8, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
-                          background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)",
-                          color: "#818cf8", borderRadius: 4, padding: "1px 5px",
-                        }}>
-                          {formatBRL(fixedMonthlyTotal)}/mês ÷ 30
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: "#818cf8", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(dailyFixedCostQuota)}</span>
-                    </div>
-                    <Bar pct={totalEarnings > 0 ? (dailyFixedCostQuota / totalEarnings) * 100 : 0} color="rgba(99,102,241,0.5)" height={5} delay={0.22} />
-                  </div>
-                )}
-                {/* Divider */}
-                <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
-                {/* Lucro real */}
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Lucro real</span>
-                    <span style={{ fontSize: 18, fontWeight: 900, color: pColor, fontVariantNumeric: "tabular-nums" }}>{formatBRL(profit)}</span>
-                  </div>
-                  <Bar pct={Math.max(0, profitPos ? marginPct : 0)} color={pColor} height={5} delay={0.3} />
+                  <span style={{ fontSize: 22, fontWeight: 900, color: pColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                    {formatBRL(profit)}
+                  </span>
                 </div>
-                {/* Monthly coverage insight — shown only when user has fixed costs configured */}
+
+                {/* ── Monthly fixed-cost coverage — compact footer ──────── */}
                 {fixedMonthlyTotal > 0 && (
-                  <>
-                    <div style={{ height: 1, background: "rgba(99,102,241,0.12)" }} />
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>Custos fixos do mês</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(129,140,248,0.7)", fontVariantNumeric: "tabular-nums" }}>{formatBRL(fixedMonthlyTotal)}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>Já coberto (dia {daysIntoMonth}/30)</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" }}>{formatBRL(fixedCoveredMonth)}</span>
-                      </div>
-                      <div style={{ height: 4, background: "rgba(99,102,241,0.1)", borderRadius: 4, overflow: "hidden", marginTop: 2 }}>
-                        <div style={{ height: "100%", width: `${fixedCoveragePct}%`, background: "#818cf8", borderRadius: 4, transition: "width 0.6s ease" }} />
-                      </div>
-                      <p style={{ fontSize: 10, color: "rgba(129,140,248,0.6)", textAlign: "right", fontWeight: 600 }}>{fixedCoveragePct}% coberto</p>
+                  <div style={{
+                    padding: "10px 20px 12px",
+                    borderTop: "1px solid rgba(99,102,241,0.1)",
+                    display: "flex", flexDirection: "column", gap: 6,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(129,140,248,0.55)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        Fixos mensais cobertos
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(129,140,248,0.7)", fontVariantNumeric: "tabular-nums" }}>
+                        {formatBRL(fixedCoveredMonth)} / {formatBRL(fixedMonthlyTotal)} · {fixedCoveragePct}%
+                      </span>
                     </div>
-                  </>
+                    <div style={{ height: 3, background: "rgba(99,102,241,0.1)", borderRadius: 2, overflow: "hidden" }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${fixedCoveragePct}%` }}
+                        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                        style={{ height: "100%", background: "#818cf8", borderRadius: 2 }}
+                      />
+                    </div>
+                  </div>
                 )}
+
               </div>
             </motion.div>
           )}
