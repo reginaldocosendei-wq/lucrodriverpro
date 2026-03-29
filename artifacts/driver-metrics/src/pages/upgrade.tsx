@@ -94,8 +94,12 @@ export default function Upgrade() {
     setError(null);
     try {
       const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
+      if (!productsRes.ok) {
+        setError(t("upgrade.errorGeneral"));
+        return;
+      }
       const productsData = await productsRes.json();
-      if (!productsData.data?.length) {
+      if (!Array.isArray(productsData.data) || productsData.data.length === 0) {
         setError(t("upgrade.errorNoPlans"));
         return;
       }
