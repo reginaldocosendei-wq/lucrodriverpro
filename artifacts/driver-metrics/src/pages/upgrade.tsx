@@ -90,7 +90,71 @@ export default function Upgrade() {
     { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
   ], [t]);
 
-  // ── Stripe checkout ──────────────────────────────────────────────────────────
+  // ── Simple checkout — fixed monthly price via /api/create-checkout ───────────
+  const handleCheckout = async () => {
+    if (!user) {
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      return;
+    }
+
+    if (DEV_SKIP_STRIPE_CHECKOUT) {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!r.ok) throw new Error("simulate failed");
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        navigate("/?upgraded=1");
+      } catch {
+        setError(t("upgrade.errorGeneral"));
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    console.log("[handleCheckout] start — userId:", (user as any)?.id);
+
+    try {
+      const res = await fetch(`${BASE}/api/create-checkout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.status === 401) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        navigate("/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        if (data.code === "stripe_auth") {
+          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
+        } else {
+          setError(t("upgrade.errorGeneral"));
+        }
+        return;
+      }
+
+      console.log("[handleCheckout] → redirecting to Stripe checkout");
+      window.location.href = data.url;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[handleCheckout] error:", msg);
+      setError(t("upgrade.errorGeneral"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Full dynamic checkout — fetches prices from Stripe (keeps existing logic) ─
   const handleUpgrade = async () => {
     if (!user) {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
@@ -481,9 +545,11 @@ export default function Upgrade() {
           </AnimatePresence>
 
           {/* ── Primary button ─────────────────────────────────────────── */}
+          {/* Monthly plan → handleCheckout (fixed price, fast path)      */}
+          {/* Yearly plan  → handleUpgrade  (dynamic price lookup)         */}
           <motion.button
             whileTap={{ scale: 0.985 }}
-            onClick={handleUpgrade}
+            onClick={selected === "monthly" ? handleCheckout : handleUpgrade}
             disabled={isLoading}
             style={{
               display: "block",

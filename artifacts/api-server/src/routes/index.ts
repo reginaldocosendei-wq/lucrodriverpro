@@ -17,6 +17,7 @@ import pixAdminRouter from "./pixAdmin";
 import adminUsersRouter from "./adminUsers";
 import preferencesRouter from "./preferences";
 import extraEarningsRouter from "./extraEarnings";
+import createCheckoutRouter from "./createCheckout";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,7 @@ router.use("/admin/pix", pixAdminRouter);
 router.use("/admin/users", adminUsersRouter);
 router.use("/preferences", preferencesRouter);
 router.use("/extra-earnings", extraEarningsRouter);
+router.use("/create-checkout", createCheckoutRouter);
 
 // Dev-only utilities — the router itself refuses all requests in production
 router.use("/dev", devAdminRouter);
