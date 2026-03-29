@@ -435,13 +435,18 @@ export default function Upgrade() {
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════════
-          ERROR
+          ERROR — only visible after a real failed request
       ══════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#f87171", textAlign: "center" }}
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.22)",
+              borderRadius: 14, padding: "12px 16px", marginBottom: 16,
+              fontSize: 13, color: "#f87171", textAlign: "center", lineHeight: 1.5,
+            }}
           >
             {error}
           </motion.div>
@@ -449,94 +454,114 @@ export default function Upgrade() {
       </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════════════
-          MAIN CTA
+          MAIN CTA — primary action, full prominence
       ══════════════════════════════════════════════════════════════ */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 14, maxWidth: isDesktop ? 560 : undefined, margin: isDesktop ? "0 auto 14px" : undefined }}>
+      <motion.div
+        variants={fadeUp}
+        style={{
+          maxWidth: isDesktop ? 680 : undefined,
+          margin: isDesktop ? "0 auto" : undefined,
+          width: "100%",
+          marginBottom: 10,
+        }}
+      >
         <motion.button
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.975 }}
           onClick={handleUpgrade}
           disabled={isLoading}
           style={{
-            width: "100%", height: 62, borderRadius: 20, border: "none",
+            width: "100%", height: 70, borderRadius: 22, border: "none",
             background: isLoading ? "rgba(0,255,136,0.5)" : "#00ff88",
-            color: "#000", fontWeight: 900, fontSize: 18,
+            color: "#000", fontWeight: 900, fontSize: 19,
             cursor: isLoading ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            boxShadow: "0 12px 40px rgba(0,255,136,0.35), 0 4px 12px rgba(0,0,0,0.3)",
+            boxShadow: isLoading
+              ? "none"
+              : "0 14px 44px rgba(0,255,136,0.38), 0 4px 14px rgba(0,0,0,0.35)",
             fontFamily: "inherit", letterSpacing: "-0.01em",
             position: "relative", overflow: "hidden",
+            transition: "box-shadow 0.2s, background 0.2s",
           }}
         >
           {/* Shine sweep */}
-          <motion.div
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 1.5 }}
-            style={{ position: "absolute", top: 0, bottom: 0, width: "40%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)", pointerEvents: "none" }}
-          />
+          {!isLoading && (
+            <motion.div
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+              style={{ position: "absolute", top: 0, bottom: 0, width: "40%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)", pointerEvents: "none" }}
+            />
+          )}
 
           {isLoading ? (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-              style={{ width: 22, height: 22, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000" }}
+              style={{ width: 24, height: 24, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000" }}
             />
           ) : (
             <>
-              <span style={{ position: "absolute", left: 22, display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                <Zap size={20} strokeWidth={2.5} />
+              <span style={{ position: "absolute", left: 24, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <Zap size={21} strokeWidth={2.5} />
               </span>
               <span style={{ position: "relative" }}>{t("upgrade.cta")}</span>
-              <span style={{ position: "absolute", right: 22, display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                <ChevronRight size={20} strokeWidth={2.5} />
+              <span style={{ position: "absolute", right: 24, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <ChevronRight size={21} strokeWidth={2.5} />
               </span>
             </>
           )}
         </motion.button>
+
+        {/* Reassurance tagline */}
+        <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.38)", marginTop: 11, lineHeight: 1.5 }}>
+          7 dias grátis · sem cobrança agora · cancele quando quiser
+        </p>
       </motion.div>
 
-      {/* ── Pix option (BRL only) ────────────────────────────────────────────── */}
+      {/* ── PIX — secondary option (BRL only) ───────────────────────────────── */}
       {isBRL && (
-        <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
-          {/* "ou" divider */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+        <motion.div
+          variants={fadeUp}
+          style={{
+            maxWidth: isDesktop ? 680 : undefined,
+            margin: isDesktop ? "0 auto" : undefined,
+            width: "100%",
+            marginBottom: 32,
+          }}
+        >
+          {/* Subtle "ou" divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "18px 0 14px" }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+            <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em", textTransform: "uppercase" }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
           </div>
 
-          {/* PIX card */}
-          <div style={{
-            background: "rgba(50,188,173,0.07)",
-            border: "1px solid rgba(50,188,173,0.22)",
-            borderRadius: 18,
-            padding: "14px 16px",
-          }}>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate("/pix-payment")}
-              style={{
-                width: "100%", height: 48, borderRadius: 12,
-                background: "rgba(50,188,173,0.12)",
-                border: "1px solid rgba(50,188,173,0.3)",
-                color: "rgba(255,255,255,0.88)",
-                fontWeight: 700, fontSize: 13.5,
-                cursor: "pointer", fontFamily: "inherit",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                transition: "background 0.15s",
-              }}
-            >
-              <span style={{ fontSize: 17 }}>📲</span>
-              {t("upgrade.ctaPix")}
-            </motion.button>
-            <p style={{ textAlign: "center", fontSize: 11.5, color: "rgba(255,255,255,0.45)", marginTop: 10, lineHeight: 1.5 }}>
-              {t("upgrade.pixComingSoon")}
-            </p>
-          </div>
+          {/* Ghost PIX button — clearly secondary */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate("/pix-payment")}
+            style={{
+              width: "100%", height: 48, borderRadius: 14,
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.65)",
+              fontWeight: 600, fontSize: 13.5,
+              cursor: "pointer", fontFamily: "inherit",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>📲</span>
+            {t("upgrade.ctaPix")}
+          </motion.button>
+
+          <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.32)", marginTop: 8, lineHeight: 1.5 }}>
+            {t("upgrade.pixComingSoon")}
+          </p>
         </motion.div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          TRUST BADGES
+          TRUST BADGES — supporting, not competing
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp}>
         <div style={{

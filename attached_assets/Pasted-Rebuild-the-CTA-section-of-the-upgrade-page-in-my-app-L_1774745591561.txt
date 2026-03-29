@@ -1,0 +1,74 @@
+Rebuild the CTA section of the /upgrade page in my app "Lucro Driver".
+
+PROBLEM:
+The upgrade page CTA area is still wrong.
+The "Começar agora" button is too small, weak, and visually detached.
+The red error bar is appearing and hurting trust.
+The PIX section is competing with the main CTA instead of being secondary.
+
+GOAL:
+Rebuild only the CTA/payment section of /upgrade so it becomes clean, premium, and conversion-focused.
+
+IMPORTANT:
+- Do NOT redesign the whole app
+- Do NOT change mobile unless necessary
+- Focus only on the CTA/payment area of /upgrade
+- Preserve dark premium fintech style
+
+TASKS:
+
+1. REMOVE FALSE ERROR STATE
+- Hide the red error bar by default
+- Only show error if there is a real failed request after clicking an action
+- Clear stale error state on page load
+
+2. REBUILD MAIN CTA BLOCK
+Create a proper main CTA section with:
+- full-width or large centered desktop CTA
+- balanced max-width
+- strong visual prominence
+- proper internal alignment
+
+The button "Começar agora" must:
+- be much larger than it is now
+- look like the primary action of the page
+- have centered text and icon
+- not look like a small floating pill
+- feel premium and trustworthy
+
+3. CTA LAYOUT
+Desktop:
+- CTA container centered
+- max-width around 680px to 820px
+- button height large and comfortable
+- enough vertical spacing above and below
+
+4. PIX AS SECONDARY ACTION
+Place the PIX section below the main CTA.
+PIX must look secondary, not stronger than the main CTA.
+It should support the user, not compete with the main button.
+
+5. "OU" DIVIDER
+- Make the divider subtle and clean
+- Proper spacing between main CTA and PIX block
+- Do not let it become visually dominant
+
+6. TRUST CARDS
+- Keep them below the PIX block
+- Align them evenly
+- Improve spacing and consistency
+- They should support trust, not distract from CTA
+
+7. VISUAL HIERARCHY
+The order of importance must be:
+1. Main CTA
+2. PIX alternative
+3. Trust cards
+
+8. FINAL RESULT
+The /upgrade CTA area must feel:
+- premium
+- clear
+- trustworthy
+- conversion-focused
+- visually balanced
