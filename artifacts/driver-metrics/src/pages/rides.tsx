@@ -1108,115 +1108,231 @@ export default function RidesPage() {
 
       {/* ── Sticky header ───────────────────────────────────────────────────── */}
       <div style={{
-        padding: "16px 20px 0",
         position: "sticky", top: 0, zIndex: 10,
         background: "rgba(8,8,8,0.94)", backdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 14, gap: 8, flexWrap: "nowrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexShrink: 1, overflow: "hidden" }}>
-            <Link href="/">
-              <button style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
-                <ChevronLeft size={22} />
-              </button>
-            </Link>
-            <div>
-              <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>{t("history.title")}</p>
-              {summaries && summaries.length > 0 && (
-                <p style={{ color: "#6b7280", fontSize: 11, marginTop: 1 }}>
-                  {summaries.length} {summaries.length !== 1 ? t("common.records") : t("common.record")} {t("common.saved")}
-                </p>
-              )}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              style={{
-                width: 36, height: 36, borderRadius: 10, border: "none",
-                background: showFilters ? "rgba(0,255,136,0.1)" : "rgba(255,255,255,0.05)",
-                color: showFilters ? "#00ff88" : "#6b7280", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <SlidersHorizontal size={15} />
-            </button>
-            <button
-              onClick={() => setShowManualModal(true)}
-              style={{
-                background: "rgba(129,140,248,0.08)", border: "1px solid rgba(99,102,241,0.22)",
-                borderRadius: 10, padding: "7px 10px", height: 36,
-                color: "#818cf8", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
-              }}
-            >
-              <Pencil size={13} strokeWidth={2.5} /> Manual
-            </button>
-            <Link href="/import">
-              <button style={{
-                background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
-                borderRadius: 10, padding: "7px 10px", height: 36,
-                color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
-              }}>
-                <Plus size={14} /> Importar
-              </button>
-            </Link>
-          </div>
-        </div>
 
-        {/* ── Filter bar ──────────────────────────────────────────────────── */}
-        <AnimatePresence>
-          {(showFilters || summaries != null) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              style={{ overflow: "hidden" }}
-            >
-              <div style={{ display: "flex", gap: 6, paddingBottom: 14, overflowX: "auto", scrollbarWidth: "none" }}>
-                {FILTERS.map(({ id, label }) => {
-                  const active = filter === id;
-                  return (
-                    <button key={id} onClick={() => setFilter(id)} style={{
-                      padding: "7px 16px", borderRadius: 20, flexShrink: 0,
-                      background: active ? "#00ff88" : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${active ? "#00ff88" : "rgba(255,255,255,0.08)"}`,
-                      color: active ? "#000" : "rgba(255,255,255,0.45)",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer",
-                      fontFamily: "inherit", transition: "all 0.15s ease",
-                    }}>{label}</button>
-                  );
-                })}
+        {isDesktop ? (
+          /* ══ Desktop: original single-row layout ══════════════════════════ */
+          <div style={{ padding: "16px 40px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Link href="/">
+                  <button style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
+                    <ChevronLeft size={22} />
+                  </button>
+                </Link>
+                <div>
+                  <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>{t("history.title")}</p>
+                  {summaries && summaries.length > 0 && (
+                    <p style={{ color: "#6b7280", fontSize: 11, marginTop: 1 }}>
+                      {summaries.length} {summaries.length !== 1 ? t("common.records") : t("common.record")} {t("common.saved")}
+                    </p>
+                  )}
+                </div>
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  style={{
+                    width: 36, height: 36, borderRadius: 10, border: "none",
+                    background: showFilters ? "rgba(0,255,136,0.1)" : "rgba(255,255,255,0.05)",
+                    color: showFilters ? "#00ff88" : "#6b7280", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <SlidersHorizontal size={15} />
+                </button>
+                <button
+                  onClick={() => setShowManualModal(true)}
+                  style={{
+                    background: "rgba(129,140,248,0.08)", border: "1px solid rgba(99,102,241,0.22)",
+                    borderRadius: 10, padding: "7px 13px", height: 36,
+                    color: "#818cf8", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit",
+                  }}
+                >
+                  <Pencil size={13} strokeWidth={2.5} /> Manual
+                </button>
+                <Link href="/import">
+                  <button style={{
+                    background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
+                    borderRadius: 10, padding: "7px 14px", height: 36,
+                    color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+                  }}>
+                    <Plus size={14} /> Importar
+                  </button>
+                </Link>
+              </div>
+            </div>
 
-              {/* Custom date range inputs */}
-              <AnimatePresence>
-                {filter === "custom" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                    style={{ overflow: "hidden" }}
-                  >
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingBottom: 14 }}>
-                      {[
-                        { label: t("common.from"), value: customFrom, onChange: setCustomFrom },
-                        { label: t("common.to"),   value: customTo,   onChange: setCustomTo },
-                      ].map(({ label, value, onChange }) => (
-                        <div key={label}>
-                          <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>{label}</p>
-                          <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{
-                            width: "100%", height: 38, borderRadius: 10, padding: "0 10px",
-                            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                            color: "#f9fafb", fontSize: 12, fontFamily: "inherit",
-                            outline: "none", boxSizing: "border-box",
-                          }} />
+            <AnimatePresence>
+              {(showFilters || summaries != null) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div style={{ display: "flex", gap: 6, paddingBottom: 14, overflowX: "auto", scrollbarWidth: "none" }}>
+                    {FILTERS.map(({ id, label }) => {
+                      const active = filter === id;
+                      return (
+                        <button key={id} onClick={() => setFilter(id)} style={{
+                          padding: "7px 16px", borderRadius: 20, flexShrink: 0,
+                          background: active ? "#00ff88" : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${active ? "#00ff88" : "rgba(255,255,255,0.08)"}`,
+                          color: active ? "#000" : "rgba(255,255,255,0.45)",
+                          fontSize: 12, fontWeight: 700, cursor: "pointer",
+                          fontFamily: "inherit", transition: "all 0.15s ease",
+                        }}>{label}</button>
+                      );
+                    })}
+                  </div>
+                  <AnimatePresence>
+                    {filter === "custom" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                        style={{ overflow: "hidden" }}
+                      >
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingBottom: 14 }}>
+                          {[
+                            { label: t("common.from"), value: customFrom, onChange: setCustomFrom },
+                            { label: t("common.to"),   value: customTo,   onChange: setCustomTo },
+                          ].map(({ label, value, onChange }) => (
+                            <div key={label}>
+                              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>{label}</p>
+                              <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{
+                                width: "100%", height: 38, borderRadius: 10, padding: "0 10px",
+                                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                                color: "#f9fafb", fontSize: 12, fontFamily: "inherit",
+                                outline: "none", boxSizing: "border-box",
+                              }} />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          /* ══ Mobile: intentional 3-row stacked layout ═════════════════════ */
+          <div style={{ padding: "14px 16px 0" }}>
+
+            {/* ── Row 1: back · title/subtitle · filter icon ─────────────── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <Link href="/">
+                <button style={{
+                  background: "none", border: "none", color: "#6b7280",
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  padding: 0, flexShrink: 0,
+                }}>
+                  <ChevronLeft size={22} />
+                </button>
+              </Link>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: "#f9fafb", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>
+                  {t("history.title")}
+                </p>
+                {summaries && summaries.length > 0 && (
+                  <p style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>
+                    {summaries.length} {summaries.length !== 1 ? t("common.records") : t("common.record")} {t("common.saved")}
+                  </p>
                 )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+              <button
+                onClick={() => setShowFilters((v) => !v)}
+                style={{
+                  width: 36, height: 36, borderRadius: 10, border: "none",
+                  background: showFilters ? "rgba(0,255,136,0.1)" : "rgba(255,255,255,0.05)",
+                  color: showFilters ? "#00ff88" : "#6b7280", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <SlidersHorizontal size={15} />
+              </button>
+            </div>
+
+            {/* ── Row 2: action buttons — each takes half the width ──────── */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+              <button
+                onClick={() => setShowManualModal(true)}
+                style={{
+                  flex: 1, height: 42, borderRadius: 12,
+                  background: "rgba(129,140,248,0.08)", border: "1px solid rgba(99,102,241,0.22)",
+                  color: "#818cf8", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  fontFamily: "inherit",
+                }}
+              >
+                <Pencil size={14} strokeWidth={2.5} /> Manual
+              </button>
+              <Link href="/import" style={{ flex: 1, textDecoration: "none" }}>
+                <button style={{
+                  width: "100%", height: 42, borderRadius: 12,
+                  background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
+                  color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  fontFamily: "inherit",
+                }}>
+                  <Plus size={14} /> Importar
+                </button>
+              </Link>
+            </div>
+
+            {/* ── Row 3: period chips — horizontal scroll, never clips ───── */}
+            <div style={{
+              display: "flex", gap: 6, paddingBottom: 14,
+              overflowX: "auto", scrollbarWidth: "none",
+              msOverflowStyle: "none" as React.CSSProperties["msOverflowStyle"],
+            }}>
+              {FILTERS.map(({ id, label }) => {
+                const active = filter === id;
+                return (
+                  <button key={id} onClick={() => setFilter(id)} style={{
+                    padding: "7px 16px", borderRadius: 20, flexShrink: 0,
+                    background: active ? "#00ff88" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${active ? "#00ff88" : "rgba(255,255,255,0.08)"}`,
+                    color: active ? "#000" : "rgba(255,255,255,0.45)",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "inherit", transition: "all 0.15s ease",
+                  }}>{label}</button>
+                );
+              })}
+            </div>
+
+            {/* Custom date range inputs */}
+            <AnimatePresence>
+              {filter === "custom" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingBottom: 14 }}>
+                    {[
+                      { label: t("common.from"), value: customFrom, onChange: setCustomFrom },
+                      { label: t("common.to"),   value: customTo,   onChange: setCustomTo },
+                    ].map(({ label, value, onChange }) => (
+                      <div key={label}>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>{label}</p>
+                        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{
+                          width: "100%", height: 38, borderRadius: 10, padding: "0 10px",
+                          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                          color: "#f9fafb", fontSize: 12, fontFamily: "inherit",
+                          outline: "none", boxSizing: "border-box",
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
