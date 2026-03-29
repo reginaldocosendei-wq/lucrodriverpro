@@ -139,6 +139,15 @@ export default function Home() {
   const goalDaily     = summary?.goalDaily ?? 0;
   const goalRemaining = goalDaily > 0 ? Math.max(0, goalDaily - totalEarnings) : 0;
 
+  // ── Fixed monthly costs ────────────────────────────────────────────────────
+  const fixedMonthlyTotal   = Math.max(0, (summary as any)?.fixedMonthlyTotal   ?? 0);
+  const dailyFixedCostQuota = Math.max(0, (summary as any)?.dailyFixedCostQuota ?? 0);
+  const variableCostsToday  = Math.max(0, (summary as any)?.variableCostsToday  ?? costs);
+  // Monthly coverage: how many days into the month × daily quota
+  const daysIntoMonth       = new Date().getDate();
+  const fixedCoveredMonth   = Math.min(fixedMonthlyTotal, daysIntoMonth * dailyFixedCostQuota);
+  const fixedCoveragePct    = fixedMonthlyTotal > 0 ? Math.round((fixedCoveredMonth / fixedMonthlyTotal) * 100) : 0;
+
   // ── Weekly / monthly goals ─────────────────────────────────────────────────
   const goalWeekly          = (summary as any)?.goalWeekly         ?? 0;
   const goalMonthly         = (summary as any)?.goalMonthly        ?? 0;
@@ -178,9 +187,20 @@ export default function Home() {
       if (mpct >= 100) insights.push({ text: "Meta mensal batida! 📆", positive: true });
       else insights.push({ text: `Você está em ${mpct}% da meta mensal`, positive: null });
     }
-    if (costs > 0) {
-      const costRatio = Math.round((costs / totalEarnings) * 100);
-      insights.push({ text: `Custos representam ${costRatio}% do faturamento`, positive: costRatio <= 20 ? true : costRatio > 35 ? false : null });
+    const totalDailyCosts = (variableCostsToday > 0 ? variableCostsToday : costs) + dailyFixedCostQuota;
+    if (totalDailyCosts > 0) {
+      const costRatio = Math.round((totalDailyCosts / totalEarnings) * 100);
+      const hasFixed = dailyFixedCostQuota > 0;
+      const label = hasFixed
+        ? `Custos totais (var + fixos) = ${costRatio}% do dia`
+        : `Custos representam ${costRatio}% do faturamento`;
+      insights.push({ text: label, positive: costRatio <= 20 ? true : costRatio > 40 ? false : null });
+    }
+    if (dailyFixedCostQuota > 0 && profit > 0) {
+      const fixedPctOfProfit = Math.round((dailyFixedCostQuota / (totalEarnings)) * 100);
+      if (fixedPctOfProfit >= 30) {
+        insights.push({ text: `Custos fixos consomem ${fixedPctOfProfit}% do faturamento`, positive: false });
+      }
     }
     if (compPct !== null) {
       if (compIsUp)   insights.push({ text: `Faturamento ${Math.abs(compPct)}% acima de ontem`, positive: true });
@@ -738,14 +758,45 @@ export default function Home() {
                   </div>
                   <Bar pct={100} color="rgba(255,255,255,0.12)" height={5} delay={0} />
                 </div>
-                {/* Custos */}
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos do dia</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(costs)}</span>
+                {/* Custos variáveis */}
+                {variableCostsToday > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos variáveis</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(variableCostsToday)}</span>
+                    </div>
+                    <Bar pct={totalEarnings > 0 ? (variableCostsToday / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
                   </div>
-                  <Bar pct={totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
-                </div>
+                )}
+                {/* Custos variáveis (fallback: legacy costs field) — shown only if new field is zero but legacy has data */}
+                {variableCostsToday === 0 && costs > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos do dia</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(costs)}</span>
+                    </div>
+                    <Bar pct={totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
+                  </div>
+                )}
+                {/* Custos fixos (cota diária) — only shown when user has fixed monthly costs */}
+                {dailyFixedCostQuota > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos fixos (dia)</span>
+                        <span style={{
+                          fontSize: 8, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
+                          background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)",
+                          color: "#818cf8", borderRadius: 4, padding: "1px 5px",
+                        }}>
+                          {formatBRL(fixedMonthlyTotal)}/mês ÷ 30
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#818cf8", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(dailyFixedCostQuota)}</span>
+                    </div>
+                    <Bar pct={totalEarnings > 0 ? (dailyFixedCostQuota / totalEarnings) * 100 : 0} color="rgba(99,102,241,0.5)" height={5} delay={0.22} />
+                  </div>
+                )}
                 {/* Divider */}
                 <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
                 {/* Lucro real */}
@@ -756,6 +807,26 @@ export default function Home() {
                   </div>
                   <Bar pct={Math.max(0, profitPos ? marginPct : 0)} color={pColor} height={5} delay={0.3} />
                 </div>
+                {/* Monthly coverage insight — shown only when user has fixed costs configured */}
+                {fixedMonthlyTotal > 0 && (
+                  <>
+                    <div style={{ height: 1, background: "rgba(99,102,241,0.12)" }} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>Custos fixos do mês</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(129,140,248,0.7)", fontVariantNumeric: "tabular-nums" }}>{formatBRL(fixedMonthlyTotal)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>Já coberto (dia {daysIntoMonth}/30)</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" }}>{formatBRL(fixedCoveredMonth)}</span>
+                      </div>
+                      <div style={{ height: 4, background: "rgba(99,102,241,0.1)", borderRadius: 4, overflow: "hidden", marginTop: 2 }}>
+                        <div style={{ height: "100%", width: `${fixedCoveragePct}%`, background: "#818cf8", borderRadius: 4, transition: "width 0.6s ease" }} />
+                      </div>
+                      <p style={{ fontSize: 10, color: "rgba(129,140,248,0.6)", textAlign: "right", fontWeight: 600 }}>{fixedCoveragePct}% coberto</p>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

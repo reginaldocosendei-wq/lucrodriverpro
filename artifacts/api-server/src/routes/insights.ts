@@ -40,8 +40,13 @@ router.get("/", requireAuth, async (req, res) => {
     const summariesToday = summaries.filter((s) => s.date >= today);
     const todayAgg = aggregateMetrics(summariesToday);
 
-    const costsToday = costs.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-    const costsMonth = costs.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+    const isFixed = (c: { costType?: string | null }) => (c.costType ?? "variable") === "fixed_monthly";
+    const variableCosts    = costs.filter((c) => !isFixed(c));
+    const fixedCosts       = costs.filter(isFixed);
+    const fixedMonthlyTotal   = fixedCosts.reduce((s, c) => s + c.amount, 0);
+    const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
+    const costsToday = variableCosts.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
+    const costsMonth = variableCosts.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
     const earningsMonth = summaries
       .filter((s) => s.date >= monthStart)
       .reduce((s, r) => s + r.earnings, 0);
@@ -53,6 +58,8 @@ router.get("/", requireAuth, async (req, res) => {
       summaries,
       costsToday,
       costsMonth,
+      fixedMonthlyTotal,
+      dailyFixedCostQuota,
       earningsToday: todayAgg.totalEarnings,
       earningsMonth,
       tripsToday: todayAgg.totalTrips,

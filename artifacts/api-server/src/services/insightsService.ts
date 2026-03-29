@@ -185,8 +185,12 @@ export function generateInsights(input: InsightInput): Insight[] {
   }
 
   // ─── 4. COST vs EARNINGS ─────────────────────────────────────────────────
+  const fixedMonthlyTotal   = (input as any).fixedMonthlyTotal   ?? 0;
+  const dailyFixedCostQuota = (input as any).dailyFixedCostQuota ?? 0;
+  const hasFixedCosts       = fixedMonthlyTotal > 0;
+
   if (earningsToday > 0) {
-    if (costsToday === 0) {
+    if (costsToday === 0 && !hasFixedCosts) {
       insights.push({
         type: "costsMissing",
         status: "average",
@@ -195,32 +199,58 @@ export function generateInsights(input: InsightInput): Insight[] {
         suggestion: "Registre combustível, alimentação e outros custos para ver seu lucro verdadeiro.",
       });
     } else {
-      const costRatio = costsToday / earningsToday;
+      // Total daily cost burden = variable costs today + fixed monthly quota
+      const totalDailyCosts = costsToday + dailyFixedCostQuota;
+      const costRatio = totalDailyCosts / earningsToday;
 
       if (costRatio > 0.5) {
+        const fixedNote = hasFixedCosts
+          ? ` (incluindo R$ ${dailyFixedCostQuota.toFixed(2).replace(".", ",")} de cota fixa diária)`
+          : "";
         insights.push({
           type: "costRatio",
           status: "bad",
           title: "Custos muito altos hoje ❌",
-          message: `Seus custos de hoje (R$ ${costsToday.toFixed(2).replace(".", ",")}) representam ${Math.round(costRatio * 100)}% dos seus ganhos. A margem ideal fica abaixo de 40%.`,
-          suggestion: "Reduza gastos desnecessários. Combustível, pedágios e alimentação podem ser otimizados.",
+          message: `Seus custos totais de hoje${fixedNote} representam ${Math.round(costRatio * 100)}% dos seus ganhos. A margem ideal fica abaixo de 40%.`,
+          suggestion: "Reduza gastos variáveis desnecessários. Combustível, pedágios e alimentação podem ser otimizados.",
         });
       } else if (costRatio > 0.4) {
         insights.push({
           type: "costRatio",
           status: "average",
           title: "Custos acima do ideal",
-          message: `Seus custos hoje são ${Math.round(costRatio * 100)}% dos seus ganhos. O ideal é ficar abaixo de 40%.`,
-          suggestion: "Tente planejar melhor seus gastos com combustível para ganhar margem.",
+          message: `Seus custos totais hoje são ${Math.round(costRatio * 100)}% dos seus ganhos. O ideal é ficar abaixo de 40%.`,
+          suggestion: hasFixedCosts
+            ? "Seus custos fixos mensais já pesam no resultado diário. Controle os gastos variáveis para compensar."
+            : "Tente planejar melhor seus gastos com combustível para ganhar margem.",
         });
       } else {
+        const fmtFixed = `R$ ${fixedMonthlyTotal.toFixed(2).replace(".", ",")}`;
+        const profitLine = hasFixedCosts
+          ? ` Seus custos fixos mensais (${fmtFixed}) já estão sendo absorvidos no cálculo diário.`
+          : "";
         insights.push({
           type: "costRatio",
           status: "good",
           title: "Custos bem controlados ✓",
-          message: `Seus custos representam apenas ${Math.round(costRatio * 100)}% dos seus ganhos hoje — dentro do ideal.`,
+          message: `Seus custos representam apenas ${Math.round(costRatio * 100)}% dos seus ganhos hoje — dentro do ideal.${profitLine}`,
           suggestion: "Continue controlando seus gastos assim. Isso é o que garante seu lucro real.",
         });
+      }
+
+      // Extra insight when fixed costs are a significant burden
+      if (hasFixedCosts && dailyFixedCostQuota > 0 && earningsToday > 0) {
+        const fixedPct = Math.round((dailyFixedCostQuota / earningsToday) * 100);
+        if (fixedPct >= 25) {
+          const fmtFixed = `R$ ${fixedMonthlyTotal.toFixed(2).replace(".", ",")}`;
+          insights.push({
+            type: "fixedCostBurden",
+            status: fixedPct >= 40 ? "bad" : "average",
+            title: fixedPct >= 40 ? "Custos fixos pesam muito ⚠️" : "Atenção aos custos fixos",
+            message: `Seus custos fixos mensais (${fmtFixed}) consomem ${fixedPct}% do seu faturamento diário.`,
+            suggestion: "Avalie se todos os custos fixos registrados são realmente necessários.",
+          });
+        }
       }
     }
   }

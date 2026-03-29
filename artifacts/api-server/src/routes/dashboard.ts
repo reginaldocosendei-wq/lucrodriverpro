@@ -80,12 +80,33 @@ router.get("/summary", requireAuth, async (req, res) => {
   const extraWeek   = extraEarnings.filter((e) => e.date >= weekStart).reduce((s, e) => s + e.amount, 0);
   const extraMonth  = extraEarnings.filter((e) => e.date >= monthStart).reduce((s, e) => s + e.amount, 0);
 
-  // ── Costs ──────────────────────────────────────────────────────────────────
-  const costsToday = costs.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-  const costsMonth = costs.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+  // ── Costs — split by type ─────────────────────────────────────────────────
+  // variable:      one-off daily expense (fuel, food, toll …)
+  // fixed_monthly: recurring monthly cost (car rental, insurance, tracker …)
+  // Legacy rows (no costType column value) are treated as variable.
+  const isFixed = (c: { costType?: string | null }) => (c.costType ?? "variable") === "fixed_monthly";
+  const isVar   = (c: { costType?: string | null }) => !isFixed(c);
 
-  const realProfitToday = (earningsToday + extraToday) - costsToday;
-  const realProfitMonth = (earningsMonth + extraMonth) - costsMonth;
+  const variableCosts        = costs.filter(isVar);
+  const fixedMonthlyCosts    = costs.filter(isFixed);
+
+  // Variable costs are date-filtered (they happen on a specific day)
+  const variableCostsToday   = variableCosts.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
+  const variableCostsMonth   = variableCosts.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+
+  // Fixed monthly costs are NOT date-filtered — their `amount` represents a recurring
+  // monthly burden regardless of when the record was created.
+  const fixedMonthlyTotal    = fixedMonthlyCosts.reduce((s, c) => s + c.amount, 0);
+  const dailyFixedCostQuota  = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
+
+  // Backward-compatible alias: costsToday = variable costs (same as before for accounts
+  // with no fixed monthly costs; new accounts see variable-only total here)
+  const costsToday = variableCostsToday;
+  const costsMonth = variableCostsMonth;
+
+  // True daily real profit now accounts for fixed cost quota
+  const realProfitToday = (earningsToday + extraToday) - variableCostsToday - dailyFixedCostQuota;
+  const realProfitMonth = (earningsMonth + extraMonth) - variableCostsMonth - fixedMonthlyTotal;
 
   // ── New metrics from daily_summaries ──────────────────────────────────────
   const earningsPerTripToday = todayAgg.earningsPerTrip;
@@ -163,6 +184,10 @@ router.get("/summary", requireAuth, async (req, res) => {
     realProfitToday,
     costsMonth,
     realProfitMonth,
+    // Fixed monthly cost breakdown
+    variableCostsToday,
+    fixedMonthlyTotal,
+    dailyFixedCostQuota,
     // Goals
     goalDaily,
     goalWeekly,

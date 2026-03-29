@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, costsTable } from "@workspace/db";
-import { eq, desc, gte, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 const router = Router();
 
@@ -18,6 +18,11 @@ function getDateString(daysAgo: number): string {
   return d.toISOString().split("T")[0];
 }
 
+function startOfMonth(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
+}
+
 router.get("/", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
 
@@ -27,29 +32,59 @@ router.get("/", requireAuth, async (req, res) => {
     .where(eq(costsTable.userId, userId))
     .orderBy(desc(costsTable.date));
 
-  const today = getDateString(0);
-  const weekAgo = getDateString(7);
+  const today    = getDateString(0);
+  const weekAgo  = getDateString(7);
   const monthAgo = getDateString(30);
+  const monthStart = startOfMonth();
 
-  const totalDay = costs.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-  const totalWeek = costs.filter((c) => c.date >= weekAgo).reduce((s, c) => s + c.amount, 0);
-  const totalMonth = costs.filter((c) => c.date >= monthAgo).reduce((s, c) => s + c.amount, 0);
+  // ── Split by type ──────────────────────────────────────────────────────────
+  const variable      = costs.filter((c) => (c.costType ?? "variable") !== "fixed_monthly");
+  const fixedMonthly  = costs.filter((c) => (c.costType ?? "variable") === "fixed_monthly");
 
-  res.json({ costs, totalDay, totalWeek, totalMonth });
+  // Variable totals (filtered by date — they are one-off daily expenses)
+  const totalDay   = variable.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
+  const totalWeek  = variable.filter((c) => c.date >= weekAgo).reduce((s, c) => s + c.amount, 0);
+  const totalMonth = variable.filter((c) => c.date >= monthAgo).reduce((s, c) => s + c.amount, 0);
+
+  // Fixed monthly totals — sum of all registered recurring amounts (not date-filtered)
+  const fixedMonthlyTotal = fixedMonthly.reduce((s, c) => s + c.amount, 0);
+  const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
+
+  // Month-to-date variable costs (for coverage display)
+  const variableCostsThisMonth = variable.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+
+  res.json({
+    costs,
+    totalDay,
+    totalWeek,
+    totalMonth,
+    fixedMonthlyTotal,
+    dailyFixedCostQuota,
+    variableCostsThisMonth,
+  });
 });
 
 router.post("/", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const { category, amount, description, date } = req.body;
+  const { category, amount, description, date, costType } = req.body;
 
   if (!category || !amount || !date) {
     res.status(400).json({ error: "Campos obrigatórios faltando" });
     return;
   }
 
+  const safeType = costType === "fixed_monthly" ? "fixed_monthly" : "variable";
+
   const [cost] = await db
     .insert(costsTable)
-    .values({ userId, category, amount, description: description || "", date })
+    .values({
+      userId,
+      category,
+      amount,
+      description: description || "",
+      date,
+      costType: safeType,
+    })
     .returning();
 
   res.status(201).json(cost);
