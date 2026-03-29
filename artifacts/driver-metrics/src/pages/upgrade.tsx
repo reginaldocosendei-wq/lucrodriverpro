@@ -110,14 +110,19 @@ export default function Upgrade() {
     setIsLoading(true);
     setError(null);
 
+    // [DEBUG] Log upgrade attempt context
+    console.log("[upgrade] attempt — plan:", selected, "user:", { id: (user as any)?.id, email: (user as any)?.email, plan: (user as any)?.plan });
+
     try {
       // ── Step 1: load products ──────────────────────────────────────────────
       const productsRes  = await fetch(`${BASE}/api/stripe/products-with-prices`, { credentials: "include" });
+      console.log("[upgrade] step1 products-with-prices status:", productsRes.status);
       if (!productsRes.ok) {
         setError(t("upgrade.errorGeneral"));
         return;
       }
       const productsData = await productsRes.json();
+      console.log("[upgrade] step1 products:", productsData.data?.length, "items", productsData.data?.flatMap((p: any) => p.prices).map((p: any) => `${p.id}/${p.currency}/${p.recurring?.interval}`));
       if (!Array.isArray(productsData.data) || productsData.data.length === 0) {
         setError(t("upgrade.errorNoPlans"));
         return;
@@ -133,6 +138,7 @@ export default function Upgrade() {
         product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
         product.prices?.find((p: any) => p.recurring?.interval === interval);
 
+      console.log("[upgrade] step2 resolved price:", price?.id, "interval:", interval, "currency:", targetCurr);
       if (!price) {
         setError(t("upgrade.errorNoPlan"));
         return;
@@ -140,16 +146,19 @@ export default function Upgrade() {
 
       // ── Step 3: create Stripe checkout session ────────────────────────────
       const origin      = window.location.origin;
+      const payload = {
+        priceId:    price.id,
+        successUrl: `${origin}${BASE}/checkout/success`,
+        cancelUrl:  `${origin}${BASE}/checkout/cancel`,
+      };
+      console.log("[upgrade] step3 checkout payload:", payload);
       const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          priceId:    price.id,
-          successUrl: `${origin}${BASE}/checkout/success`,
-          cancelUrl:  `${origin}${BASE}/checkout/cancel`,
-        }),
+        body: JSON.stringify(payload),
       });
+      console.log("[upgrade] step3 checkout status:", checkoutRes.status);
 
       // Session expired while on this page → force re-login.
       if (checkoutRes.status === 401) {
@@ -159,6 +168,7 @@ export default function Upgrade() {
       }
 
       const checkoutData = await checkoutRes.json();
+      console.log("[upgrade] step3 checkout response:", checkoutRes.ok ? { url: checkoutData.url?.slice(0, 60) } : checkoutData);
 
       if (!checkoutRes.ok || !checkoutData.url) {
         // Stripe config error — surface a clear message.
@@ -167,12 +177,15 @@ export default function Upgrade() {
       }
 
       // ── Step 4: redirect to Stripe-hosted checkout ────────────────────────
+      console.log("[upgrade] step4 redirecting to Stripe →", checkoutData.url.slice(0, 60));
       if (Capacitor.isNativePlatform()) {
         window.open(checkoutData.url, "_system");
       } else {
         window.location.href = checkoutData.url;
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[upgrade] caught error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
