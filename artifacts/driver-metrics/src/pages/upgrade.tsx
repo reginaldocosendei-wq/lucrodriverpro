@@ -402,7 +402,7 @@ export default function Upgrade() {
       {/* ══════════════════════════════════════════════════════════════
           MAIN CTA
       ══════════════════════════════════════════════════════════════ */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 14 }}>
+      <motion.div variants={fadeUp} style={{ marginBottom: 14, maxWidth: isDesktop ? 560 : undefined, margin: isDesktop ? "0 auto 14px" : undefined }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleUpgrade}
