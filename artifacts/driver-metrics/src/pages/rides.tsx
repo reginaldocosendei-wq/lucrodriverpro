@@ -970,6 +970,22 @@ export default function RidesPage() {
   const totalEarnings = filtered.reduce((s, r) => s + r.earnings, 0);
   const totalTrips    = filtered.reduce((s, r) => s + r.trips, 0);
 
+  // Extra earnings sum for the active filter — added to the summary bar so the
+  // displayed total always equals imported platform earnings + manual entries.
+  // allExtraEarnings already fetched above; no extra network call needed.
+  const extraEarningsTotal = useMemo(() => {
+    const today = isoToday();
+    let relevant = allExtraEarnings;
+    switch (filter) {
+      case "today":  relevant = allExtraEarnings.filter((e) => e.date === today); break;
+      case "week":   relevant = allExtraEarnings.filter((e) => e.date >= isoNDaysAgo(6)); break;
+      case "month":  relevant = allExtraEarnings.filter((e) => e.date >= isoMonthStart()); break;
+      case "custom": relevant = allExtraEarnings.filter((e) =>
+        (!customFrom || e.date >= customFrom) && (!customTo || e.date <= customTo)); break;
+    }
+    return relevant.reduce((s, e) => s + e.amount, 0);
+  }, [allExtraEarnings, filter, customFrom, customTo]);
+
   // ── Delete ──────────────────────────────────────────────────────────────────
   const handleDeleteConfirm = async () => {
     if (!confirmTarget) return;
@@ -1279,7 +1295,7 @@ export default function RidesPage() {
                 <motion.div variants={cardVariants} style={isDesktop ? { gridColumn: "1 / -1" } : {}}>
                   <div style={{ background: "#111", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 4 }}>
                     {[
-                      { label: filter === "today" ? t("common.today") : filter === "week" ? t("common.week") : filter === "month" ? t("common.month") : t("history.total"), value: formatBRL(totalEarnings), color: "#00ff88" },
+                      { label: filter === "today" ? t("common.today") : filter === "week" ? t("common.week") : filter === "month" ? t("common.month") : t("history.total"), value: formatBRL(totalEarnings + extraEarningsTotal), color: "#00ff88" },
                       { label: t("history.tripsCount"), value: String(totalTrips), color: "#f9fafb" },
                       { label: t("common.days"),        value: String(filtered.length), color: "#f9fafb" },
                     ].map(({ label, value, color }) => (
