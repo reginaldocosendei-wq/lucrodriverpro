@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, ridesTable, costsTable, goalsTable, dailySummariesTable, extraEarningsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { aggregateMetrics } from "../services/metricsService";
+import { computeCostMetrics } from "../lib/costSplit";
 
 const router = Router();
 
@@ -80,31 +81,18 @@ router.get("/summary", requireAuth, async (req, res) => {
   const extraWeek   = extraEarnings.filter((e) => e.date >= weekStart).reduce((s, e) => s + e.amount, 0);
   const extraMonth  = extraEarnings.filter((e) => e.date >= monthStart).reduce((s, e) => s + e.amount, 0);
 
-  // ── Costs — split by type ─────────────────────────────────────────────────
-  // variable:      one-off daily expense (fuel, food, toll …)
-  // fixed_monthly: recurring monthly cost (car rental, insurance, tracker …)
-  // Legacy rows (no costType column value) are treated as variable.
-  const isFixed = (c: { costType?: string | null }) => (c.costType ?? "variable") === "fixed_monthly";
-  const isVar   = (c: { costType?: string | null }) => !isFixed(c);
+  // ── Costs — authoritative split via shared utility ───────────────────────
+  // splitCosts() guarantees: variable ∪ fixed = all costs, variable ∩ fixed = ∅.
+  // computeCostMetrics() derives all four numbers in one safe pass.
+  // Neither fixed monthly costs nor variable costs can be subtracted twice.
+  const { variableCostsToday, variableCostsMonth, fixedMonthlyTotal, dailyFixedCostQuota } =
+    computeCostMetrics(costs, today, monthStart);
 
-  const variableCosts        = costs.filter(isVar);
-  const fixedMonthlyCosts    = costs.filter(isFixed);
-
-  // Variable costs are date-filtered (they happen on a specific day)
-  const variableCostsToday   = variableCosts.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-  const variableCostsMonth   = variableCosts.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
-
-  // Fixed monthly costs are NOT date-filtered — their `amount` represents a recurring
-  // monthly burden regardless of when the record was created.
-  const fixedMonthlyTotal    = fixedMonthlyCosts.reduce((s, c) => s + c.amount, 0);
-  const dailyFixedCostQuota  = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
-
-  // Backward-compatible alias: costsToday = variable costs (same as before for accounts
-  // with no fixed monthly costs; new accounts see variable-only total here)
+  // Backward-compatible alias (no fixed costs → same value as before this feature)
   const costsToday = variableCostsToday;
   const costsMonth = variableCostsMonth;
 
-  // True daily real profit now accounts for fixed cost quota
+  // True daily real profit: variable costs subtracted once + fixed quota subtracted once
   const realProfitToday = (earningsToday + extraToday) - variableCostsToday - dailyFixedCostQuota;
   const realProfitMonth = (earningsMonth + extraMonth) - variableCostsMonth - fixedMonthlyTotal;
 

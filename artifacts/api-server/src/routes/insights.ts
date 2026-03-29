@@ -3,6 +3,7 @@ import { db, dailySummariesTable, costsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { aggregateMetrics } from "../services/metricsService";
 import { generateInsights, calculateDecision } from "../services/insightsService";
+import { computeCostMetrics } from "../lib/costSplit";
 
 const router = Router();
 
@@ -40,13 +41,9 @@ router.get("/", requireAuth, async (req, res) => {
     const summariesToday = summaries.filter((s) => s.date >= today);
     const todayAgg = aggregateMetrics(summariesToday);
 
-    const isFixed = (c: { costType?: string | null }) => (c.costType ?? "variable") === "fixed_monthly";
-    const variableCosts    = costs.filter((c) => !isFixed(c));
-    const fixedCosts       = costs.filter(isFixed);
-    const fixedMonthlyTotal   = fixedCosts.reduce((s, c) => s + c.amount, 0);
-    const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
-    const costsToday = variableCosts.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-    const costsMonth = variableCosts.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+    // Authoritative cost split — no double-counting possible, assertion verified at runtime
+    const { variableCostsToday: costsToday, variableCostsMonth: costsMonth, fixedMonthlyTotal, dailyFixedCostQuota } =
+      computeCostMetrics(costs, today, monthStart);
     const earningsMonth = summaries
       .filter((s) => s.date >= monthStart)
       .reduce((s, r) => s + r.earnings, 0);

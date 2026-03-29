@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, costsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { splitCosts } from "../lib/costSplit";
 
 const router = Router();
 
@@ -37,21 +38,22 @@ router.get("/", requireAuth, async (req, res) => {
   const monthAgo = getDateString(30);
   const monthStart = startOfMonth();
 
-  // ── Split by type ──────────────────────────────────────────────────────────
-  const variable      = costs.filter((c) => (c.costType ?? "variable") !== "fixed_monthly");
-  const fixedMonthly  = costs.filter((c) => (c.costType ?? "variable") === "fixed_monthly");
+  // ── Split by type — canonical split, no double-counting possible ──────────
+  // splitCosts() asserts variable.length + fixed.length === costs.length at runtime.
+  const { variable, fixed: fixedMonthly } = splitCosts(costs);
 
-  // Variable totals (filtered by date — they are one-off daily expenses)
-  const totalDay   = variable.filter((c) => c.date >= today).reduce((s, c) => s + c.amount, 0);
-  const totalWeek  = variable.filter((c) => c.date >= weekAgo).reduce((s, c) => s + c.amount, 0);
-  const totalMonth = variable.filter((c) => c.date >= monthAgo).reduce((s, c) => s + c.amount, 0);
+  // Variable totals (date-filtered — one-off daily expenses)
+  const safeSum = (arr: typeof variable) => arr.reduce((s, c) => s + (Number.isFinite(c.amount) ? c.amount : 0), 0);
+  const totalDay   = safeSum(variable.filter((c) => c.date >= today));
+  const totalWeek  = safeSum(variable.filter((c) => c.date >= weekAgo));
+  const totalMonth = safeSum(variable.filter((c) => c.date >= monthAgo));
 
-  // Fixed monthly totals — sum of all registered recurring amounts (not date-filtered)
-  const fixedMonthlyTotal = fixedMonthly.reduce((s, c) => s + c.amount, 0);
+  // Fixed monthly totals — NOT date-filtered (recurring monthly amounts)
+  const fixedMonthlyTotal   = safeSum(fixedMonthly);
   const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
 
   // Month-to-date variable costs (for coverage display)
-  const variableCostsThisMonth = variable.filter((c) => c.date >= monthStart).reduce((s, c) => s + c.amount, 0);
+  const variableCostsThisMonth = safeSum(variable.filter((c) => c.date >= monthStart));
 
   res.json({
     costs,
