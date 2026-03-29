@@ -262,7 +262,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         boxShadow: "0 1px 0 rgba(255,255,255,0.03), 0 4px 32px rgba(0,0,0,0.5)",
       }}>
         <div style={{
-          padding: isDesktop ? "12px 40px" : "14px 20px",
+          padding: isDesktop ? "12px 40px" : "14px 16px",
           display: "flex", alignItems: "center",
           width: "100%",
           boxSizing: "border-box",
@@ -308,7 +308,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
 
           {/* ── Actions ───────────────────────────────────────────────────── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             {u?.plan !== "pro" && !trialExpired && (
               <Link href="/upgrade">
                 <motion.div

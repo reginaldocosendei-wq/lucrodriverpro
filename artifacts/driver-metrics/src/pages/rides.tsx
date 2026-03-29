@@ -1113,8 +1113,8 @@ export default function RidesPage() {
         background: "rgba(8,8,8,0.94)", backdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 14, gap: 8, flexWrap: "nowrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexShrink: 1, overflow: "hidden" }}>
             <Link href="/">
               <button style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
                 <ChevronLeft size={22} />
@@ -1129,7 +1129,7 @@ export default function RidesPage() {
               )}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <button
               onClick={() => setShowFilters((v) => !v)}
               style={{
@@ -1145,9 +1145,9 @@ export default function RidesPage() {
               onClick={() => setShowManualModal(true)}
               style={{
                 background: "rgba(129,140,248,0.08)", border: "1px solid rgba(99,102,241,0.22)",
-                borderRadius: 10, padding: "7px 13px", height: 36,
-                color: "#818cf8", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit",
+                borderRadius: 10, padding: "7px 10px", height: 36,
+                color: "#818cf8", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
               }}
             >
               <Pencil size={13} strokeWidth={2.5} /> Manual
@@ -1155,9 +1155,9 @@ export default function RidesPage() {
             <Link href="/import">
               <button style={{
                 background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
-                borderRadius: 10, padding: "7px 14px", height: 36,
-                color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+                borderRadius: 10, padding: "7px 10px", height: 36,
+                color: "#00ff88", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
               }}>
                 <Plus size={14} /> Importar
               </button>
@@ -1220,7 +1220,7 @@ export default function RidesPage() {
       </div>
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "24px 40px 60px" : "20px 20px 100px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "24px 40px 60px" : "20px 16px 100px" }}>
 
         {/* Loading */}
         {loading && (
