@@ -16,6 +16,9 @@ const BASE = getApiBase();
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload || !payload.length) return null;
+  // Filter out entries whose value is null (days with no data)
+  const visible = payload.filter((e: any) => e.value !== null && e.value !== undefined);
+  if (!visible.length) return null;
   return (
     <div style={{
       background: "rgba(17,17,17,0.97)", border: "1px solid rgba(255,255,255,0.1)",
@@ -23,7 +26,7 @@ function CustomTooltip({ active, payload, label }: any) {
       backdropFilter: "blur(12px)", minWidth: 160,
     }}>
       <p style={{ fontWeight: 700, color: "#fff", marginBottom: 8, fontSize: 13 }}>{label}</p>
-      {payload.map((entry: any) => (
+      {visible.map((entry: any) => (
         <div key={entry.dataKey} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
@@ -304,9 +307,9 @@ export default function Reports() {
               />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 2 }} />
               <Legend wrapperStyle={{ paddingTop: 16, fontSize: 12, fontWeight: 600 }} iconType="circle" />
-              <Line type="monotone" dataKey="earnings" name="Ganhos"    stroke="#00ff88" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="costs"    name="Custos"    stroke="#ef4444" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="earnings" name="Ganhos"     stroke="#00ff88" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="costs"    name="Custos"     stroke="#ef4444" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

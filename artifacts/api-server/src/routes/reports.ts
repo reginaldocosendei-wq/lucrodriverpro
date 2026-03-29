@@ -79,13 +79,26 @@ router.get("/earnings", requireAuth, async (req, res) => {
     }
   }
 
-  const daily = Object.entries(dailyMap).map(([date, v]) => ({
-    date,
-    earnings: Math.round(v.earnings * 100) / 100,
-    costs:    Math.round(v.costs    * 100) / 100,
-    profit:   Math.round((v.earnings - v.costs) * 100) / 100,
-    trips:    v.trips,
-  }));
+  // Track which dates have at least one real record so we can return null for
+  // empty days instead of zero — this prevents flat-line artefacts on the chart.
+  const activeDates = new Set<string>();
+  for (const s of summaries)      { if (dailyMap[s.date] !== undefined) activeDates.add(s.date); }
+  for (const e of extras)         { if (dailyMap[e.date] !== undefined) activeDates.add(e.date); }
+  for (const c of variableCosts)  { if (dailyMap[c.date] !== undefined) activeDates.add(c.date); }
+
+  const daily = Object.entries(dailyMap).map(([date, v]) => {
+    if (!activeDates.has(date)) {
+      // No real data for this day — return nulls so the chart skips the point
+      return { date, earnings: null, costs: null, profit: null, trips: 0 };
+    }
+    return {
+      date,
+      earnings: Math.round(v.earnings * 100) / 100,
+      costs:    Math.round(v.costs    * 100) / 100,
+      profit:   Math.round((v.earnings - v.costs) * 100) / 100,
+      trips:    v.trips,
+    };
+  });
 
   // ── 2. By Platform — total earnings per platform across ALL history ─────────
   const platformMap: Record<string, { earnings: number; trips: number }> = {};
