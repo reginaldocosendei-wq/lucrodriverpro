@@ -95,9 +95,14 @@ pnpm run cap:open
 - `lib/` — base config: `api.ts` (getApiBase), `utils.ts` (re-exports)
 
 **Backend (`artifacts/api-server/src/`)**
-- `routes/` — all Express route handlers (dashboard, import, dailySummaries, rides, costs, goals, stripe, auth)
+- `routes/` — thin Express route handlers (auth, dashboard, rides, costs, goals, stripe, import, etc.)
+- `paymentService.ts` — **single source of truth for all payment logic**: `createCheckoutSession`, `activateProAccess`, `syncSubscriptionStatus`, `handleStripeWebhook`. All payment business logic lives here; routes and webhookHandlers are thin dispatchers.
+- `webhookHandlers.ts` — delegates to `paymentService.handleStripeWebhook`; exists for backward compat with `app.ts`
+- `stripeService.ts` — thin Stripe API wrappers (createCustomer, createCheckoutSession, listPricesWithProducts, createCustomerPortalSession)
+- `stripeClient.ts` — Replit-managed Stripe credentials; never cache the client
+- `lib/planSync.ts` — `computeEffectivePlan` (pure, no DB), `syncStripeStatusForUser` (used by auth routes and paymentService.syncSubscriptionStatus), `TRIAL_MS/TRIAL_DAYS` constants
+- `storage.ts` — DB layer: getUser, updateUserStripeInfo, listProductsWithPrices, getActiveSubscriptionForCustomer
 - `services/` — `metricsService.ts` (aggregateMetrics, calculateDailyMetrics), `importService.ts` (parseExtracted, todayDateStr)
-- `middlewares/` — Express middleware
 - `lib/` — logger.ts
 
 ### Daily Summary Metrics System
