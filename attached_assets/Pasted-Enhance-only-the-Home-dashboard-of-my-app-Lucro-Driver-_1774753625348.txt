@@ -1,0 +1,124 @@
+Enhance only the Home dashboard of my app "Lucro Driver" with a PRO financial panel, using a safe additive approach.
+
+IMPORTANT SAFETY RULES:
+- Do NOT redesign the entire app
+- Do NOT modify login, auth, payments, domain, routes, or global layout
+- Do NOT break the current mobile or desktop layout
+- Only improve the Home dashboard by adding structured financial intelligence blocks
+- Reuse existing data and existing styles whenever possible
+
+GOAL:
+Make the Home dashboard more valuable by showing real profit logic, goal progress, and smart financial insights without destabilizing the app.
+
+======================================
+1. KEEP CURRENT STRUCTURE
+======================================
+
+- Preserve the existing Home page layout
+- Preserve the current main profit card
+- Preserve current indicator cards
+- Preserve the current visual identity
+
+Only add/refine content inside the dashboard area.
+
+======================================
+2. ADD REAL PROFIT BREAKDOWN
+======================================
+
+Inside or just below the main financial area, show clearly:
+
+- Faturamento do dia
+- Custos do dia
+- Lucro real
+
+Formula:
+realProfit = earnings - costs
+
+If data is missing, handle gracefully.
+
+======================================
+3. ADD GOAL PROGRESS SECTION
+======================================
+
+Create a compact progress section showing:
+
+- Meta diária
+- Meta semanal
+- Meta mensal
+
+Each one should show:
+- current value
+- target value
+- percentage progress
+
+Important:
+The daily goal can be completed while weekly and monthly goals remain in progress.
+
+======================================
+4. ADD SMART INSIGHTS
+======================================
+
+Add a small “insights” or “análise rápida” block with short messages like:
+
+- "Meta diária batida"
+- "Você está em X% da meta semanal"
+- "Você está em X% da meta mensal"
+- "Custos representam X% do faturamento de hoje"
+- "Seu lucro hoje está acima/abaixo de ontem"
+
+Keep messages short, human, and useful.
+
+======================================
+5. ADD SIMPLE COMPARISON
+======================================
+
+If previous day data exists, show:
+
+- Hoje vs Ontem
+- Difference in lucro real
+- Percentage up/down if possible
+
+If no previous data exists, hide this block gracefully.
+
+======================================
+6. SAFE DATA USAGE
+======================================
+
+Reuse existing data sources if already available:
+- earnings
+- costs
+- goals
+- previous records/history
+
+Do not create fragile dependencies.
+If some data is unavailable, show partial info safely instead of breaking the page.
+
+======================================
+7. UI / UX
+======================================
+
+- Keep the current premium dark fintech style
+- Keep spacing balanced
+- Add blocks in a natural order
+- Make it feel like an upgrade of the current dashboard, not a redesign
+
+Suggested order:
+1. current main financial card
+2. profit breakdown
+3. goal progress
+4. smart insights
+5. comparison
+
+======================================
+8. DESKTOP + MOBILE SAFETY
+======================================
+
+- On desktop, integrate these blocks cleanly into the current responsive layout
+- On mobile, keep the page readable and stacked vertically
+- Do not compress or break existing cards
+
+======================================
+9. FINAL RESULT
+======================================
+
+The Home dashboard should become more intelligent and financially useful, while keeping the current app stable and visually consistent.

@@ -4,7 +4,7 @@ import { useGetDashboardSummary, useGetMe } from "@workspace/api-client-react";
 import { DEV_DISABLE_DASHBOARD_PRELOAD } from "@/lib/dev-flags";
 import { useT } from "@/lib/i18n";
 import { formatBRL } from "@/lib/utils";
-import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap, Check, X } from "lucide-react";
+import { Car, Clock, Navigation, Camera, ChevronRight, Lock, Zap, Check, X, TrendingUp, TrendingDown } from "lucide-react";
 import { motion, animate, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightCard";
@@ -138,6 +138,56 @@ export default function Home() {
   const goalPct       = Math.min(100, summary?.goalDailyPct ?? 0);
   const goalDaily     = summary?.goalDaily ?? 0;
   const goalRemaining = goalDaily > 0 ? Math.max(0, goalDaily - totalEarnings) : 0;
+
+  // ── Weekly / monthly goals ─────────────────────────────────────────────────
+  const goalWeekly          = (summary as any)?.goalWeekly         ?? 0;
+  const goalMonthly         = (summary as any)?.goalMonthly        ?? 0;
+  const goalWeeklyPct       = Math.min(100, (summary as any)?.goalWeeklyPct  ?? 0);
+  const goalMonthlyPct      = Math.min(100, (summary as any)?.goalMonthlyPct ?? 0);
+  const earningsWeek        = (summary as any)?.totalEarningsWeek  ?? (summary as any)?.earningsWeek  ?? 0;
+  const earningsMonth       = (summary as any)?.totalEarningsMonth ?? (summary as any)?.earningsMonth ?? 0;
+  const goalWeeklyRemaining  = goalWeekly  > 0 ? Math.max(0, goalWeekly  - earningsWeek)  : 0;
+  const goalMonthlyRemaining = goalMonthly > 0 ? Math.max(0, goalMonthly - earningsMonth) : 0;
+  const gwColor = goalWeeklyPct  >= 100 ? "#00ff88" : goalWeeklyPct  >= 70 ? "#4ade80" : goalWeeklyPct  >= 40 ? "#eab308" : "#ef4444";
+  const gmColor = goalMonthlyPct >= 100 ? "#00ff88" : goalMonthlyPct >= 70 ? "#4ade80" : goalMonthlyPct >= 40 ? "#eab308" : "#ef4444";
+
+  // ── Yesterday comparison ───────────────────────────────────────────────────
+  const yesterdayStr      = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })();
+  const yesterdayEntry    = historyRaw?.find((e) => e.date === yesterdayStr) ?? null;
+  const yesterdayEarnings = yesterdayEntry?.earnings ?? null;
+  const compDiff   = yesterdayEarnings !== null ? totalEarnings - yesterdayEarnings : null;
+  const compPct    = compDiff !== null && yesterdayEarnings > 0 ? Math.round((compDiff / yesterdayEarnings) * 100) : null;
+  const compIsUp   = compDiff !== null && compDiff > 0;
+  const compIsDown = compDiff !== null && compDiff < 0;
+
+  // ── Smart insights ─────────────────────────────────────────────────────────
+  type InsightItem = { text: string; positive: boolean | null };
+  const insights: InsightItem[] = [];
+  if (!isLoading && totalEarnings > 0) {
+    if (goalDaily > 0) {
+      if (goalPct >= 100) insights.push({ text: "Meta diária batida! 🎯", positive: true });
+      else insights.push({ text: `${Math.round(goalPct)}% da meta diária concluída`, positive: null });
+    }
+    if (goalWeekly > 0) {
+      const wpct = Math.round(goalWeeklyPct);
+      if (wpct >= 100) insights.push({ text: "Meta semanal batida! 🗓️", positive: true });
+      else insights.push({ text: `Você está em ${wpct}% da meta semanal`, positive: null });
+    }
+    if (goalMonthly > 0) {
+      const mpct = Math.round(goalMonthlyPct);
+      if (mpct >= 100) insights.push({ text: "Meta mensal batida! 📆", positive: true });
+      else insights.push({ text: `Você está em ${mpct}% da meta mensal`, positive: null });
+    }
+    if (costs > 0) {
+      const costRatio = Math.round((costs / totalEarnings) * 100);
+      insights.push({ text: `Custos representam ${costRatio}% do faturamento`, positive: costRatio <= 20 ? true : costRatio > 35 ? false : null });
+    }
+    if (compPct !== null) {
+      if (compIsUp)   insights.push({ text: `Faturamento ${Math.abs(compPct)}% acima de ontem`, positive: true });
+      else if (compIsDown) insights.push({ text: `Faturamento ${Math.abs(compPct)}% abaixo de ontem`, positive: false });
+      else            insights.push({ text: "Faturamento igual ao de ontem", positive: null });
+    }
+  }
 
   // ── Profit color ───────────────────────────────────────────────────────────
   const pColor = profitPos ? "#00ff88" : "#ef4444";
@@ -661,6 +711,217 @@ export default function Home() {
 
       </div>{/* end right column row 2 */}
       </div>{/* end desktop row 2 */}
+
+
+      {/* ══ NEW ROW A: Profit Breakdown + Weekly/Monthly Goals ════════════════
+           Left: explicit 3-line financial breakdown (faturamento/custos/lucro)
+           Right: weekly + monthly goal progress bars
+          ════════════════════════════════════════════════════════════════════ */}
+      {!isLoading && (totalEarnings > 0 || goalWeekly > 0 || goalMonthly > 0) && (
+        <div style={isDesktop
+          ? { display: "grid", gridTemplateColumns: "minmax(0,1.4fr) minmax(320px,0.9fr)", gap: 20, alignItems: "start" }
+          : { display: "flex", flexDirection: "column", gap: 16 }
+        }>
+
+          {/* ── Profit breakdown ──────────────────────────────────────────── */}
+          {totalEarnings > 0 && (
+            <motion.div variants={item}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+                Resumo financeiro
+              </p>
+              <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Faturamento */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Faturamento do dia</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(totalEarnings)}</span>
+                  </div>
+                  <Bar pct={100} color="rgba(255,255,255,0.12)" height={5} delay={0} />
+                </div>
+                {/* Custos */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Custos do dia</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>- {formatBRL(costs)}</span>
+                  </div>
+                  <Bar pct={totalEarnings > 0 ? (costs / totalEarnings) * 100 : 0} color="rgba(239,68,68,0.6)" height={5} delay={0.15} />
+                </div>
+                {/* Divider */}
+                <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                {/* Lucro real */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Lucro real</span>
+                    <span style={{ fontSize: 18, fontWeight: 900, color: pColor, fontVariantNumeric: "tabular-nums" }}>{formatBRL(profit)}</span>
+                  </div>
+                  <Bar pct={Math.max(0, profitPos ? marginPct : 0)} color={pColor} height={5} delay={0.3} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Weekly + Monthly goals ────────────────────────────────────── */}
+          {(goalWeekly > 0 || goalMonthly > 0) && (
+            <motion.div variants={item}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+                Metas semanal e mensal
+              </p>
+              <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 18 }}>
+                {goalWeekly > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 3 }}>Semanal</p>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                          <span style={{ fontSize: 18, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(earningsWeek)}</span>
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>de {formatBRL(goalWeekly)}</span>
+                        </div>
+                      </div>
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.4, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ width: 44, height: 44, borderRadius: "50%", border: `2px solid ${gwColor}40`, display: "flex", alignItems: "center", justifyContent: "center", background: `${gwColor}08`, flexShrink: 0 }}
+                      >
+                        <span style={{ fontSize: 11, fontWeight: 900, color: gwColor, fontVariantNumeric: "tabular-nums" }}>{Math.round(goalWeeklyPct)}%</span>
+                      </motion.div>
+                    </div>
+                    <Bar pct={goalWeeklyPct} color={gwColor} height={6} delay={0.2} />
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 7 }}>
+                      {goalWeeklyPct >= 100
+                        ? <span style={{ color: "#00ff88", fontWeight: 700 }}>✓ Meta semanal atingida</span>
+                        : `Faltam ${formatBRL(goalWeeklyRemaining)}`}
+                    </p>
+                  </div>
+                )}
+                {goalWeekly > 0 && goalMonthly > 0 && (
+                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                )}
+                {goalMonthly > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 3 }}>Mensal</p>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                          <span style={{ fontSize: 18, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(earningsMonth)}</span>
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>de {formatBRL(goalMonthly)}</span>
+                        </div>
+                      </div>
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.5, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ width: 44, height: 44, borderRadius: "50%", border: `2px solid ${gmColor}40`, display: "flex", alignItems: "center", justifyContent: "center", background: `${gmColor}08`, flexShrink: 0 }}
+                      >
+                        <span style={{ fontSize: 11, fontWeight: 900, color: gmColor, fontVariantNumeric: "tabular-nums" }}>{Math.round(goalMonthlyPct)}%</span>
+                      </motion.div>
+                    </div>
+                    <Bar pct={goalMonthlyPct} color={gmColor} height={6} delay={0.35} />
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 7 }}>
+                      {goalMonthlyPct >= 100
+                        ? <span style={{ color: "#00ff88", fontWeight: 700 }}>✓ Meta mensal atingida</span>
+                        : `Faltam ${formatBRL(goalMonthlyRemaining)}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+        </div>
+      )}
+
+
+      {/* ══ NEW ROW B: Smart Insights ══════════════════════════════════════════
+           Pill chips — color-coded by sentiment (green / red / neutral)
+          ════════════════════════════════════════════════════════════════════ */}
+      {!isLoading && insights.length > 0 && (
+        <motion.div variants={item}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+            Análise rápida
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {insights.map((ins, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "inline-flex", alignItems: "center",
+                  background: ins.positive === true
+                    ? "rgba(0,255,136,0.08)"
+                    : ins.positive === false
+                      ? "rgba(239,68,68,0.08)"
+                      : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${ins.positive === true
+                    ? "rgba(0,255,136,0.2)"
+                    : ins.positive === false
+                      ? "rgba(239,68,68,0.2)"
+                      : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 30,
+                  padding: "7px 14px",
+                }}
+              >
+                <span style={{
+                  fontSize: 12, fontWeight: 600,
+                  color: ins.positive === true ? "#00ff88" : ins.positive === false ? "#ef4444" : "rgba(255,255,255,0.55)",
+                }}>
+                  {ins.text}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+
+      {/* ══ NEW ROW C: Today vs Yesterday ════════════════════════════════════
+           Only rendered when yesterday has a recorded earnings entry
+          ════════════════════════════════════════════════════════════════════ */}
+      {!isLoading && yesterdayEarnings !== null && totalEarnings > 0 && (
+        <motion.div variants={item}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+            Hoje vs ontem
+          </p>
+          <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "18px 22px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              {/* Today */}
+              <div>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 5 }}>Hoje</p>
+                <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{formatBRL(totalEarnings)}</p>
+              </div>
+              {/* Arrow + percentage */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                {compIsUp
+                  ? <TrendingUp  size={22} color="#00ff88" />
+                  : compIsDown
+                    ? <TrendingDown size={22} color="#ef4444" />
+                    : <span style={{ fontSize: 18, color: "rgba(255,255,255,0.2)" }}>—</span>
+                }
+                {compPct !== null && compPct !== 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: compIsUp ? "#00ff88" : "#ef4444" }}>
+                    {compIsUp ? "+" : ""}{compPct}%
+                  </span>
+                )}
+              </div>
+              {/* Yesterday */}
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 5 }}>Ontem</p>
+                <p style={{ fontSize: 22, fontWeight: 900, color: "rgba(255,255,255,0.38)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{formatBRL(yesterdayEarnings)}</p>
+              </div>
+            </div>
+            {/* Difference banner */}
+            {compDiff !== null && (
+              <div style={{
+                marginTop: 14, padding: "8px 14px", borderRadius: 10,
+                background: compIsUp ? "rgba(0,255,136,0.06)" : compIsDown ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${compIsUp ? "rgba(0,255,136,0.15)" : compIsDown ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.06)"}`,
+              }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: compIsUp ? "#00ff88" : compIsDown ? "#ef4444" : "rgba(255,255,255,0.4)" }}>
+                  {compIsUp ? "+" : ""}{formatBRL(compDiff)}{" "}
+                  {compIsUp ? "a mais que ontem" : compIsDown ? "a menos que ontem" : "— igual ao de ontem"}
+                </p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
 
       {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
