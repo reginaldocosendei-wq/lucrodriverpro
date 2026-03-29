@@ -221,9 +221,20 @@ export default function Reports() {
   const byPlatform  = (reports as any).byPlatform  as any[] ?? [];
   const byDayOfWeek = (reports as any).byDayOfWeek as any[] ?? [];
 
-  const hasAnyEarnings = daily.some((d: any) => d.earnings > 0) || byPlatform.length > 0;
+  // hasDailyData: at least one real earnings point in the last 30 days.
+  // This is intentionally separate from byPlatform so a user with only
+  // historical data (outside the window) doesn't get an invisible line chart.
+  const hasDailyData    = daily.some((d: any) => d.earnings !== null && d.earnings > 0);
+  const hasAnyEarnings  = hasDailyData || byPlatform.length > 0;
   const hasPlatformData = byPlatform.length > 0;
   const hasDayData      = byDayOfWeek.some((d: any) => d.earnings > 0);
+
+  // Diagnostic logs — visible in browser console
+  console.log(
+    `[Reports] daily: ${daily.length} pts | with data: ${daily.filter((d: any) => d.earnings !== null).length}`,
+    '\nfirst:', daily[0],
+    '\nlast:',  daily[daily.length - 1],
+  );
 
   const axisStyle = { fill: "#6b7280", fontSize: 10, fontWeight: 600 } as const;
   const gridColor = "rgba(255,255,255,0.05)";
@@ -282,8 +293,8 @@ export default function Reports() {
 
       {/* ── Evolução Diária ───────────────────────────────────────────────── */}
       <ChartCard title="📈 Evolução Diária — Últimos 30 dias" height={300}>
-        {!hasAnyEarnings ? (
-          <EmptyChart />
+        {!hasDailyData ? (
+          <EmptyChart message="Nenhum ganho registrado nos últimos 30 dias. Importe corridas ou adicione dados manualmente." />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={daily} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
@@ -307,9 +318,12 @@ export default function Reports() {
               />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 2 }} />
               <Legend wrapperStyle={{ paddingTop: 16, fontSize: 12, fontWeight: 600 }} iconType="circle" />
-              <Line type="monotone" dataKey="earnings" name="Ganhos"     stroke="#00ff88" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="costs"    name="Custos"     stroke="#ef4444" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
+              {/* dot must be an object (not false) so isolated single-day points
+                  render as visible dots even without an adjacent non-null neighbour.
+                  connectNulls={false} keeps gaps between non-consecutive days. */}
+              <Line type="monotone" dataKey="earnings" name="Ganhos"     stroke="#00ff88" strokeWidth={2.5} dot={{ r: 2.5, fill: "#00ff88",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#00ff88", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="costs"    name="Custos"     stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5, fill: "#ef4444",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#ef4444", stroke: "#000", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="profit"   name="Lucro Real" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 2.5, fill: "#3b82f6",  strokeWidth: 0 }} connectNulls={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#000", strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         )}
