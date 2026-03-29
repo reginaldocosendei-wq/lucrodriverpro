@@ -377,10 +377,74 @@ export default function AuthScreen({
           {t("auth.subtitle")}
         </motion.p>
 
+        {/* Testimonials */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: "100%", marginBottom: 28 }}
+        >
+          <div style={{
+            display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4,
+            scrollSnapType: "x mandatory",
+            msOverflowStyle: "none", scrollbarWidth: "none",
+          }}>
+            {[
+              {
+                quote: "Descobri que estava aceitando corridas que me davam prejuízo. Hoje só pego as que realmente valem a pena.",
+                author: "Motorista Uber",
+              },
+              {
+                quote: "Eu achava que ganhava bem... mas quando vi o lucro real, mudei totalmente minha estratégia.",
+                author: "Motorista 99",
+              },
+              {
+                quote: "Depois que comecei a usar, meu lucro aumentou sem precisar trabalhar mais horas.",
+                author: "Motorista App",
+              },
+            ].map(({ quote, author }) => (
+              <div
+                key={author}
+                style={{
+                  flexShrink: 0, width: 230, scrollSnapAlign: "start",
+                  background: "#111111",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 18, padding: "16px 16px 14px",
+                  textAlign: "left",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Stars */}
+                <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
+                  {[0,1,2,3,4].map((i) => (
+                    <svg key={i} width="12" height="12" viewBox="0 0 12 12" fill="#eab308">
+                      <path d="M6 1l1.3 2.6L10 4l-2 1.9.5 2.7L6 7.3 3.5 8.6 4 5.9 2 4l2.7-.4z"/>
+                    </svg>
+                  ))}
+                </div>
+                {/* Quote */}
+                <p style={{
+                  fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,0.72)",
+                  fontWeight: 500, marginBottom: 12,
+                  fontStyle: "italic",
+                }}>
+                  "{quote}"
+                </p>
+                {/* Author */}
+                <p style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: "#00ff88", letterSpacing: "0.02em",
+                }}>
+                  — {author}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* Proof line */}
         <motion.p
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 0.36, duration: 0.4 }}
+          transition={{ delay: 0.44, duration: 0.4 }}
           style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: "0.01em", marginBottom: 36 }}
         >
           7 dias grátis · Sem cartão necessário
