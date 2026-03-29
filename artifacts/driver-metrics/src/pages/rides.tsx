@@ -460,16 +460,18 @@ interface EditPayload {
 }
 
 // ─── HistoryExtrasPanel ───────────────────────────────────────────────────────
-function HistoryExtrasPanel({ date, appEarnings }: { date: string; appEarnings: number }) {
+function HistoryExtrasPanel({ date, appEarnings, defaultOpen = false }: {
+  date: string; appEarnings: number; defaultOpen?: boolean;
+}) {
   const { data: entries = [], isLoading } = useExtraEarnings(date);
   const addMutation    = useAddExtraEarning();
   const updateMutation = useUpdateExtraEarning();
   const deleteMutation = useDeleteExtraEarning();
 
-  const [open, setOpen]         = useState(false);
+  const [open, setOpen]         = useState(defaultOpen);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]     = useState<number | null>(null);
-  const [formType, setFormType] = useState("tip_cash");
+  const [formType, setFormType] = useState("cash_ride");
   const [formAmt,  setFormAmt]  = useState("");
   const [formNote, setFormNote] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -478,7 +480,7 @@ function HistoryExtrasPanel({ date, appEarnings }: { date: string; appEarnings: 
 
   function openAdd() {
     setEditId(null);
-    setFormType("tip_cash"); setFormAmt(""); setFormNote("");
+    setFormType("cash_ride"); setFormAmt(""); setFormNote("");
     setShowForm(true);
   }
 
@@ -620,6 +622,230 @@ function HistoryExtrasPanel({ date, appEarnings }: { date: string; appEarnings: 
   );
 }
 
+// ─── Manual Earning Modal ─────────────────────────────────────────────────────
+const modalLabelStyle: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+  color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
+  marginBottom: 8, display: "block",
+};
+
+function ManualEarningModal({ initialDate, onClose, showToast }: {
+  initialDate: string;
+  onClose: () => void;
+  showToast: (msg: string, type: "success" | "error") => void;
+}) {
+  const addMutation = useAddExtraEarning();
+  const [date, setDate]   = useState(initialDate);
+  const [type, setType]   = useState("cash_ride");
+  const [amount, setAmount] = useState("");
+  const [note, setNote]   = useState("");
+
+  const valid  = parseFloat(amount) > 0 && !!date;
+  const saving = addMutation.isPending;
+
+  async function handleSave() {
+    const parsed = parseFloat(amount);
+    if (!valid || saving) return;
+    try {
+      await addMutation.mutateAsync({ date, type, amount: parsed, note });
+      showToast("Ganho adicionado com sucesso!", "success");
+      onClose();
+    } catch {
+      showToast("Erro ao salvar ganho.", "error");
+    }
+  }
+
+  const inputBase: React.CSSProperties = {
+    width: "100%", height: 50, borderRadius: 14,
+    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+    color: "#f9fafb", fontSize: 15, fontFamily: "inherit",
+    outline: "none", padding: "0 14px", boxSizing: "border-box",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(0,0,0,0.82)", backdropFilter: "blur(12px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 90, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 70, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 340, damping: 32 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 480,
+          background: "#141414", border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "28px 28px 0 0",
+          boxShadow: "0 -24px 80px rgba(0,0,0,0.8)",
+          maxHeight: "92dvh", overflowY: "auto",
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "14px 0 0" }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px 20px" }}>
+          <div>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "#f9fafb" }}>Adicionar ganho manual</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+              Corridas em dinheiro, gorjetas, ajustes
+            </p>
+          </div>
+          <button onClick={onClose} style={{
+            width: 36, height: 36, borderRadius: 10, border: "none",
+            background: "rgba(255,255,255,0.06)", cursor: "pointer",
+            color: "rgba(255,255,255,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: "0 24px 32px", display: "flex", flexDirection: "column", gap: 18 }}>
+
+          {/* Type chips */}
+          <div>
+            <label style={modalLabelStyle}>Tipo de ganho</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {EXTRA_EARNING_TYPES.map((t) => (
+                <button key={t.value} onClick={() => setType(t.value)} style={{
+                  padding: "7px 14px", borderRadius: 22, fontSize: 12, fontWeight: 600,
+                  border: type === t.value ? "1px solid #00ff88" : "1px solid rgba(255,255,255,0.1)",
+                  background: type === t.value ? "rgba(0,255,136,0.1)" : "transparent",
+                  color: type === t.value ? "#00ff88" : "rgba(255,255,255,0.5)",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.12s ease",
+                }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label style={modalLabelStyle}>Valor</label>
+            <div style={{ position: "relative" }}>
+              <span style={{
+                position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+                fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.4)",
+              }}>R$</span>
+              <input
+                type="number" inputMode="decimal" placeholder="0,00"
+                value={amount} onChange={(e) => setAmount(e.target.value)}
+                autoFocus
+                style={{
+                  ...inputBase, paddingLeft: 40, paddingRight: 16,
+                  fontSize: 20, fontWeight: 800,
+                  border: "1px solid rgba(0,255,136,0.25)",
+                  height: 56,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label style={modalLabelStyle}>Data</label>
+            <input
+              type="date" value={date}
+              onChange={(e) => setDate(e.target.value)}
+              style={inputBase}
+            />
+          </div>
+
+          {/* Note */}
+          <div>
+            <label style={modalLabelStyle}>
+              Observação <span style={{ opacity: 0.4, fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>— opcional</span>
+            </label>
+            <input
+              type="text" placeholder="Ex: gorjeta do cliente, ajuste de saldo…"
+              value={note} onChange={(e) => setNote(e.target.value)}
+              style={inputBase}
+            />
+          </div>
+
+          {/* Save button */}
+          <button
+            onClick={handleSave} disabled={!valid || saving}
+            style={{
+              width: "100%", height: 54, borderRadius: 16, border: "none",
+              background: valid && !saving ? "#00ff88" : "rgba(0,255,136,0.15)",
+              color: valid && !saving ? "#000" : "rgba(0,255,136,0.35)",
+              fontWeight: 900, fontSize: 16,
+              cursor: valid && !saving ? "pointer" : "not-allowed",
+              fontFamily: "inherit",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: valid && !saving ? "0 8px 32px rgba(0,255,136,0.2)" : "none",
+              marginTop: 4,
+              transition: "all 0.15s ease",
+            }}
+          >
+            {saving
+              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
+                  style={{ width: 20, height: 20, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000" }} />
+              : <><CheckCircle size={18} strokeWidth={2.5} /> Salvar ganho</>}
+          </button>
+
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Manual Day Card ──────────────────────────────────────────────────────────
+// Shown in history for dates that have manual entries but NO imported ride
+function ManualDayCard({ date, total, count }: { date: string; total: number; count: number }) {
+  return (
+    <div style={{
+      background: "#111",
+      border: "1px solid rgba(99,102,241,0.18)",
+      borderRadius: 22, overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    }}>
+      <div style={{ padding: "16px 18px 14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+              <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                <Calendar size={11} /> {formatDate(date)}
+              </span>
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+                color: "rgba(129,140,248,0.9)",
+                background: "rgba(99,102,241,0.1)",
+                border: "1px solid rgba(99,102,241,0.22)",
+                borderRadius: 5, padding: "2px 7px", textTransform: "uppercase",
+              }}>
+                Manual
+              </span>
+            </div>
+            <p style={{
+              fontSize: 28, fontWeight: 900, color: "#4ade80",
+              letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums",
+              lineHeight: 1, marginBottom: 4,
+            }}>
+              +{formatBRL(total)}
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 500 }}>
+              {count} {count === 1 ? "ganho manual" : "ganhos manuais"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded extras panel — always open, appEarnings=0 since no ride */}
+      <HistoryExtrasPanel date={date} appEarnings={0} defaultOpen />
+    </div>
+  );
+}
+
 // ─── Animation variants ───────────────────────────────────────────────────────
 const listVariants = {
   hidden: { opacity: 0 },
@@ -655,6 +881,7 @@ export default function RidesPage() {
   const [confirmTarget,  setConfirmTarget]  = useState<{ id: number | null; date: string; source: "summary" | "rides" } | null>(null);
   const [isDeleting,     setIsDeleting]     = useState(false);
   const [toast,          setToast]          = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   // ── Load records ────────────────────────────────────────────────────────────
   const loadSummaries = useCallback(async () => {
@@ -696,6 +923,48 @@ export default function RidesPage() {
       default: return summaries;
     }
   }, [summaries, filter, customFrom, customTo]);
+
+  // ── All extra earnings (for manual-only date cards) ──────────────────────────
+  const { data: allExtraEarnings = [] } = useExtraEarnings();
+
+  // Dates that have imported summaries
+  const summaryDates = useMemo(() =>
+    new Set((summaries ?? []).map((s) => s.date)),
+  [summaries]);
+
+  // Group extras by date for those WITHOUT an imported summary
+  const manualOnlyByDate = useMemo(() => {
+    const map: Record<string, { total: number; count: number }> = {};
+    for (const e of allExtraEarnings) {
+      if (!summaryDates.has(e.date)) {
+        if (!map[e.date]) map[e.date] = { total: 0, count: 0 };
+        map[e.date].total += e.amount;
+        map[e.date].count += 1;
+      }
+    }
+    return map;
+  }, [allExtraEarnings, summaryDates]);
+
+  // Apply same date filter to manual-only dates
+  const filteredManualDates = useMemo(() => {
+    const dates = Object.keys(manualOnlyByDate).sort().reverse();
+    const today = isoToday();
+    switch (filter) {
+      case "today":  return dates.filter((d) => d === today);
+      case "week":   return dates.filter((d) => d >= isoNDaysAgo(6));
+      case "month":  return dates.filter((d) => d >= isoMonthStart());
+      case "custom": return dates.filter((d) =>
+        (!customFrom || d >= customFrom) && (!customTo || d <= customTo));
+      default: return dates;
+    }
+  }, [manualOnlyByDate, filter, customFrom, customTo]);
+
+  // ── Derived display flags ────────────────────────────────────────────────────
+  const hasImported   = filtered.length > 0;
+  const hasManual     = filteredManualDates.length > 0;
+  const hasAny        = hasImported || hasManual;
+  const noSummaries   = (summaries?.length ?? 0) === 0 && !hasManual;
+  const noFilterMatch = !hasAny && (summaries?.length ?? 0) > 0;
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const totalEarnings = filtered.reduce((s, r) => s + r.earnings, 0);
@@ -811,6 +1080,16 @@ export default function RidesPage() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showManualModal && (
+          <ManualEarningModal
+            initialDate={isoToday()}
+            onClose={() => setShowManualModal(false)}
+            showToast={(msg, type) => setToast({ message: msg, type })}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Sticky header ───────────────────────────────────────────────────── */}
       <div style={{
         padding: "16px 20px 0",
@@ -846,6 +1125,17 @@ export default function RidesPage() {
             >
               <SlidersHorizontal size={15} />
             </button>
+            <button
+              onClick={() => setShowManualModal(true)}
+              style={{
+                background: "rgba(129,140,248,0.08)", border: "1px solid rgba(99,102,241,0.22)",
+                borderRadius: 10, padding: "7px 13px", height: 36,
+                color: "#818cf8", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit",
+              }}
+            >
+              <Pencil size={13} strokeWidth={2.5} /> Manual
+            </button>
             <Link href="/import">
               <button style={{
                 background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)",
@@ -853,7 +1143,7 @@ export default function RidesPage() {
                 color: "#00ff88", fontSize: 13, fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
               }}>
-                <Plus size={14} /> {t("common.new")}
+                <Plus size={14} /> Importar
               </button>
             </Link>
           </div>
@@ -935,8 +1225,8 @@ export default function RidesPage() {
         {/* ── Content ─────────────────────────────────────────────────────── */}
         {!loading && summaries != null && (
           <>
-            {/* Empty state — no records at all */}
-            {summaries.length === 0 && (
+            {/* Empty state — no records at all (no imports, no manual) */}
+            {noSummaries && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", paddingTop: 72 }}>
                 <div style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 22px" }}>
                   <Calendar size={36} color="#374151" />
@@ -947,16 +1237,25 @@ export default function RidesPage() {
                 <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
                   {t("history.noRecordsSub")}
                 </p>
-                <Link href="/import">
-                  <button style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
-                    {t("history.addRecord")}
+                <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                  <button onClick={() => setShowManualModal(true)} style={{
+                    padding: "14px 24px", borderRadius: 14, border: "1px solid rgba(99,102,241,0.3)",
+                    background: "rgba(99,102,241,0.08)", color: "#818cf8", fontWeight: 700, fontSize: 14,
+                    cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 7,
+                  }}>
+                    <Pencil size={15} /> Ganho manual
                   </button>
-                </Link>
+                  <Link href="/import">
+                    <button style={{ padding: "14px 24px", borderRadius: 14, border: "none", background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                      {t("history.addRecord")}
+                    </button>
+                  </Link>
+                </div>
               </motion.div>
             )}
 
             {/* Empty state — filter returns nothing */}
-            {summaries.length > 0 && filtered.length === 0 && (
+            {noFilterMatch && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center", paddingTop: 56 }}>
                 <p style={{ color: "#6b7280", fontSize: 15, marginBottom: 14 }}>
                   {t("history.noResultsForPeriod")}
@@ -968,7 +1267,7 @@ export default function RidesPage() {
             )}
 
             {/* ── Records list ────────────────────────────────────────────── */}
-            {filtered.length > 0 && (
+            {hasAny && (
               <motion.div variants={listVariants} initial="hidden" animate="show"
                 style={isDesktop
                   ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }
@@ -1125,6 +1424,23 @@ export default function RidesPage() {
                           {/* ── Extra earnings panel ──────────────────────────── */}
                           <HistoryExtrasPanel date={s.date} appEarnings={s.earnings} />
                         </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Manual-only day cards (dates with manual earnings but no imported ride) */}
+                <AnimatePresence initial={false}>
+                  {filteredManualDates.map((date) => {
+                    const { total, count } = manualOnlyByDate[date];
+                    return (
+                      <motion.div
+                        key={`manual-${date}`}
+                        variants={cardVariants}
+                        layout
+                        exit={{ opacity: 0, x: -24, transition: { duration: 0.22 } }}
+                      >
+                        <ManualDayCard date={date} total={total} count={count} />
                       </motion.div>
                     );
                   })}

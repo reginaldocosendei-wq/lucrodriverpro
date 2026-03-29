@@ -14,11 +14,12 @@ export interface ExtraEarning {
 }
 
 export const EXTRA_EARNING_TYPES = [
-  { value: "tip_cash",    label: "Gorjeta em dinheiro" },
-  { value: "tip_pix",     label: "Gorjeta em Pix" },
   { value: "cash_ride",   label: "Corrida em dinheiro" },
+  { value: "tip_pix",     label: "Gorjeta em Pix" },
+  { value: "tip_cash",    label: "Gorjeta em dinheiro" },
   { value: "bonus",       label: "Bônus" },
-  { value: "other",       label: "Outro" },
+  { value: "adjustment",  label: "Ajuste" },
+  { value: "other",       label: "Outro ganho" },
 ] as const;
 
 export function typeLabel(type: string): string {
