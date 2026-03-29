@@ -480,17 +480,41 @@ export default function Upgrade() {
       {/* ── Pix option (BRL only) ────────────────────────────────────────────── */}
       {isBRL && (
         <motion.div variants={fadeUp} style={{ marginBottom: 28 }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/pix-payment")}
-            style={{ width: "100%", height: 50, borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-          >
-            <span style={{ fontSize: 16 }}>🔑</span>
-            {t("upgrade.ctaPix")}
-          </motion.button>
-          <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>
-            {t("upgrade.pixComingSoon")}
-          </p>
+          {/* "ou" divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+          </div>
+
+          {/* PIX card */}
+          <div style={{
+            background: "rgba(50,188,173,0.07)",
+            border: "1px solid rgba(50,188,173,0.22)",
+            borderRadius: 18,
+            padding: "14px 16px",
+          }}>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/pix-payment")}
+              style={{
+                width: "100%", height: 48, borderRadius: 12,
+                background: "rgba(50,188,173,0.12)",
+                border: "1px solid rgba(50,188,173,0.3)",
+                color: "rgba(255,255,255,0.88)",
+                fontWeight: 700, fontSize: 13.5,
+                cursor: "pointer", fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                transition: "background 0.15s",
+              }}
+            >
+              <span style={{ fontSize: 17 }}>📲</span>
+              {t("upgrade.ctaPix")}
+            </motion.button>
+            <p style={{ textAlign: "center", fontSize: 11.5, color: "rgba(255,255,255,0.45)", marginTop: 10, lineHeight: 1.5 }}>
+              {t("upgrade.pixComingSoon")}
+            </p>
+          </div>
         </motion.div>
       )}
 
