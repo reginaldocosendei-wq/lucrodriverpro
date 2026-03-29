@@ -335,8 +335,12 @@ export default function Reports() {
                 </div>
               ))}
             </div>
-            <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>
-              Adicione mais dias para visualizar a evolução completa
+            <p style={{
+              textAlign: "center", fontSize: 13, lineHeight: 1.6, fontWeight: 500,
+              color: "rgba(255,255,255,0.35)", maxWidth: 320, margin: "0 auto",
+              letterSpacing: "0.01em",
+            }}>
+              Você já está no lucro. Agora registre mais dias e descubra como escalar seus resultados.
             </p>
           </div>
 
