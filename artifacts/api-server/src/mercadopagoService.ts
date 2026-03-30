@@ -3,6 +3,8 @@
  * No SDK dependency required.
  */
 
+import { createHmac } from "crypto";
+
 const MP_BASE = "https://api.mercadopago.com";
 
 export interface MpPixResult {
@@ -96,4 +98,40 @@ export async function getPaymentStatus(
     statusDetail: data.status_detail ?? "",
     externalReference: data.external_reference ?? null,
   };
+}
+
+// ── validateWebhookSignature ──────────────────────────────────────────────────
+// Optional: validates the x-signature header from Mercado Pago.
+// Returns true if the secret is not configured (allows graceful opt-in).
+// Signature format: "ts=<timestamp>,v1=<hmac-sha256>"
+// Signed message:   "id=<paymentId>&request-id=<xRequestId>&ts=<ts>"
+export function validateWebhookSignature(opts: {
+  secret: string | undefined;
+  xSignature: string | undefined;
+  xRequestId: string | undefined;
+  paymentId: string;
+}): boolean {
+  if (!opts.secret) return true; // not configured → skip validation
+
+  if (!opts.xSignature) {
+    console.warn("[MP Webhook] x-signature header missing");
+    return false;
+  }
+
+  const parts: Record<string, string> = {};
+  for (const part of opts.xSignature.split(",")) {
+    const [k, v] = part.split("=");
+    if (k && v) parts[k.trim()] = v.trim();
+  }
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+  if (!ts || !v1) return false;
+
+  const message = `id=${opts.paymentId}&request-id=${opts.xRequestId ?? ""}&ts=${ts}`;
+  const expected = createHmac("sha256", opts.secret)
+    .update(message)
+    .digest("hex");
+
+  return expected === v1;
 }

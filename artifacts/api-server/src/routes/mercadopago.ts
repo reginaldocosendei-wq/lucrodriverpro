@@ -9,7 +9,7 @@
 import { Router } from "express";
 import { db, usersTable, pixPaymentsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
-import { createPixPayment, getPaymentStatus } from "../mercadopagoService";
+import { createPixPayment, getPaymentStatus, validateWebhookSignature } from "../mercadopagoService";
 import { paymentService } from "../paymentService";
 
 const router = Router();
@@ -224,6 +224,18 @@ router.post("/webhook", async (req, res) => {
     }
 
     const providerPaymentId = String(rawId);
+
+    // Signature validation — optional, skipped when MERCADOPAGO_WEBHOOK_SECRET is not set
+    const sigValid = validateWebhookSignature({
+      secret:     process.env.MERCADOPAGO_WEBHOOK_SECRET,
+      xSignature: req.headers["x-signature"] as string | undefined,
+      xRequestId: req.headers["x-request-id"] as string | undefined,
+      paymentId:  providerPaymentId,
+    });
+    if (!sigValid) {
+      console.warn(`[MP Webhook] Invalid signature for paymentId=${providerPaymentId}`);
+      return;
+    }
     console.log(`[MP Webhook] Received notification for paymentId=${providerPaymentId}`);
 
     // Fetch the real payment from Mercado Pago to verify status
