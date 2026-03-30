@@ -51,12 +51,19 @@ if (!rawPort) throw new Error("PORT environment variable is required");
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${rawPort}"`);
 
-await initStripe();
-
+// Start listening immediately so the health check (/api/healthz) responds
+// right away and Autoscale deployment marks the instance as healthy.
+// Stripe initialization runs in the background and must not block startup —
+// in production, findOrCreateManagedWebhook can take several seconds or hang,
+// which previously prevented app.listen() from ever being called.
 app.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
+});
+
+initStripe().catch((err: any) => {
+  logger.warn({ err: err?.message }, "Stripe background init error");
 });
