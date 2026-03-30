@@ -1,0 +1,80 @@
+Fix the PRO activation flow without breaking anything else.
+
+CURRENT PROBLEM:
+- The app shows the PRO upsell screen even after successful payment
+- The user does not get PRO access unlocked
+- The screen shows an error like "Algo deu errado. Tente novamente."
+- I want the current logged-in user to become PRO automatically after successful payment/subscription activation
+
+IMPORTANT RULES:
+- Do NOT refactor unrelated code
+- Do NOT redesign UI
+- Do NOT change working pages unrelated to PRO access
+- Do NOT break login/auth/session
+- Do NOT break existing payments
+- Be precise and minimal-risk
+- Reuse existing auth, user, billing, and subscription logic if already present
+
+GOAL:
+Find why PRO is not being enabled and fix the full activation flow end-to-end.
+
+TASKS:
+1. Inspect the current PRO gating logic:
+   - find where the app decides if user is PRO or not
+   - find where the reports page checks access
+   - find where the UI reads user plan/subscription status
+
+2. Inspect payment completion logic:
+   - Stripe checkout success handler
+   - Stripe webhook handlers
+   - any checkout session completion route
+   - any code that should update the user/subscription after payment
+
+3. Inspect database user/subscription fields:
+   - identify the exact field(s) that represent PRO access
+   - examples: plan, subscriptionStatus, isPro, tier, stripeCustomerId, stripeSubscriptionId, trialEndsAt, etc.
+   - determine what value the reports page expects in order to unlock PRO
+
+4. Fix the activation logic so that after successful payment or trial activation:
+   - the correct user record is updated
+   - the correct PRO/subscription field is saved
+   - the current logged-in user is matched correctly
+   - webhook processing is idempotent
+   - the frontend refreshes/reloads the latest account status after success
+
+5. Fix the reports page access check:
+   - if the user is already PRO, never show the lock/upsell page
+   - if the backend says PRO is active, unlock immediately
+   - if there is a stale client cache, refresh account state after payment success
+
+6. Add safe debugging logs only where needed:
+   - when checkout session is created
+   - when webhook is received
+   - when user PRO status is updated
+   - when reports page checks PRO access
+
+7. Verify the full flow:
+   - logged-in user starts checkout
+   - payment/trial succeeds
+   - backend updates user/subscription
+   - frontend loads fresh account state
+   - reports page unlocks correctly
+
+8. Create a short report file:
+   backup_notes/PRO_ACCESS_FIX_REPORT.md
+   Include:
+   - root cause
+   - files changed
+   - database fields involved
+   - how PRO is determined now
+   - how to test the fix safely
+
+9. Do NOT leave temporary hacks.
+10. Do NOT fake PRO in frontend only.
+11. Fix the real source of truth.
+
+FINAL OUTPUT:
+At the end, clearly tell me:
+- what the root cause was
+- which files were changed
+- how the app

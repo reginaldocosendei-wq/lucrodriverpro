@@ -101,8 +101,9 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-  req.session.destroy(() => {});
-  res.json({ message: "Logout realizado com sucesso" });
+  req.session.destroy(() => {
+    res.json({ message: "Logout realizado com sucesso" });
+  });
 });
 
 router.get("/me", async (req, res) => {

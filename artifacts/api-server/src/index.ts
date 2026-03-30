@@ -1,20 +1,59 @@
 import express from "express";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
-import bcrypt from "bcryptjs";
 
 const app = express();
 
-// Required so req.secure works behind Replit's proxy in production
+// Required so req.secure works behind Replit's proxy in production.
 app.set("trust proxy", 1);
 
+// ─── Health checks (must be first — before any middleware) ────────────────────
+app.get("/", (_req, res) => res.status(200).send("OK"));
+app.get("/api/healthz", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
+
+// ─── Stripe webhook — MUST be before express.json() ──────────────────────────
+// Stripe sends a raw Buffer; if express.json() runs first it consumes the body
+// and the HMAC signature check fails with a 400.
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    if (!sig) {
+      res.status(400).json({ error: "Missing stripe-signature header" });
+      return;
+    }
+    try {
+      const { WebhookHandlers } = await import("./webhookHandlers");
+      const s = Array.isArray(sig) ? sig[0] : sig;
+      await WebhookHandlers.processWebhook(req.body as Buffer, s);
+      res.status(200).json({ received: true });
+    } catch (err: any) {
+      console.error("[webhook] processing error:", err.message);
+      res.status(400).json({ error: "Webhook processing error" });
+    }
+  },
+);
+
+// ─── Domain redirect (production only) ───────────────────────────────────────
+// Registered AFTER the Stripe webhook so Stripe callbacks (which don't follow
+// redirects) are never caught here.
+const CUSTOM_DOMAIN = "lucrodriverpro.com";
+app.use((req, res, next) => {
+  if (process.env.REPLIT_DEPLOYMENT !== "1") return next();
+  const host = (req.headers.host ?? "").toLowerCase();
+  if (!host || host === CUSTOM_DOMAIN || host.endsWith(`.${CUSTOM_DOMAIN}`)) {
+    return next();
+  }
+  return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.url}`);
+});
+
+// ─── JSON body parser ─────────────────────────────────────────────────────────
 app.use(express.json());
 
 // ─── Session ──────────────────────────────────────────────────────────────────
-// connect-pg-simple manages its own pg connection via conString — no direct
-// "pg" import needed. The "session" table already exists in the database.
 const PgStore = ConnectPgSimple(session);
-
 app.use(
   session({
     store: new PgStore({
@@ -34,183 +73,31 @@ app.use(
   }),
 );
 
-// ─── Lazy DB pool ─────────────────────────────────────────────────────────────
-// Dynamic import keeps @workspace/db out of the module-load critical path —
-// server binds to PORT immediately even if DATABASE_URL is slow to appear.
-let _pool: any = null;
-async function getPool() {
-  if (!_pool) {
-    const { pool } = await import("@workspace/db");
-    _pool = pool;
+// ─── All API routes (lazily loaded) ──────────────────────────────────────────
+// The router is imported on the first request so the server can bind to PORT
+// immediately at startup without waiting for @workspace/db or any other import.
+// If a route module throws at import time, the error is sent as 500 (not a crash).
+let _router: any = null;
+async function getRouter() {
+  if (!_router) {
+    const mod = await import("./routes/index");
+    _router = mod.default;
   }
-  return _pool;
+  return _router;
 }
 
-// ─── Health checks ────────────────────────────────────────────────────────────
-app.get("/", (_req, res) => {
-  res.status(200).send("OK");
-});
-
-app.get("/api/test", (_req, res) => {
-  res.json({ status: "API working" });
-});
-
-// ─── POST /api/auth/register ──────────────────────────────────────────────────
-app.post("/api/auth/register", async (req, res) => {
-  const { name, email, password } = req.body ?? {};
-  console.log("REGISTER ATTEMPT:", email);
-
-  if (!name || !email || !password) {
-    res.status(400).json({ error: "name, email and password are required" });
-    return;
-  }
-
+app.use("/api", async (req, res, next) => {
   try {
-    const pool = await getPool();
-
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email],
-    );
-    if (existing.rows.length > 0) {
-      console.log("REGISTER FAILED — email exists:", email);
-      res.status(400).json({ error: "E-mail já cadastrado" });
-      return;
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, plan)
-       VALUES ($1, $2, $3, 'free')
-       RETURNING id, name, email, plan, created_at`,
-      [name, email, passwordHash],
-    );
-
-    const u = result.rows[0];
-    (req.session as any).userId = u.id;
-
-    console.log("REGISTER SUCCESS — userId:", u.id);
-    res.status(201).json({
-      user: {
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        plan: u.plan,
-        createdAt: u.created_at,
-      },
-      message: "Conta criada com sucesso",
-    });
+    const router = await getRouter();
+    router(req, res, next);
   } catch (err: any) {
-    console.error("REGISTER ERROR:", err.message, err.stack);
-    res.status(500).json({ error: "Erro ao criar conta. Tente novamente." });
+    console.error("[router] lazy load error:", err.message);
+    res.status(500).json({ error: "Erro interno no servidor" });
   }
-});
-
-// ─── POST /api/auth/login ─────────────────────────────────────────────────────
-app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body ?? {};
-  console.log("LOGIN ATTEMPT:", email);
-
-  if (!email || !password) {
-    res.status(400).json({ error: "email and password are required" });
-    return;
-  }
-
-  try {
-    const pool = await getPool();
-
-    const result = await pool.query(
-      `SELECT id, name, email, password_hash, plan, created_at
-       FROM users WHERE email = $1`,
-      [email],
-    );
-
-    if (result.rows.length === 0) {
-      console.log("LOGIN FAILED — not found:", email);
-      res.status(401).json({ error: "Credenciais inválidas" });
-      return;
-    }
-
-    const u = result.rows[0];
-    const valid = await bcrypt.compare(password, u.password_hash);
-
-    if (!valid) {
-      console.log("LOGIN FAILED — wrong password:", email);
-      res.status(401).json({ error: "Credenciais inválidas" });
-      return;
-    }
-
-    (req.session as any).userId = u.id;
-
-    console.log("LOGIN SUCCESS — userId:", u.id);
-    res.json({
-      user: {
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        plan: u.plan,
-        createdAt: u.created_at,
-      },
-      message: "Login realizado com sucesso",
-    });
-  } catch (err: any) {
-    console.error("LOGIN ERROR:", err.message, err.stack);
-    res.status(500).json({ error: "Erro ao fazer login. Tente novamente." });
-  }
-});
-
-// ─── GET /api/auth/me ─────────────────────────────────────────────────────────
-app.get("/api/auth/me", async (req, res) => {
-  const userId = (req.session as any)?.userId;
-  console.log("ME CHECK — userId:", userId ?? "none");
-
-  if (!userId) {
-    res.status(401).json({ error: "not authenticated" });
-    return;
-  }
-
-  try {
-    const pool = await getPool();
-    const result = await pool.query(
-      `SELECT id, name, email, plan, created_at
-       FROM users WHERE id = $1`,
-      [userId],
-    );
-
-    if (result.rows.length === 0) {
-      res.status(401).json({ error: "not authenticated" });
-      return;
-    }
-
-    const u = result.rows[0];
-    res.json({
-      user: {
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        plan: u.plan,
-        createdAt: u.created_at,
-      },
-      message: "OK",
-    });
-  } catch (err: any) {
-    console.error("ME ERROR:", err.message);
-    res.status(500).json({ error: "failed to get user" });
-  }
-});
-
-// ─── POST /api/auth/logout ────────────────────────────────────────────────────
-app.post("/api/auth/logout", (req, res) => {
-  const userId = (req.session as any)?.userId;
-  console.log("LOGOUT — userId:", userId ?? "none");
-  req.session.destroy(() => {
-    res.json({ message: "Sessão encerrada" });
-  });
 });
 
 // ─── Start server IMMEDIATELY ─────────────────────────────────────────────────
 const port = Number(process.env.PORT) || 3000;
-
 app.listen(port, "0.0.0.0", () => {
   console.log("SERVER STARTED ON PORT:", port);
 });
@@ -219,7 +106,6 @@ app.listen(port, "0.0.0.0", () => {
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT ERROR:", err);
 });
-
 process.on("unhandledRejection", (err) => {
   console.error("UNHANDLED PROMISE:", err);
 });
