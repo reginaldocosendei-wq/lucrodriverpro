@@ -3,8 +3,8 @@ import { pool } from "@workspace/db";
 /**
  * Creates all application tables if they do not already exist.
  * Uses IF NOT EXISTS — safe to run on every startup, against any state.
- * Must be called before app.listen() so the health check only passes once
- * the database is confirmed ready.
+ * Safe to call at any point — typically invoked from background init after
+ * the server is already listening so it never delays port exposure.
  */
 export async function ensureSchema(): Promise<void> {
   const client = await pool.connect();
