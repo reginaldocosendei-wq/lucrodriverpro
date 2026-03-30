@@ -1,4 +1,10 @@
-import app from "./app";
+import express from "express";
+
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("API RUNNING");
+});
 
 const port = Number(process.env.PORT) || 3000;
 
