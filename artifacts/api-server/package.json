@@ -7,7 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run migrate && pnpm run build && pnpm run start",
     "migrate": "node --input-type=module --eval \"import { runMigrations } from 'stripe-replit-sync'; await runMigrations({ databaseUrl: process.env.DATABASE_URL }).catch(e => console.warn('Stripe migrate warn:', e.message));\"",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "start": "node dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
