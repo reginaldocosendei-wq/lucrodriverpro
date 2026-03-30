@@ -40,50 +40,64 @@ const router = Router();
 
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
+  console.log(`[auth/register] attempt — email: ${email}`);
   if (!name || !email || !password) {
     res.status(400).json({ error: "Todos os campos são obrigatórios" });
     return;
   }
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (existing.length > 0) {
-    res.status(400).json({ error: "Email já cadastrado" });
-    return;
+  try {
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (existing.length > 0) {
+      console.log(`[auth/register] email already exists: ${email}`);
+      res.status(400).json({ error: "Email já cadastrado" });
+      return;
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const [user] = await db
+      .insert(usersTable)
+      .values({ name, email, passwordHash, plan: "free" })
+      .returning();
+    console.log(`[auth/register] success — userId: ${user.id}`);
+    req.session.userId = user.id;
+    await saveSession(req);
+    res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
+  } catch (err: any) {
+    console.error("[auth/register] error:", err.message);
+    res.status(500).json({ error: "Erro interno ao criar conta" });
   }
-  const passwordHash = await bcrypt.hash(password, 10);
-  const [user] = await db
-    .insert(usersTable)
-    .values({ name, email, passwordHash, plan: "free" })
-    .returning();
-  req.session.userId = user.id;
-  await saveSession(req);
-  res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
 });
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
+  console.log(`[auth/login] attempt — email: ${email}`);
   if (!email || !password) {
     res.status(400).json({ error: "Email e senha são obrigatórios" });
     return;
   }
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!user) {
-    res.status(401).json({ error: "Email ou senha incorretos" });
-    return;
-  }
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    res.status(401).json({ error: "Email ou senha incorretos" });
-    return;
-  }
+  try {
+    let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!user) {
+      console.log(`[auth/login] user not found: ${email}`);
+      res.status(401).json({ error: "Email ou senha incorretos" });
+      return;
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      console.log(`[auth/login] invalid password for: ${email}`);
+      res.status(401).json({ error: "Email ou senha incorretos" });
+      return;
+    }
 
-  user = await syncStripeStatusForUser(user);
+    user = await syncStripeStatusForUser(user);
 
-  req.session.userId = user.id;
-  // Wait until the session row is committed to PostgreSQL before replying.
-  // This prevents the race condition where GET /api/auth/me arrives before
-  // the session is written and receives a 401 despite a successful login.
-  await saveSession(req);
-  res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
+    req.session.userId = user.id;
+    await saveSession(req);
+    console.log(`[auth/login] success — userId: ${user.id}`);
+    res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
+  } catch (err: any) {
+    console.error("[auth/login] error:", err.message);
+    res.status(500).json({ error: "Erro interno ao fazer login" });
+  }
 });
 
 router.post("/logout", (req, res) => {
