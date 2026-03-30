@@ -16,6 +16,13 @@ const app: Express = express();
 // on every request after login.
 app.set("trust proxy", 1);
 
+// ─── ROOT HEALTH CHECK ────────────────────────────────────────────────────────
+// Responds before domain-redirect and any other middleware.
+// Autoscale / Cloud Run probes that hit "/" will always get 200 OK.
+app.get("/", (_req, res) => {
+  res.send("OK");
+});
+
 // ─── STRIPE WEBHOOK — must be registered BEFORE express.json() ───────────────
 // Stripe sends raw Buffer; if express.json() runs first the signature check fails.
 app.post(
