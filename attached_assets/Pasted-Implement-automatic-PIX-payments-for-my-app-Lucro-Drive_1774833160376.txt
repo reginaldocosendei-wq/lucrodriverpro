@@ -1,0 +1,146 @@
+Implement automatic PIX payments for my app "Lucro Driver" using Mercado Pago, with maximum safety and without breaking anything that already works.
+
+IMPORTANT CONTEXT:
+- The app is already working well
+- Card payments already work
+- I want to ADD PIX as a second payment method
+- I do NOT want regressions
+- Keep all existing working flows intact
+- Be conservative and precise
+- If there is any uncertainty, reuse existing payment/account/pro logic instead of inventing a new structure
+
+MAIN GOAL:
+When a user chooses PIX:
+1. create a Mercado Pago PIX payment
+2. return QR code / copy-and-paste PIX data to the frontend
+3. wait for webhook confirmation
+4. automatically activate PRO only after confirmed payment
+5. never activate PRO before approval
+
+SAFETY RULES:
+- Do not break Stripe/card flow
+- Do not break auth/login
+- Do not break current PRO logic
+- Do not refactor unrelated screens
+- Add changes in isolated files/services where possible
+- Reuse existing “activate PRO” logic if already present
+- Add logs and guardrails
+- Make all new logic idempotent to avoid double activation
+- If a payment is already processed, do not process it twice
+
+ENVIRONMENT VARIABLES:
+Create support for these secrets/configs:
+- MERCADOPAGO_ACCESS_TOKEN
+- MERCADOPAGO_WEBHOOK_SECRET (if webhook signature validation is implemented)
+- APP_BASE_URL
+
+BACKEND TASKS:
+
+1. Add Mercado Pago SDK dependency only if missing
+2. Create a dedicated Mercado Pago PIX service/module
+3. Implement a backend endpoint to create PIX payment, something like:
+   POST /api/payments/pix/create
+
+This endpoint should:
+- require authenticated user
+- create a PIX payment for the PRO plan
+- use payment_method_id = "pix"
+- include payer email if available
+- include external_reference with the internal user id
+- include notification_url pointing to webhook endpoint
+- store enough metadata to reconcile the payment later
+- return:
+  - payment id
+  - qr_code
+  - qr_code_base64
+  - copy-and-paste PIX code
+  - expiration if available
+
+4. Implement a webhook endpoint, something like:
+   POST /api/payments/mercadopago/webhook
+
+Webhook rules:
+- validate request safely if possible
+- fetch the real payment details from Mercado Pago using the payment id
+- only proceed when payment status is approved
+- map the payment back to the correct internal user via external_reference or metadata
+- activate PRO automatically for that user
+- persist payment status in database
+- mark webhook event/payment as processed to avoid duplicate activations
+- return 200 quickly after successful handling
+
+5. Add a payment status endpoint, something like:
+   GET /api/payments/pix/status/:paymentId
+
+This endpoint should:
+- require authenticated user
+- return current PIX payment status
+- help the frontend poll status while waiting
+
+6. Database/storage changes:
+If needed, create a minimal safe table/model for PIX payments with fields like:
+- id
+- userId
+- provider = mercadopago
+- providerPaymentId
+- plan
+- amount
+- status
+- processedAt
+- rawPayload or metadata
+- createdAt
+- updatedAt
+
+7. Activation logic:
+- Reuse existing PRO activation logic if present
+- Do not duplicate entitlement logic
+- If PRO is already active, do not activate twice
+- If the payment webhook is repeated, ignore safely
+
+FRONTEND TASKS:
+
+1. On the upgrade/payment screen, add PIX as an additional payment option
+2. Keep current UI style (premium dark, elegant)
+3. When user chooses PIX:
+   - call the create PIX endpoint
+   - show QR code
+   - show copy-and-paste PIX code
+   - show a “Copy PIX code” button
+   - show a status message: “Aguardando pagamento”
+4. Poll payment status every few seconds OR show a button to refresh status
+5. When payment becomes approved:
+   - show success state
+   - update user plan to PRO
+   - redirect or refresh safely
+6. If PIX expires or fails:
+   - show clear retry option
+7. Do not break mobile layout
+
+UI TEXT (PT-BR):
+Use friendly, professional Brazilian Portuguese.
+
+Examples:
+- “Pague com PIX”
+- “Escaneie o QR Code ou copie o código PIX”
+- “Aguardando confirmação do pagamento...”
+- “Pagamento confirmado! PRO ativado com sucesso.”
+- “Este PIX expirou. Gere um novo pagamento.”
+
+TESTING REQUIREMENTS:
+Implement and verify:
+1. PIX payment creation works
+2. QR code appears
+3. copy-and-paste code appears
+4. webhook approved activates PRO
+5. repeated webhook does not duplicate activation
+6. existing card payment still works
+7. mobile UI still looks good
+8. if webhook has not arrived yet, status polling behaves correctly
+
+FINAL OUTPUT REQUIRED:
+At the end, explain clearly:
+- what files were changed
+- what new endpoints were created
+- what secrets I need to add in Replit
+- how to configure webhook URL in Mercado Pago
+- how to test PIX end-to-end safely

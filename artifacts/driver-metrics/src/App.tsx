@@ -21,6 +21,7 @@ import Import from "@/pages/Import";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CheckoutCancel from "@/pages/checkout-cancel";
 import PixPayment from "@/pages/pix-payment";
+import PixAuto from "@/pages/pix-auto";
 import AdminPix from "@/pages/admin-pix";
 import AdminUsers from "@/pages/admin-users";
 import Settings from "@/pages/settings";
@@ -333,6 +334,9 @@ function Router() {
       </Route>
       <Route path="/pix-payment">
         <PrivateGuard><PixPayment /></PrivateGuard>
+      </Route>
+      <Route path="/pix-auto">
+        <PrivateGuard><PixAuto /></PrivateGuard>
       </Route>
       <Route path="/admin/pix">
         <PrivateGuard><AdminPix /></PrivateGuard>

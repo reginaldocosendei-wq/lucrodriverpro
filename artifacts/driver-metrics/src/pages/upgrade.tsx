@@ -660,7 +660,7 @@ export default function Upgrade() {
 
               {/* PIX link — text-level, not a competing CTA */}
               <button
-                onClick={() => navigate("/pix-payment")}
+                onClick={() => navigate("/pix-auto")}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                   width: "100%", background: "none", border: "none", padding: "4px 0",
@@ -671,12 +671,6 @@ export default function Upgrade() {
                 <span style={{ fontSize: 15 }}>📲</span>
                 {t("upgrade.ctaPix")}
               </button>
-              <p style={{
-                textAlign: "center", fontSize: 11,
-                color: "rgba(255,255,255,0.25)", marginTop: 6, lineHeight: 1.5,
-              }}>
-                {t("upgrade.pixComingSoon")}
-              </p>
             </>
           )}
 

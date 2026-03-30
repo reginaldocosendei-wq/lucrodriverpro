@@ -14,6 +14,7 @@ import weeklyPerformanceRouter from "./weeklyPerformance";
 import devAdminRouter from "./devAdmin";
 import pixRouter from "./pix";
 import pixAdminRouter from "./pixAdmin";
+import mercadopagoRouter from "./mercadopago";
 import adminUsersRouter from "./adminUsers";
 import preferencesRouter from "./preferences";
 import extraEarningsRouter from "./extraEarnings";
@@ -35,6 +36,7 @@ router.use("/insights", insightsRouter);
 router.use("/weekly-performance", weeklyPerformanceRouter);
 
 router.use("/pix", pixRouter);
+router.use("/pix/mp", mercadopagoRouter);
 router.use("/admin/pix", pixAdminRouter);
 router.use("/admin/users", adminUsersRouter);
 router.use("/preferences", preferencesRouter);
