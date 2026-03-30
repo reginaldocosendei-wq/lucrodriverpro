@@ -45,20 +45,10 @@ async function initStripe() {
   }
 }
 
-const port = Number(process.env["PORT"] || 3000);
-if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${process.env["PORT"]}"`);
+const port = Number(process.env.PORT) || 3000;
 
-// Start listening immediately so the health check (/api/healthz) responds
-// right away and Autoscale deployment marks the instance as healthy.
-// Stripe initialization runs in the background and must not block startup —
-// in production, findOrCreateManagedWebhook can take several seconds or hang,
-// which previously prevented app.listen() from ever being called.
-app.listen(port, "0.0.0.0", (err?: Error) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-  logger.info({ port }, "Server listening");
+app.listen(port, "0.0.0.0", () => {
+  console.log("APP STARTED ON PORT " + port);
 });
 
 initStripe().catch((err: any) => {
