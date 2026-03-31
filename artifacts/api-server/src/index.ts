@@ -100,6 +100,12 @@ app.use("/api", async (req, res, next) => {
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, "0.0.0.0", () => {
   console.log("SERVER STARTED ON PORT:", port);
+  console.log("[startup] NODE_ENV:", process.env.NODE_ENV ?? "undefined");
+  console.log("[startup] DATABASE_URL:          ", process.env.DATABASE_URL       ? "SET" : "MISSING ⚠️");
+  console.log("[startup] SESSION_SECRET:         ", process.env.SESSION_SECRET     ? "SET" : "MISSING ⚠️ (using dev fallback)");
+  console.log("[startup] STRIPE_SECRET_KEY:      ", process.env.STRIPE_SECRET_KEY  ? "SET" : "will use connector");
+  console.log("[startup] STRIPE_WEBHOOK_SECRET:  ", process.env.STRIPE_WEBHOOK_SECRET ? "SET" : "MISSING ⚠️ (webhooks unvalidated)");
+  console.log("[startup] MERCADOPAGO_ACCESS_TOKEN:", process.env.MERCADOPAGO_ACCESS_TOKEN ? "SET" : "MISSING (PIX disabled)");
 });
 
 // ─── Catch silent crashes ─────────────────────────────────────────────────────

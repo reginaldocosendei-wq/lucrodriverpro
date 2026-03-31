@@ -119,6 +119,9 @@ router.get("/me", async (req, res) => {
 
   user = await syncStripeStatusForUser(user);
 
+  const effective = computeEffectivePlan(user);
+  console.log(`[auth/me] userId=${user.id} plan=${effective.plan} planSource=${effective.planSource} trialActive=${effective.trialActive}`);
+
   res.json(userResponse(user));
 });
 
