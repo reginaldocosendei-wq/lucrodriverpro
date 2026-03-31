@@ -121,9 +121,13 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
 // ── POST /sync-plan ───────────────────────────────────────────────────────────
 // Reconciles the user's DB plan against their live Stripe subscription.
 // Called by checkout-success.tsx after returning from Stripe.
+// Accepts optional { sessionId } in the body — used as a Layer 3 fallback
+// to retrieve the checkout session directly from Stripe when webhooks fail.
 router.post("/sync-plan", requireAuth, async (req: any, res) => {
   try {
-    const result = await paymentService.syncSubscriptionStatus(req.session.userId);
+    const sessionId: string | undefined = req.body?.sessionId ?? undefined;
+    const result = await paymentService.syncSubscriptionStatus(req.session.userId, sessionId);
+    console.log(`[sync-plan] userId=${req.session.userId} sessionId=${sessionId ?? "none"} → plan=${result.plan}`);
     res.json(result);
   } catch (err: any) {
     console.error("[sync-plan]", err?.message);

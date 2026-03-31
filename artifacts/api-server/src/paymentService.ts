@@ -92,17 +92,80 @@ export class PaymentService {
   // ── 3. syncSubscriptionStatus ──────────────────────────────────────────────
   /**
    * Reconciles the user's plan against their current Stripe subscription.
-   * Uses the stripe.subscriptions table (populated by webhooks + backfill).
    *
-   * Safe to call on every login and /me request as a missed-webhook catchup.
-   * Returns the authoritative plan after sync.
+   * Three-layer fallback chain — stops at the first "pro" confirmation:
+   *   Layer 1: stripe.subscriptions DB table (populated by webhook sync library)
+   *   Layer 2: Live Stripe API — stripe.subscriptions.list for this customer
+   *   Layer 3: Live Stripe API — stripe.checkout.sessions.retrieve(sessionId)
+   *            (only when sessionId is provided by checkout-success page)
+   *
+   * This ensures PRO activates even when:
+   *   - STRIPE_WEBHOOK_SECRET is missing (webhooks not validated)
+   *   - Stripe tables not yet populated at the moment of the call
+   *   - Webhook delivery was delayed or retried
    */
-  async syncSubscriptionStatus(userId: number): Promise<PlanSyncResult> {
+  async syncSubscriptionStatus(userId: number, sessionId?: string): Promise<PlanSyncResult> {
     const user = await storage.getUser(userId);
     if (!user) throw new Error("Usuário não encontrado");
 
+    console.log(`[PaymentService] syncSubscriptionStatus — userId=${userId} sessionId=${sessionId ?? "none"} stripeCustomerId=${user.stripeCustomerId ?? "none"}`);
+
+    // ── Layer 1: DB sync (fast path, uses stripe.subscriptions table) ─────────
     const synced = await syncStripeStatusForUser(user);
-    return { plan: (synced.plan === "pro" ? "pro" : "free") };
+    if (synced.plan === "pro") {
+      console.log(`[PaymentService] sync L1 DB → pro — userId=${userId}`);
+      return { plan: "pro" };
+    }
+
+    // ── Layer 2: Live Stripe API — subscription list ───────────────────────────
+    if (user.stripeCustomerId) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const subs = await stripe.subscriptions.list({
+          customer: user.stripeCustomerId,
+          status:   "active",
+          limit:    1,
+        });
+        if (subs.data.length > 0) {
+          const sub = subs.data[0];
+          await this.activateProAccess(userId, {
+            stripeCustomerId:     user.stripeCustomerId,
+            stripeSubscriptionId: sub.id,
+          });
+          console.log(`[PaymentService] sync L2 live-sub → pro — userId=${userId} sub=${sub.id}`);
+          return { plan: "pro" };
+        }
+        console.log(`[PaymentService] sync L2 live-sub → no active subscription — userId=${userId}`);
+      } catch (err: any) {
+        console.error("[PaymentService] sync L2 error:", err.message);
+      }
+    }
+
+    // ── Layer 3: Live Stripe API — checkout session (only when sessionId given) ─
+    if (sessionId) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const session = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ["subscription"],
+        });
+        console.log(`[PaymentService] sync L3 session=${sessionId} payment_status=${session.payment_status} status=${session.status}`);
+        if (session.payment_status === "paid" || session.status === "complete") {
+          const customerId     = typeof session.customer     === "string" ? session.customer     : session.customer?.id;
+          const subscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as any)?.id;
+          await this.activateProAccess(userId, {
+            ...(customerId     ? { stripeCustomerId:     customerId }     : {}),
+            ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+          });
+          console.log(`[PaymentService] sync L3 checkout session → pro — userId=${userId}`);
+          return { plan: "pro" };
+        }
+      } catch (err: any) {
+        console.error("[PaymentService] sync L3 error:", err.message);
+      }
+    }
+
+    console.log(`[PaymentService] sync all layers → free — userId=${userId}`);
+    return { plan: "free" };
   }
 
   // ── 4. handleStripeWebhook ─────────────────────────────────────────────────
