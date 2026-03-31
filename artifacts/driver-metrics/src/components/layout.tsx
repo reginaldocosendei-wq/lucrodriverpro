@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Settings } from "lucide-react";
+import { AdminActivatePanel } from "./AdminActivatePanel";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -507,6 +508,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       )}
+
+      {/* Admin panel — only visible to admin email */}
+      <AdminActivatePanel userEmail={u?.email} />
 
     </div>
   );
