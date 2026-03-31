@@ -29,7 +29,10 @@ function getMpToken(): string | null {
 }
 
 function getNotificationUrl(): string {
-  const base = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "");
+  // APP_BASE_URL must be an absolute URL (e.g. https://lucrodriverpro.com).
+  // Fallback to the production domain so Mercado Pago always receives a valid
+  // absolute URL even when the env var is not explicitly configured.
+  const base = (process.env.APP_BASE_URL ?? "https://lucrodriverpro.com").replace(/\/$/, "");
   return `${base}/api/pix/mp/webhook`;
 }
 
@@ -129,7 +132,9 @@ router.post("/create", requireAuth, async (req, res) => {
       reused: false,
     });
   } catch (err: any) {
-    console.error("[MP PIX] create error:", err?.message ?? err);
+    // Log the full MP error (message includes status code + MP response body)
+    console.error("[MP PIX] create failed —", err?.message ?? err);
+    if (err?.cause) console.error("[MP PIX] cause:", err.cause);
     res.status(500).json({ error: "Não foi possível gerar o PIX. Tente o PIX manual." });
   }
 });
