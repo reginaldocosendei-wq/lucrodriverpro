@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
 
@@ -49,25 +50,40 @@ app.use((req, res, next) => {
   return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.url}`);
 });
 
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Required for Capacitor APK (cross-origin requests to the deployed API).
+// Also helps when Replit preview pane and API are on different subdomains.
+app.use(cors({ origin: true, credentials: true }));
+
 // ─── JSON body parser ─────────────────────────────────────────────────────────
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ─── Session ──────────────────────────────────────────────────────────────────
+// SameSite=None + Secure=true is required in two situations:
+//   1. Production: Capacitor WebViews send cookies cross-site to the API.
+//   2. Replit dev preview: the preview pane is a cross-site iframe on
+//      replit.com, so SameSite=Lax causes the browser to silently drop the
+//      session cookie on every fetch after the initial page load → 401.
+// Both situations are always HTTPS, so Secure=true is valid.
+const isProd = process.env.NODE_ENV === "production";
+const isReplit = !!process.env["REPLIT_DEV_DOMAIN"] || isProd;
+
 const PgStore = ConnectPgSimple(session);
 app.use(
   session({
     store: new PgStore({
       conString: process.env.DATABASE_URL,
       tableName: "session",
-      createTableIfMissing: false,
+      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET || "lucro-driver-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isReplit,
+      sameSite: isReplit ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   }),
