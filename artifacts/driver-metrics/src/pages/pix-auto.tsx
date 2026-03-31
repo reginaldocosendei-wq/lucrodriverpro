@@ -57,7 +57,8 @@ export default function PixAutoPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
-  const [state, setState] = useState<PageState>("creating");
+  // Auto-PIX is temporarily unavailable — start directly in unconfigured state
+  const [state, setState] = useState<PageState>("unconfigured");
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [pollCount, setPollCount] = useState(0);
@@ -106,9 +107,9 @@ export default function PixAutoPage() {
     }
   }, []);
 
-  useEffect(() => {
-    createPayment();
-  }, [createPayment]);
+  // Auto-PIX disabled until MERCADOPAGO_ACCESS_TOKEN is configured.
+  // Remove this comment and restore createPayment() call when ready to enable.
+  useEffect(() => {}, [createPayment]);
 
   // ── polling ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -537,13 +538,13 @@ export default function PixAutoPage() {
                 fontSize: 20, fontWeight: 800, color: "#f9fafb",
                 letterSpacing: "-0.02em", marginBottom: 10,
               }}>
-                PIX automático em breve
+                PIX automático estará disponível em breve
               </p>
               <p style={{
                 fontSize: 13, color: "rgba(255,255,255,0.4)",
                 lineHeight: 1.65, maxWidth: 280, margin: "0 auto 28px",
               }}>
-                O PIX automático ainda não está disponível. Use o PIX manual — seu acesso PRO é ativado em até 2 horas.
+                Use o PIX manual por enquanto — seu acesso PRO é ativado em até 2 horas após a confirmação.
               </p>
               <motion.button
                 whileTap={{ scale: 0.97 }}
