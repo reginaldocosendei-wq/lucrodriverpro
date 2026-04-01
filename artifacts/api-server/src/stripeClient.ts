@@ -11,22 +11,15 @@ import Stripe from "stripe";
 // automatically. The env var is a secondary fallback for environments where
 // the connector is not available (e.g. standalone deploys).
 
-async function resolveViaConnector(): Promise<string | null> {
-  const hostname      = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken  = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? "depl " + process.env.WEB_REPL_RENEWAL
-      : null;
-
-  if (!hostname || !xReplitToken) return null;
-
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  const targetEnv    = isProduction ? "production" : "development";
-  const url          = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set("include_secrets", "true");
-  url.searchParams.set("connector_names", "stripe");
-  url.searchParams.set("environment",     targetEnv);
+async function queryConnector(
+  hostname: string,
+  xReplitToken: string,
+  targetEnv: string,
+): Promise<string | null> {
+  const url = new URL(`https://${hostname}/api/v2/connection`);
+  url.searchParams.set("include_secrets",  "true");
+  url.searchParams.set("connector_names",  "stripe");
+  url.searchParams.set("environment",      targetEnv);
 
   try {
     const response   = await fetch(url.toString(), {
@@ -38,13 +31,36 @@ async function resolveViaConnector(): Promise<string | null> {
     const data       = await response.json();
     const connection = data.items?.[0];
     const secret     = connection?.settings?.secret as string | undefined;
-
-    if (secret && secret.startsWith("sk_")) {
+    if (secret && secret.startsWith("sk_") && secret.length > 20) {
       console.log(`[stripe] key resolved via Replit connector (${targetEnv})`);
       return secret;
     }
   } catch (err: any) {
-    console.warn("[stripe] connector fetch failed:", err?.message);
+    console.warn(`[stripe] connector fetch failed (${targetEnv}):`, err?.message);
+  }
+  return null;
+}
+
+async function resolveViaConnector(): Promise<string | null> {
+  const hostname      = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken  = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
+
+  if (!hostname || !xReplitToken) return null;
+
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+
+  // In production: try the "production" connector first, then fall back to
+  // "development". This handles the common case where only a development
+  // Stripe connection has been configured in the Replit integration panel.
+  const envOrder = isProduction ? ["production", "development"] : ["development"];
+
+  for (const env of envOrder) {
+    const key = await queryConnector(hostname, xReplitToken, env);
+    if (key) return key;
   }
 
   return null;
@@ -71,9 +87,8 @@ async function resolveSecretKey(): Promise<string> {
 async function resolvePublishableKey(): Promise<string> {
   // Try env var first (publishable key is public — safe to store directly)
   const envKey = process.env.STRIPE_PUBLISHABLE_KEY;
-  if (envKey && envKey.startsWith("pk_")) return envKey;
+  if (envKey && envKey.startsWith("pk_") && envKey.length > 20) return envKey;
 
-  // Fall back to Replit connector
   const hostname     = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -84,22 +99,27 @@ async function resolvePublishableKey(): Promise<string> {
   if (!hostname || !xReplitToken) return "";
 
   const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  const targetEnv    = isProduction ? "production" : "development";
-  const url          = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set("include_secrets", "true");
-  url.searchParams.set("connector_names", "stripe");
-  url.searchParams.set("environment",     targetEnv);
+  const envOrder     = isProduction ? ["production", "development"] : ["development"];
 
-  try {
-    const response   = await fetch(url.toString(), {
-      headers: { Accept: "application/json", "X-Replit-Token": xReplitToken },
-    });
-    const data       = await response.json();
-    const connection = data.items?.[0];
-    return (connection?.settings?.publishable as string) ?? "";
-  } catch {
-    return "";
+  for (const targetEnv of envOrder) {
+    const url = new URL(`https://${hostname}/api/v2/connection`);
+    url.searchParams.set("include_secrets", "true");
+    url.searchParams.set("connector_names", "stripe");
+    url.searchParams.set("environment",     targetEnv);
+    try {
+      const response   = await fetch(url.toString(), {
+        headers: { Accept: "application/json", "X-Replit-Token": xReplitToken },
+      });
+      const data       = await response.json();
+      const connection = data.items?.[0];
+      const pub        = connection?.settings?.publishable as string | undefined;
+      if (pub && pub.startsWith("pk_") && pub.length > 20) return pub;
+    } catch {
+      // continue to next env
+    }
   }
+
+  return "";
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
