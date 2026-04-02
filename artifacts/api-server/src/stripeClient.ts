@@ -81,11 +81,11 @@ async function resolveViaConnector(): Promise<string | null> {
 }
 
 async function resolveSecretKey(): Promise<string> {
-  // ── Path 1: Replit connector (preferred — managed, always fresh) ────────────
-  const connectorKey = await resolveViaConnector();
-  if (connectorKey) return connectorKey;
-
-  // ── Path 2: direct env var fallback ────────────────────────────────────────
+  // ── Path 1: STRIPE_SECRET_KEY env var (highest priority) ────────────────────
+  // An explicit env var always wins over the connector — it means the operator
+  // deliberately configured a specific Stripe account key. The connector may
+  // point to a different Stripe account (e.g. a Replit-managed test account)
+  // which would cause "resource_missing" for prices created in the real account.
   const envKey = process.env.STRIPE_SECRET_KEY;
   if (envKey && envKey.startsWith("sk_") && envKey.length > 20) {
     console.log(`[stripe] key resolved via STRIPE_SECRET_KEY env var (len=${envKey.length})`);
@@ -93,13 +93,16 @@ async function resolveSecretKey(): Promise<string> {
   }
 
   if (envKey) {
-    console.warn(`[stripe] STRIPE_SECRET_KEY is set but looks like a placeholder (len=${envKey.length}) — ignoring`);
+    console.warn(`[stripe] STRIPE_SECRET_KEY is set but looks like a placeholder (len=${envKey.length}) — skipping`);
   }
+
+  // ── Path 2: Replit connector (fallback when env var not set) ─────────────────
+  const connectorKey = await resolveViaConnector();
+  if (connectorKey) return connectorKey;
 
   throw new Error(
     "[stripe] No valid secret key found. " +
-    "Ensure the Stripe Replit integration is connected, or set STRIPE_SECRET_KEY " +
-    "to your actual secret key (sk_test_... or sk_live_...).",
+    "Set STRIPE_SECRET_KEY in Replit Secrets to your actual secret key (sk_test_... or sk_live_...).",
   );
 }
 
