@@ -149,13 +149,17 @@ export default function Upgrade() {
       console.log("[handleCheckout] response:", res.status, data?.code ?? "(ok)");
 
       if (!res.ok || !data.url) {
-        if (data.code === "stripe_auth") {
-          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
-        } else if (data.code === "stripe_invalid") {
-          setError("Plano não encontrado. Entre em contato com o suporte.");
-        } else {
-          setError(t("upgrade.errorGeneral"));
+        // Any Stripe configuration/auth error → redirect silently to PIX.
+        // Never expose technical error messages to the user.
+        if (
+          data.code === "stripe_auth" ||
+          data.code === "stripe_invalid" ||
+          data.code === "stripe_error"
+        ) {
+          navigate("/pix-auto");
+          return;
         }
+        setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
         return;
       }
 
@@ -210,11 +214,15 @@ export default function Upgrade() {
       });
       if (!productsRes.ok) {
         const errBody = await productsRes.json().catch(() => ({}));
-        if (errBody?.code === "stripe_auth") {
-          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
-        } else {
-          setError(t("upgrade.errorGeneral"));
+        if (
+          errBody?.code === "stripe_auth" ||
+          errBody?.code === "stripe_invalid" ||
+          errBody?.code === "stripe_error"
+        ) {
+          navigate("/pix-auto");
+          return;
         }
+        setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
         return;
       }
       const { data: products } = await productsRes.json() as { data: any[] };
@@ -258,12 +266,15 @@ export default function Upgrade() {
 
       const checkoutData = await checkoutRes.json();
       if (!checkoutRes.ok || !checkoutData.url) {
-        // Use machine-readable code for actionable messages
-        if (checkoutData.code === "stripe_auth") {
-          setError("Stripe não está configurado. Tente o pagamento via PIX ou entre em contato com o suporte.");
-        } else {
-          setError(t("upgrade.errorGeneral"));
+        if (
+          checkoutData.code === "stripe_auth" ||
+          checkoutData.code === "stripe_invalid" ||
+          checkoutData.code === "stripe_error"
+        ) {
+          navigate("/pix-auto");
+          return;
         }
+        setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
         return;
       }
 

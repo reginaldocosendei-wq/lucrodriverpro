@@ -1,0 +1,67 @@
+IMPORTANT: Before making any changes, create a full safety backup of the current project.
+
+GOAL:
+1. Protect the current working version of the app
+2. Do not break or modify existing features
+3. Only fix the payment/upgrade system
+4. Keep the app stable and online
+
+STEP 1 — BACKUP
+- Duplicate the current project or create a safe copy named:
+  "lucrodriverpro-stable-backup"
+- If version control (Git) is available, create a commit:
+  "backup before payment changes"
+- Do NOT delete or overwrite existing files unnecessarily
+- Preserve all environment variables and configs
+
+STEP 2 — KEEP APP STABLE
+- Do NOT modify login, signup, dashboard, rides, costs, goals, or reports
+- Do NOT change routing
+- Do NOT redesign UI globally
+- Do NOT touch database or authentication
+- Make minimal and safe changes only
+
+STEP 3 — FIX PAYMENT AREA
+In the upgrade/payment screen:
+- Remove technical error message:
+  "Stripe is not configured"
+- Replace with a professional message:
+  "Payment is available. Choose your preferred method to continue."
+- Keep the main button working:
+  "Start my real profit now"
+
+STEP 4 — FALLBACK LOGIC
+- If Stripe keys are valid → enable Stripe checkout
+- If Stripe is NOT configured → hide technical errors and show PIX/manual option
+- NEVER show technical errors to users
+
+STEP 5 — BUTTON BEHAVIOR
+- Main button:
+  "Start my real profit now"
+- If Stripe is ready → trigger Stripe checkout
+- If Stripe is NOT ready → open PIX/manual payment instructions
+
+STEP 6 — IMPROVE COPY
+Update texts to:
+- "7 days free trial"
+- "No charge now"
+- "Cancel anytime"
+- "Discover your real profit"
+- "Earn more by working smarter"
+
+STEP 7 — VALIDATION
+After changes:
+- Test full payment flow
+- Ensure app still works exactly as before
+- Confirm no other areas were modified
+- Show me exactly which files were changed
+- Tell me if Stripe is working or fallback is active
+
+STEP 8 — FINAL SAFETY
+Create a new commit:
+"payment fix without breaking app"
+
+IMPORTANT:
+Do NOT rebuild the project.
+Do NOT remove working features.
+Do NOT make global changes.
