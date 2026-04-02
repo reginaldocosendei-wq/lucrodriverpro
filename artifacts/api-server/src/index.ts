@@ -37,23 +37,28 @@ app.post(
   },
 );
 
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// MUST come before the domain redirect so that browser OPTIONS preflight
+// requests receive proper Access-Control-* headers. If the redirect fires
+// first, it returns a 301 with no CORS headers → Chrome treats the preflight
+// as failed → blocks the actual POST → user sees the generic error fallback
+// even though the server never received the request.
+app.use(cors({ origin: true, credentials: true }));
+
 // ─── Domain redirect (production only) ───────────────────────────────────────
-// Registered AFTER the Stripe webhook so Stripe callbacks (which don't follow
-// redirects) are never caught here.
+// Registered AFTER CORS (so preflights get headers) and AFTER the Stripe
+// webhook (so Stripe callbacks, which don't follow redirects, are not caught).
 const CUSTOM_DOMAIN = "lucrodriverpro.com";
 app.use((req, res, next) => {
   if (process.env.REPLIT_DEPLOYMENT !== "1") return next();
+  // Skip redirect for CORS preflights — they must be answered in-place.
+  if (req.method === "OPTIONS") return next();
   const host = (req.headers.host ?? "").toLowerCase();
   if (!host || host === CUSTOM_DOMAIN || host.endsWith(`.${CUSTOM_DOMAIN}`)) {
     return next();
   }
   return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.url}`);
 });
-
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-// Required for Capacitor APK (cross-origin requests to the deployed API).
-// Also helps when Replit preview pane and API are on different subdomains.
-app.use(cors({ origin: true, credentials: true }));
 
 // ─── JSON body parser ─────────────────────────────────────────────────────────
 app.use(express.json());

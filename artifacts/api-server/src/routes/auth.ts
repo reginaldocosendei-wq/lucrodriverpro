@@ -40,8 +40,9 @@ const router = Router();
 
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
-  console.log(`[auth/register] attempt — email: ${email}`);
+  console.log(`[auth/register] attempt — email: ${email} name: ${name ? "set" : "missing"}`);
   if (!name || !email || !password) {
+    console.log(`[auth/register] missing fields — name:${!!name} email:${!!email} password:${!!password}`);
     res.status(400).json({ error: "Todos os campos são obrigatórios" });
     return;
   }
@@ -57,13 +58,14 @@ router.post("/register", async (req, res) => {
       .insert(usersTable)
       .values({ name, email, passwordHash, plan: "free" })
       .returning();
-    console.log(`[auth/register] success — userId: ${user.id}`);
+    console.log(`[auth/register] user created — userId: ${user.id}`);
     req.session.userId = user.id;
     await saveSession(req);
+    console.log(`[auth/register] session saved — userId: ${user.id}`);
     res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
   } catch (err: any) {
-    console.error("[auth/register] error:", err.message);
-    res.status(500).json({ error: "Erro interno ao criar conta" });
+    console.error("[auth/register] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
+    res.status(500).json({ error: "Erro interno ao criar conta. Tente novamente." });
   }
 });
 
@@ -92,11 +94,11 @@ router.post("/login", async (req, res) => {
 
     req.session.userId = user.id;
     await saveSession(req);
-    console.log(`[auth/login] success — userId: ${user.id}`);
+    console.log(`[auth/login] success — userId: ${user.id} sessionId: ${req.sessionID}`);
     res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
   } catch (err: any) {
-    console.error("[auth/login] error:", err.message);
-    res.status(500).json({ error: "Erro interno ao fazer login" });
+    console.error("[auth/login] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
+    res.status(500).json({ error: "Erro interno ao fazer login. Tente novamente." });
   }
 });
 
