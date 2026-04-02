@@ -120,7 +120,7 @@ export default function Upgrade() {
     setError(null);
     console.log("[handleCheckout] start — userId:", (user as any)?.id, "currency:", currency);
 
-    // Do NOT send priceId — let the backend use STRIPE_PRICE_ID from env.
+    // Send plan=monthly so backend uses STRIPE_PRICE_ID.
     // Dynamic success/cancel URLs — use the current origin so they work in
     // both the Replit dev environment and the production domain.
     const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -133,7 +133,7 @@ export default function Upgrade() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ successUrl, cancelUrl }),
+        body: JSON.stringify({ plan: "monthly", successUrl, cancelUrl }),
       });
 
       if (res.status === 401) {
@@ -216,7 +216,7 @@ export default function Upgrade() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ successUrl, cancelUrl }),
+        body: JSON.stringify({ plan: "yearly", successUrl, cancelUrl }),
       });
 
       if (res.status === 401) {

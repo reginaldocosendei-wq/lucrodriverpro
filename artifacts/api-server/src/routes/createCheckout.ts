@@ -18,21 +18,25 @@ import { paymentService } from "../paymentService";
 
 const router = Router();
 
-// ── Default price ID ──────────────────────────────────────────────────────────
-// Priority: STRIPE_PRICE_ID env var → hardcoded test-mode fallback.
-// Set STRIPE_PRICE_ID in Replit Secrets to switch to a different price
-// (e.g., a live-mode price) without changing code.
-const MONTHLY_PRICE_BRL_ID =
+// ── Price IDs ─────────────────────────────────────────────────────────────────
+// Priority: env var → hardcoded test-mode fallback.
+// Set STRIPE_PRICE_ID / STRIPE_PRICE_ID_YEARLY in Replit Secrets.
+const MONTHLY_PRICE_ID =
   (process.env.STRIPE_PRICE_ID ?? "").startsWith("price_")
     ? process.env.STRIPE_PRICE_ID!
     : "price_1TEbgtDnebKxBIG0kxMNHyH5";
+
+const YEARLY_PRICE_ID =
+  (process.env.STRIPE_PRICE_ID_YEARLY ?? "").startsWith("price_")
+    ? process.env.STRIPE_PRICE_ID_YEARLY!
+    : null; // no hardcoded fallback for yearly — must be configured
 
 // Production custom domain — used as last-resort fallback for success/cancel URLs.
 const PROD_DOMAIN = "https://lucrodriverpro.com";
 
 console.log("[create-checkout] route loaded — POST /api/create-checkout");
-console.log("[create-checkout] default BRL price:", MONTHLY_PRICE_BRL_ID);
-console.log("[create-checkout] price source:", process.env.STRIPE_PRICE_ID ? "STRIPE_PRICE_ID env var" : "hardcoded fallback");
+console.log("[create-checkout] monthly price:", MONTHLY_PRICE_ID, process.env.STRIPE_PRICE_ID ? "(env)" : "(hardcoded fallback)");
+console.log("[create-checkout] yearly price: ", YEARLY_PRICE_ID ?? "NOT CONFIGURED — STRIPE_PRICE_ID_YEARLY missing");
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req: any, res: any, next: any) {
@@ -47,12 +51,30 @@ function requireAuth(req: any, res: any, next: any) {
 router.post("/", requireAuth, async (req: any, res) => {
   const userId = req.session.userId as number;
 
-  // Accept optional overrides from the frontend
+  // `plan` selects monthly vs yearly. `priceId` is an explicit override (legacy).
   const {
-    priceId    = MONTHLY_PRICE_BRL_ID,
+    plan       = "monthly",
+    priceId:   explicitPriceId,
     successUrl: clientSuccess,
     cancelUrl:  clientCancel,
   } = req.body ?? {};
+
+  // Resolve price ID:
+  //   1. Explicit priceId in body (legacy path — kept for compatibility)
+  //   2. plan=yearly  → STRIPE_PRICE_ID_YEARLY env var
+  //   3. plan=monthly → STRIPE_PRICE_ID env var (default)
+  let priceId: string;
+  if (explicitPriceId && typeof explicitPriceId === "string" && explicitPriceId.startsWith("price_")) {
+    priceId = explicitPriceId;
+  } else if (plan === "yearly") {
+    if (!YEARLY_PRICE_ID) {
+      console.error("[create-checkout] STRIPE_PRICE_ID_YEARLY not configured");
+      return res.status(500).json({ error: "Plano anual não configurado", code: "yearly_not_configured" });
+    }
+    priceId = YEARLY_PRICE_ID;
+  } else {
+    priceId = MONTHLY_PRICE_ID;
+  }
 
   // Build success/cancel URLs:
   //  1. Frontend-provided (highest priority — includes SPA base path)
@@ -64,13 +86,9 @@ router.post("/", requireAuth, async (req: any, res) => {
   const successUrl = clientSuccess || `${origin}/checkout/success`;
   const cancelUrl  = clientCancel  || `${origin}/checkout/cancel`;
 
-  console.log(`[create-checkout] ▶ userId=${userId} priceId=${priceId}`);
+  console.log(`[create-checkout] ▶ userId=${userId} plan=${plan} priceId=${priceId}`);
   console.log(`[create-checkout]   successUrl=${successUrl}`);
   console.log(`[create-checkout]   cancelUrl=${cancelUrl}`);
-
-  if (!priceId || typeof priceId !== "string" || !priceId.startsWith("price_")) {
-    return res.status(400).json({ error: "priceId inválido", code: "invalid_price" });
-  }
 
   try {
     console.log("[create-checkout] calling paymentService.createCheckoutSession...");
