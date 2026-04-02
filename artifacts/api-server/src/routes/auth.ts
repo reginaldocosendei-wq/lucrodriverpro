@@ -1,8 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { computeEffectivePlan, syncStripeStatusForUser, TRIAL_MS } from "../lib/planSync";
+
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
 
 declare module "express-session" {
   interface SessionData {
@@ -39,26 +43,42 @@ function saveSession(req: Parameters<Router>[0]): Promise<void> {
 const router = Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const rawEmail    = req.body.email    ?? "";
+  const rawName     = req.body.name     ?? "";
+  const rawPassword = req.body.password ?? "";
+
+  const email    = normalizeEmail(rawEmail);
+  const name     = rawName.trim();
+  const password = rawPassword;
+
   console.log(`[auth/register] attempt — email: ${email} name: ${name ? "set" : "missing"}`);
+
   if (!name || !email || !password) {
     console.log(`[auth/register] missing fields — name:${!!name} email:${!!email} password:${!!password}`);
     res.status(400).json({ error: "Todos os campos são obrigatórios" });
     return;
   }
+
   try {
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    // Case-insensitive duplicate check — catches "User@gmail.com" vs "user@gmail.com"
+    const existing = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(sql`lower(${usersTable.email}) = ${email}`)
+      .limit(1);
+
     if (existing.length > 0) {
-      console.log(`[auth/register] email already exists: ${email}`);
+      console.log(`[auth/register] email already exists (case-insensitive): ${email}`);
       res.status(400).json({ error: "Email já cadastrado" });
       return;
     }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const [user] = await db
       .insert(usersTable)
       .values({ name, email, passwordHash, plan: "free" })
       .returning();
-    console.log(`[auth/register] user created — userId: ${user.id}`);
+
+    console.log(`[auth/register] user created — userId: ${user.id} email: ${email}`);
     req.session.userId = user.id;
     await saveSession(req);
     console.log(`[auth/register] session saved — userId: ${user.id}`);
@@ -70,24 +90,48 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const rawEmail    = req.body.email    ?? "";
+  const rawPassword = req.body.password ?? "";
+
+  const email    = normalizeEmail(rawEmail);
+  const password = rawPassword;
+
   console.log(`[auth/login] attempt — email: ${email}`);
+
   if (!email || !password) {
     res.status(400).json({ error: "Email e senha são obrigatórios" });
     return;
   }
+
   try {
-    let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    // Case-insensitive lookup — handles users who registered with mixed-case email
+    let [user] = await db.select().from(usersTable)
+      .where(sql`lower(${usersTable.email}) = ${email}`)
+      .limit(1);
+
+    console.log(`[auth/login] user found: ${!!user}`);
+
     if (!user) {
-      console.log(`[auth/login] user not found: ${email}`);
+      console.log(`[auth/login] user not found for email: ${email}`);
       res.status(401).json({ error: "Email ou senha incorretos" });
       return;
     }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
+    console.log(`[auth/login] password match: ${valid}`);
+
     if (!valid) {
-      console.log(`[auth/login] invalid password for: ${email}`);
+      console.log(`[auth/login] invalid password for userId: ${user.id}`);
       res.status(401).json({ error: "Email ou senha incorretos" });
       return;
+    }
+
+    // Silently repair stored email to normalized form if it differs
+    // (fixes existing accounts that were registered with mixed-case or spaces)
+    if (user.email !== email) {
+      console.log(`[auth/login] repairing email case for userId: ${user.id} — stored: "${user.email}" → normalized: "${email}"`);
+      await db.update(usersTable).set({ email }).where(eq(usersTable.id, user.id));
+      user = { ...user, email };
     }
 
     user = await syncStripeStatusForUser(user);
