@@ -59,12 +59,38 @@ export class PaymentService {
       customerId = customer.id;
     }
 
-    const session = await stripeService.createCheckoutSession(
-      customerId,
-      priceId,
-      successUrl,
-      cancelUrl,
-    );
+    // Create checkout session, with one automatic retry if the stored customer
+    // ID no longer exists in Stripe (e.g. test→live account migration).
+    let session;
+    try {
+      session = await stripeService.createCheckoutSession(
+        customerId,
+        priceId,
+        successUrl,
+        cancelUrl,
+      );
+    } catch (err: any) {
+      const isMissingCustomer =
+        (err?.code === "resource_missing" || err?.type === "StripeInvalidRequestError") &&
+        err?.param === "customer";
+
+      if (isMissingCustomer) {
+        console.warn(
+          `[PaymentService] stored customer ${customerId} not found in Stripe — creating fresh customer and retrying`,
+        );
+        const fresh = await stripeService.createCustomer(user.email, user.id);
+        await storage.updateUserStripeInfo(user.id, { stripeCustomerId: fresh.id });
+        customerId = fresh.id;
+        session = await stripeService.createCheckoutSession(
+          customerId,
+          priceId,
+          successUrl,
+          cancelUrl,
+        );
+      } else {
+        throw err;
+      }
+    }
 
     if (!session.url) throw new Error("Stripe não retornou URL de checkout");
     return { url: session.url };
