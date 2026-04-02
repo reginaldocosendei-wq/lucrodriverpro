@@ -120,10 +120,7 @@ export default function Upgrade() {
     setError(null);
     console.log("[handleCheckout] start — userId:", (user as any)?.id, "currency:", currency);
 
-    // Confirmed Stripe price IDs for the monthly plan
-    const PRICE_BRL = "price_1TEbgtDnebKxBIG0kxMNHyH5";
-    const priceId   = PRICE_BRL; // use BRL price; for USD Stripe will handle conversion
-
+    // Do NOT send priceId — let the backend use STRIPE_PRICE_ID from env.
     // Dynamic success/cancel URLs — use the current origin so they work in
     // both the Replit dev environment and the production domain.
     const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -136,7 +133,7 @@ export default function Upgrade() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, successUrl, cancelUrl }),
+        body: JSON.stringify({ successUrl, cancelUrl }),
       });
 
       if (res.status === 401) {
@@ -202,74 +199,40 @@ export default function Upgrade() {
       return;
     }
 
-    // ── Production path: real Stripe Checkout ─────────────────────────────────
+    // ── Production path: direct Stripe Checkout (no plan lookup) ─────────────
+    // Use /api/create-checkout which reads STRIPE_PRICE_ID from the backend env.
+    // This avoids any dependency on the stripe-sync DB tables or product lookup.
     setIsLoading(true);
     setError(null);
     console.log("[upgrade] start — plan:", selected, "userId:", (user as any)?.id);
 
+    const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const origin     = window.location.origin;
+    const successUrl = `${origin}${basePath}/checkout/success`;
+    const cancelUrl  = `${origin}${basePath}/checkout/cancel`;
+
     try {
-      // Step 1: load products + prices from backend
-      const productsRes = await fetch(`${BASE}/api/stripe/products-with-prices`, {
-        credentials: "include",
-      });
-      if (!productsRes.ok) {
-        const errBody = await productsRes.json().catch(() => ({}));
-        if (
-          errBody?.code === "stripe_auth" ||
-          errBody?.code === "stripe_invalid" ||
-          errBody?.code === "stripe_error"
-        ) {
-          navigate("/pix-auto");
-          return;
-        }
-        setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
-        return;
-      }
-      const { data: products } = await productsRes.json() as { data: any[] };
-      if (!Array.isArray(products) || products.length === 0) {
-        setError(t("upgrade.errorNoPlans"));
-        return;
-      }
-
-      // Step 2: match price to selected plan + user currency
-      const product     = products[0];
-      const interval    = selected === "monthly" ? "month" : "year";
-      const targetCurr  = PLANS.find((p) => p.id === selected)?.stripeCurrency ?? (isBRL ? "brl" : "usd");
-      const price =
-        product.prices?.find((p: any) => p.recurring?.interval === interval && p.currency === targetCurr) ??
-        product.prices?.find((p: any) => p.recurring?.interval === interval);
-      if (!price) {
-        setError(t("upgrade.errorNoPlan"));
-        return;
-      }
-      console.log("[upgrade] resolved price:", price.id, "interval:", interval, "currency:", targetCurr);
-
-      // Step 3: create Stripe Checkout session
-      const origin     = window.location.origin;
-      const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const checkoutRes = await fetch(`${BASE}/api/stripe/checkout`, {
+      const res = await fetch(`${BASE}/api/create-checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          priceId:    price.id,
-          successUrl: `${origin}${basePath}/checkout/success`,
-          cancelUrl:  `${origin}${basePath}/checkout/cancel`,
-        }),
+        body: JSON.stringify({ successUrl, cancelUrl }),
       });
 
-      if (checkoutRes.status === 401) {
+      if (res.status === 401) {
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/login");
         return;
       }
 
-      const checkoutData = await checkoutRes.json();
-      if (!checkoutRes.ok || !checkoutData.url) {
+      const data = await res.json();
+      console.log("[upgrade] checkout response:", res.status, data?.code ?? "(ok)");
+
+      if (!res.ok || !data.url) {
         if (
-          checkoutData.code === "stripe_auth" ||
-          checkoutData.code === "stripe_invalid" ||
-          checkoutData.code === "stripe_error"
+          data.code === "stripe_auth" ||
+          data.code === "stripe_invalid" ||
+          data.code === "stripe_error"
         ) {
           navigate("/pix-auto");
           return;
@@ -278,9 +241,8 @@ export default function Upgrade() {
         return;
       }
 
-      // Step 4: hand off to Stripe-hosted checkout
       console.log("[upgrade] → redirecting to Stripe checkout");
-      window.location.href = checkoutData.url;
+      window.location.href = data.url;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[upgrade] error:", msg);

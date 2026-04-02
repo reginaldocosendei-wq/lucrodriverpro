@@ -29,11 +29,20 @@ async function queryConnector(
       },
     });
     const data       = await response.json();
-    const connection = data.items?.[0];
+    const items      = data.items ?? [];
+    console.log(`[stripe] connector (${targetEnv}): ${items.length} item(s) returned`);
+    const connection = items[0];
+    if (connection) {
+      const settingKeys = Object.keys(connection.settings ?? {});
+      console.log(`[stripe] connector (${targetEnv}): settings keys =`, settingKeys);
+    }
     const secret     = connection?.settings?.secret as string | undefined;
     if (secret && secret.startsWith("sk_") && secret.length > 20) {
-      console.log(`[stripe] key resolved via Replit connector (${targetEnv})`);
+      console.log(`[stripe] key resolved via Replit connector (${targetEnv}), len=${secret.length}`);
       return secret;
+    }
+    if (secret) {
+      console.warn(`[stripe] connector (${targetEnv}) returned a secret but it looks invalid (len=${secret.length})`);
     }
   } catch (err: any) {
     console.warn(`[stripe] connector fetch failed (${targetEnv}):`, err?.message);
