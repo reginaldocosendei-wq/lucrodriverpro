@@ -18,16 +18,21 @@ import { paymentService } from "../paymentService";
 
 const router = Router();
 
-// ── Known confirmed price IDs ─────────────────────────────────────────────────
-// These come from the project Stripe account and are used as defaults.
-// The frontend may override by sending { priceId } in the request body.
-const MONTHLY_PRICE_BRL_ID = "price_1TEbgtDnebKxBIG0kxMNHyH5";
+// ── Default price ID ──────────────────────────────────────────────────────────
+// Priority: STRIPE_PRICE_ID env var → hardcoded test-mode fallback.
+// Set STRIPE_PRICE_ID in Replit Secrets to switch to a different price
+// (e.g., a live-mode price) without changing code.
+const MONTHLY_PRICE_BRL_ID =
+  (process.env.STRIPE_PRICE_ID ?? "").startsWith("price_")
+    ? process.env.STRIPE_PRICE_ID!
+    : "price_1TEbgtDnebKxBIG0kxMNHyH5";
 
 // Production custom domain — used as last-resort fallback for success/cancel URLs.
 const PROD_DOMAIN = "https://lucrodriverpro.com";
 
 console.log("[create-checkout] route loaded — POST /api/create-checkout");
 console.log("[create-checkout] default BRL price:", MONTHLY_PRICE_BRL_ID);
+console.log("[create-checkout] price source:", process.env.STRIPE_PRICE_ID ? "STRIPE_PRICE_ID env var" : "hardcoded fallback");
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req: any, res: any, next: any) {

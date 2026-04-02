@@ -49,7 +49,12 @@ async function resolveViaConnector(): Promise<string | null> {
       ? "depl " + process.env.WEB_REPL_RENEWAL
       : null;
 
-  if (!hostname || !xReplitToken) return null;
+  if (!hostname || !xReplitToken) {
+    console.log("[stripe] connector unavailable — missing:",
+      !hostname ? "REPLIT_CONNECTORS_HOSTNAME " : "",
+      !xReplitToken ? "(no REPL_IDENTITY or WEB_REPL_RENEWAL)" : "");
+    return null;
+  }
 
   const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
 
@@ -73,14 +78,19 @@ async function resolveSecretKey(): Promise<string> {
 
   // ── Path 2: direct env var fallback ────────────────────────────────────────
   const envKey = process.env.STRIPE_SECRET_KEY;
-  if (envKey && envKey.startsWith("sk_")) {
-    console.log("[stripe] key resolved via STRIPE_SECRET_KEY env var");
+  if (envKey && envKey.startsWith("sk_") && envKey.length > 20) {
+    console.log(`[stripe] key resolved via STRIPE_SECRET_KEY env var (len=${envKey.length})`);
     return envKey;
+  }
+
+  if (envKey) {
+    console.warn(`[stripe] STRIPE_SECRET_KEY is set but looks like a placeholder (len=${envKey.length}) — ignoring`);
   }
 
   throw new Error(
     "[stripe] No valid secret key found. " +
-    "Ensure the Stripe Replit integration is connected, or set STRIPE_SECRET_KEY.",
+    "Ensure the Stripe Replit integration is connected, or set STRIPE_SECRET_KEY " +
+    "to your actual secret key (sk_test_... or sk_live_...).",
   );
 }
 
