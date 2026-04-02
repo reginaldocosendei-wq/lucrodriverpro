@@ -1291,7 +1291,7 @@ export default function RidesPage() {
       {/* ── Sticky header ───────────────────────────────────────────────────── */}
       <div style={{
         position: "sticky", top: 0, zIndex: 10,
-        background: "rgba(8,8,8,0.94)", backdropFilter: "blur(20px)",
+        background: "#090909",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
 
@@ -1518,7 +1518,7 @@ export default function RidesPage() {
       </div>
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "24px 40px 60px" : "20px 16px 100px" }}>
+      <div style={{ flex: 1, padding: isDesktop ? "24px 40px 60px" : "20px 16px 100px" }}>
 
         {/* Loading */}
         {loading && (
@@ -1622,7 +1622,6 @@ export default function RidesPage() {
                         <motion.div
                           key={`group-${date}`}
                           variants={cardVariants}
-                          layout
                           exit={{ opacity: 0, x: -24, transition: { duration: 0.22 } }}
                         >
                           <DayGroupCard
@@ -1642,7 +1641,6 @@ export default function RidesPage() {
                       <motion.div
                         key={`${s.source}-${s.date}-${s.id}`}
                         variants={cardVariants}
-                        layout
                         exit={{ opacity: 0, x: -24, transition: { duration: 0.22 } }}
                       >
                         <div style={{
