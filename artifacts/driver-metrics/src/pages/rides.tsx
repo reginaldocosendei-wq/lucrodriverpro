@@ -799,6 +799,174 @@ function ManualEarningModal({ initialDate, onClose, showToast }: {
   );
 }
 
+// ─── Day Group Card ───────────────────────────────────────────────────────────
+// Shown when multiple imported records exist for the same date (multi-platform)
+function DayGroupCard({
+  records,
+  onEdit,
+  onDelete,
+}: {
+  records: DailySummary[];
+  onEdit: (s: DailySummary) => void;
+  onDelete: (s: DailySummary) => void;
+}) {
+  const { t } = useT();
+  const date          = records[0].date;
+  const totalEarnings = records.reduce((sum, r) => sum + r.earnings, 0);
+  const totalTrips    = records.reduce((sum, r) => sum + r.trips, 0);
+  const perTrip       = totalTrips > 0 ? totalEarnings / totalTrips : null;
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div style={{
+      background: "#111",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 22,
+      overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    }}>
+      {/* Header row */}
+      <div style={{ padding: "16px 18px 14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+              <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                <Calendar size={11} /> {formatDate(date)}
+              </span>
+              {records.filter(r => r.platform).map((r, i) => (
+                <span key={i} style={{
+                  background: platformColor(r.platform),
+                  borderRadius: 5, padding: "2px 7px",
+                  color: "#fff", fontSize: 10, fontWeight: 700,
+                }}>
+                  {r.platform}
+                </span>
+              ))}
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+                color: "rgba(255,255,255,0.5)",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 5, padding: "2px 7px", textTransform: "uppercase",
+              }}>
+                {records.length} fontes
+              </span>
+            </div>
+            <p style={{
+              fontSize: 28, fontWeight: 900, color: "#00ff88",
+              letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums",
+              lineHeight: 1, marginBottom: 4,
+            }}>
+              {formatBRL(totalEarnings)}
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 500 }}>
+              {totalTrips} {t("history.tripsCount").toLowerCase()}
+              {perTrip != null && (
+                <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>
+                  {" "}· {formatBRL(perTrip)}/{t("history.perTrip")}
+                </span>
+              )}
+            </p>
+          </div>
+          {/* Expand/collapse sub-records */}
+          <button
+            onClick={() => setExpanded(v => !v)}
+            title={expanded ? "Recolher" : "Ver por plataforma"}
+            style={{
+              width: 36, height: 36, borderRadius: 11, border: "none",
+              background: expanded ? "rgba(0,255,136,0.08)" : "rgba(255,255,255,0.05)",
+              color: expanded ? "#00ff88" : "rgba(255,255,255,0.4)",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Expandable per-platform sub-rows */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <div style={{
+              borderTop: "1px solid rgba(255,255,255,0.04)",
+              padding: "10px 14px 12px",
+              display: "flex", flexDirection: "column", gap: 8,
+            }}>
+              {records.map((r) => (
+                <div
+                  key={`${r.source}-${r.id ?? r.date}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "10px 12px",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {r.platform && (
+                      <span style={{
+                        display: "inline-block",
+                        background: platformColor(r.platform),
+                        borderRadius: 4, padding: "1px 6px",
+                        color: "#fff", fontSize: 9, fontWeight: 700, marginRight: 6,
+                      }}>
+                        {r.platform}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>
+                      {formatBRL(r.earnings)}
+                    </span>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginLeft: 6 }}>
+                      {r.trips} {t("history.tripsCount").toLowerCase()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => onEdit(r)}
+                    title={t("common.edit")}
+                    style={{
+                      width: 30, height: 30, borderRadius: 9, border: "none",
+                      background: "rgba(99,102,241,0.1)",
+                      color: "#818cf8", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <Pencil size={12} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => onDelete(r)}
+                    title={t("common.delete")}
+                    style={{
+                      width: 30, height: 30, borderRadius: 9, border: "none",
+                      background: "rgba(239,68,68,0.08)",
+                      color: "#ef4444", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <Trash2 size={12} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Extras panel — once per day, not per record */}
+      <HistoryExtrasPanel date={date} appEarnings={totalEarnings} />
+    </div>
+  );
+}
+
 // ─── Manual Day Card ──────────────────────────────────────────────────────────
 // Shown in history for dates that have manual entries but NO imported ride
 function ManualDayCard({ date, total, count }: { date: string; total: number; count: number }) {
@@ -923,6 +1091,20 @@ export default function RidesPage() {
       default: return summaries;
     }
   }, [summaries, filter, customFrom, customTo]);
+
+  // ── Group filtered records by date (newest first) ─────────────────────────────
+  // Multiple platform imports on the same day → one grouped card per date
+  const groupedFiltered = useMemo(() => {
+    const map = new Map<string, DailySummary[]>();
+    for (const s of filtered) {
+      const arr = map.get(s.date);
+      if (arr) arr.push(s);
+      else map.set(s.date, [s]);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, records]) => ({ date, records }));
+  }, [filtered]);
 
   // ── All extra earnings (for manual-only date cards) ──────────────────────────
   const { data: allExtraEarnings = [] } = useExtraEarnings();
@@ -1413,7 +1595,7 @@ export default function RidesPage() {
                     {[
                       { label: filter === "today" ? t("common.today") : filter === "week" ? t("common.week") : filter === "month" ? t("common.month") : t("history.total"), value: formatBRL(totalEarnings + extraEarningsTotal), color: "#00ff88" },
                       { label: t("history.tripsCount"), value: String(totalTrips), color: "#f9fafb" },
-                      { label: t("common.days"),        value: String(filtered.length), color: "#f9fafb" },
+                      { label: t("common.days"),        value: String(groupedFiltered.length), color: "#f9fafb" },
                     ].map(({ label, value, color }) => (
                       <div key={label}>
                         <p style={{ color: "#6b7280", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</p>
@@ -1430,9 +1612,28 @@ export default function RidesPage() {
                   </p>
                 </motion.div>
 
-                {/* Cards */}
+                {/* Cards — one per date (multi-platform days show DayGroupCard) */}
                 <AnimatePresence initial={false}>
-                  {filtered.map((s) => {
+                  {groupedFiltered.map(({ date, records }) => {
+                    const s = records[0];
+
+                    if (records.length > 1) {
+                      return (
+                        <motion.div
+                          key={`group-${date}`}
+                          variants={cardVariants}
+                          layout
+                          exit={{ opacity: 0, x: -24, transition: { duration: 0.22 } }}
+                        >
+                          <DayGroupCard
+                            records={records}
+                            onEdit={(r) => setEditTarget(r)}
+                            onDelete={(r) => setConfirmTarget({ id: r.id, date: r.date, source: r.source })}
+                          />
+                        </motion.div>
+                      );
+                    }
+
                     const perTrip = s.trips > 0 ? s.earnings / s.trips : null;
                     const perKm   = s.kmDriven   && s.kmDriven   > 0 ? s.earnings / s.kmDriven   : null;
                     const perHour = s.hoursWorked && s.hoursWorked > 0 ? s.earnings / s.hoursWorked : null;
