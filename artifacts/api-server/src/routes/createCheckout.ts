@@ -1,16 +1,22 @@
 /**
  * POST /api/create-checkout
  *
- * Fast-path checkout for the monthly subscription plan.
+ * Creates a Stripe Checkout session for the selected plan.
  *
- * Accepts (all optional) from the request body:
- *   priceId     — Stripe price ID; defaults to MONTHLY_PRICE_BRL_ID
- *   successUrl  — redirect after payment; defaults to ${origin}/checkout/success
- *   cancelUrl   — redirect on cancel;    defaults to ${origin}/checkout/cancel
+ * Body params:
+ *   plan        — "monthly" | "yearly"  (required)
+ *   successUrl  — redirect after payment (optional, has sensible default)
+ *   cancelUrl   — redirect on cancel    (optional, has sensible default)
+ *
+ * Price IDs are resolved PER-REQUEST from environment variables so that
+ * changes to Replit Secrets take effect immediately without a redeploy.
+ *
+ *   plan=monthly → process.env.STRIPE_PRICE_ID
+ *   plan=yearly  → process.env.STRIPE_PRICE_ID_YEARLY
  *
  * Secret key resolution (stripeClient.ts):
- *   1. Replit connector  (preferred — managed, always fresh)
- *   2. STRIPE_SECRET_KEY env var  (fallback for standalone deploys)
+ *   1. STRIPE_SECRET_KEY env var  (set in Replit Secrets)
+ *   2. Replit connector            (managed fallback)
  */
 
 import { Router } from "express";
@@ -18,25 +24,8 @@ import { paymentService } from "../paymentService";
 
 const router = Router();
 
-// ── Price IDs ─────────────────────────────────────────────────────────────────
-// Priority: env var → hardcoded test-mode fallback.
-// Set STRIPE_PRICE_ID / STRIPE_PRICE_ID_YEARLY in Replit Secrets.
-const MONTHLY_PRICE_ID =
-  (process.env.STRIPE_PRICE_ID ?? "").startsWith("price_")
-    ? process.env.STRIPE_PRICE_ID!
-    : "price_1TEbgtDnebKxBIG0kxMNHyH5";
-
-const YEARLY_PRICE_ID =
-  (process.env.STRIPE_PRICE_ID_YEARLY ?? "").startsWith("price_")
-    ? process.env.STRIPE_PRICE_ID_YEARLY!
-    : null; // no hardcoded fallback for yearly — must be configured
-
-// Production custom domain — used as last-resort fallback for success/cancel URLs.
+// Production custom domain — used as fallback for success/cancel URLs.
 const PROD_DOMAIN = "https://lucrodriverpro.com";
-
-console.log("[create-checkout] route loaded — POST /api/create-checkout");
-console.log("[create-checkout] monthly price:", MONTHLY_PRICE_ID, process.env.STRIPE_PRICE_ID ? "(env)" : "(hardcoded fallback)");
-console.log("[create-checkout] yearly price: ", YEARLY_PRICE_ID ?? "NOT CONFIGURED — STRIPE_PRICE_ID_YEARLY missing");
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req: any, res: any, next: any) {
@@ -47,69 +36,91 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+// ── Resolve price ID per-request ───────────────────────────────────────────
+// Read from env on every request — never from module-level constants.
+// This ensures that updates to Replit Secrets are picked up immediately
+// and avoids the "stale container had no env var" class of bug.
+function resolvePriceId(plan: string): { priceId: string | null; source: string } {
+  if (plan === "yearly") {
+    const id = process.env.STRIPE_PRICE_ID_YEARLY ?? "";
+    if (id.startsWith("price_") && id.length > 10) {
+      return { priceId: id, source: "STRIPE_PRICE_ID_YEARLY" };
+    }
+    return { priceId: null, source: "STRIPE_PRICE_ID_YEARLY (MISSING or INVALID)" };
+  }
+
+  // monthly (default)
+  const id = process.env.STRIPE_PRICE_ID ?? "";
+  if (id.startsWith("price_") && id.length > 10) {
+    return { priceId: id, source: "STRIPE_PRICE_ID" };
+  }
+  return { priceId: null, source: "STRIPE_PRICE_ID (MISSING or INVALID)" };
+}
+
 // ── POST /api/create-checkout ─────────────────────────────────────────────────
 router.post("/", requireAuth, async (req: any, res) => {
   const userId = req.session.userId as number;
 
-  // `plan` selects monthly vs yearly. `priceId` is an explicit override (legacy).
   const {
     plan       = "monthly",
-    priceId:   explicitPriceId,
     successUrl: clientSuccess,
     cancelUrl:  clientCancel,
   } = req.body ?? {};
 
-  // Resolve price ID:
-  //   1. Explicit priceId in body (legacy path — kept for compatibility)
-  //   2. plan=yearly  → STRIPE_PRICE_ID_YEARLY env var
-  //   3. plan=monthly → STRIPE_PRICE_ID env var (default)
-  let priceId: string;
-  if (explicitPriceId && typeof explicitPriceId === "string" && explicitPriceId.startsWith("price_")) {
-    priceId = explicitPriceId;
-  } else if (plan === "yearly") {
-    if (!YEARLY_PRICE_ID) {
-      console.error("[create-checkout] STRIPE_PRICE_ID_YEARLY not configured");
-      return res.status(500).json({ error: "Plano anual não configurado", code: "yearly_not_configured" });
-    }
-    priceId = YEARLY_PRICE_ID;
-  } else {
-    priceId = MONTHLY_PRICE_ID;
+  // ── Log: selected plan received by backend
+  console.log(`[create-checkout] ▶ userId=${userId} plan="${plan}" received`);
+
+  // ── Resolve price ID from environment (per-request, no cached constants)
+  const { priceId, source } = resolvePriceId(plan);
+
+  // ── Log: price ID chosen
+  console.log(`[create-checkout] price resolved: priceId=${priceId ?? "null"} source=${source}`);
+
+  if (!priceId) {
+    console.error(`[create-checkout] ✗ price ID not configured for plan="${plan}" — set ${source} in Replit Secrets`);
+    return res.status(500).json({
+      error:  "Plano não configurado no servidor. Configure a variável de ambiente correta.",
+      code:   "price_not_configured",
+      detail: source,
+    });
   }
 
   // Build success/cancel URLs:
   //  1. Frontend-provided (highest priority — includes SPA base path)
-  //  2. Request host (works in all Replit environments: dev + prod)
-  //  3. PROD_DOMAIN (lucrodriverpro.com) — last resort
-  const origin     = req.headers.host
-    ? `https://${req.headers.host}`
-    : PROD_DOMAIN;
+  //  2. Request host (works in dev + prod Replit environments)
+  //  3. PROD_DOMAIN — last resort
+  const origin     = req.headers.host ? `https://${req.headers.host}` : PROD_DOMAIN;
   const successUrl = clientSuccess || `${origin}/checkout/success`;
   const cancelUrl  = clientCancel  || `${origin}/checkout/cancel`;
 
-  console.log(`[create-checkout] ▶ userId=${userId} plan=${plan} priceId=${priceId}`);
   console.log(`[create-checkout]   successUrl=${successUrl}`);
   console.log(`[create-checkout]   cancelUrl=${cancelUrl}`);
 
   try {
-    console.log("[create-checkout] calling paymentService.createCheckoutSession...");
+    // ── Log: attempting session creation
+    console.log(`[create-checkout] calling paymentService.createCheckoutSession — userId=${userId} priceId=${priceId}`);
+
     const { url } = await paymentService.createCheckoutSession(
       userId,
       priceId,
       successUrl,
       cancelUrl,
     );
-    console.log(`[create-checkout] ✓ session created — userId=${userId}`);
+
+    // ── Log: checkout session created successfully
+    console.log(`[create-checkout] ✓ session created — userId=${userId} plan=${plan}`);
+
     res.json({ url });
   } catch (err: any) {
     console.error("[create-checkout] ✗ ERROR:", {
       userId,
+      plan,
       priceId,
       message: err?.message,
       type:    err?.type,
       code:    err?.code,
       param:   err?.param,
       rawMsg:  err?.raw?.message,
-      stack:   err?.stack?.split("\n").slice(0, 5).join(" | "),
     });
 
     const code =

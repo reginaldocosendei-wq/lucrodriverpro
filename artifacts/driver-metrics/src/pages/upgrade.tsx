@@ -90,13 +90,16 @@ export default function Upgrade() {
     { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
   ], [t]);
 
-  // ── Simple checkout — fixed monthly price via /api/create-checkout ───────────
+  // ── Unified checkout handler ──────────────────────────────────────────────
+  // Sends the currently-selected plan ("monthly" | "yearly") to the backend.
+  // Backend resolves the Stripe price ID from env vars per-request.
   const handleCheckout = async () => {
     if (!user) {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       return;
     }
 
+    // Dev-only bypass — skips Stripe and activates PRO instantly.
     if (DEV_SKIP_STRIPE_CHECKOUT) {
       setIsLoading(true);
       setError(null);
@@ -118,11 +121,8 @@ export default function Upgrade() {
 
     setIsLoading(true);
     setError(null);
-    console.log("[handleCheckout] start — userId:", (user as any)?.id, "currency:", currency);
+    console.log("[checkout] start — plan:", selected, "userId:", (user as any)?.id);
 
-    // Send plan=monthly so backend uses STRIPE_PRICE_ID.
-    // Dynamic success/cancel URLs — use the current origin so they work in
-    // both the Replit dev environment and the production domain.
     const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
     const origin     = window.location.origin;
     const successUrl = `${origin}${basePath}/checkout/success`;
@@ -133,7 +133,7 @@ export default function Upgrade() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "monthly", successUrl, cancelUrl }),
+        body: JSON.stringify({ plan: selected, successUrl, cancelUrl }),
       });
 
       if (res.status === 401) {
@@ -143,13 +143,11 @@ export default function Upgrade() {
       }
 
       const data = await res.json();
-      console.log("[handleCheckout] response:", res.status, data?.code ?? "(ok)");
+      console.log("[checkout] response:", res.status, data?.code ?? "(ok)");
 
       if (!res.ok || !data.url) {
-        // Any Stripe configuration/auth error → redirect silently to PIX.
-        // Never expose technical error messages to the user.
         if (
-          data.code === "stripe_auth" ||
+          data.code === "stripe_auth"    ||
           data.code === "stripe_invalid" ||
           data.code === "stripe_error"
         ) {
@@ -160,92 +158,11 @@ export default function Upgrade() {
         return;
       }
 
-      console.log("[handleCheckout] → redirecting to Stripe checkout");
+      console.log("[checkout] → redirecting to Stripe checkout for plan:", selected);
       window.location.href = data.url;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[handleCheckout] fetch error:", msg);
-      setError(t("upgrade.errorGeneral"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ── Full dynamic checkout — fetches prices from Stripe (keeps existing logic) ─
-  const handleUpgrade = async () => {
-    if (!user) {
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      return;
-    }
-
-    // ── Dev-only bypass: skips Stripe and activates PRO instantly ────────────
-    // Controlled by DEV_SKIP_STRIPE_CHECKOUT in dev-flags.ts — must be false in prod.
-    if (DEV_SKIP_STRIPE_CHECKOUT) {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, {
-          method: "POST",
-          credentials: "include",
-        });
-        if (!r.ok) throw new Error("simulate failed");
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        navigate("/?upgraded=1");
-      } catch {
-        setError(t("upgrade.errorGeneral"));
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // ── Production path: direct Stripe Checkout (no plan lookup) ─────────────
-    // Use /api/create-checkout which reads STRIPE_PRICE_ID from the backend env.
-    // This avoids any dependency on the stripe-sync DB tables or product lookup.
-    setIsLoading(true);
-    setError(null);
-    console.log("[upgrade] start — plan:", selected, "userId:", (user as any)?.id);
-
-    const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
-    const origin     = window.location.origin;
-    const successUrl = `${origin}${basePath}/checkout/success`;
-    const cancelUrl  = `${origin}${basePath}/checkout/cancel`;
-
-    try {
-      const res = await fetch(`${BASE}/api/create-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ plan: "yearly", successUrl, cancelUrl }),
-      });
-
-      if (res.status === 401) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        navigate("/login");
-        return;
-      }
-
-      const data = await res.json();
-      console.log("[upgrade] checkout response:", res.status, data?.code ?? "(ok)");
-
-      if (!res.ok || !data.url) {
-        if (
-          data.code === "stripe_auth" ||
-          data.code === "stripe_invalid" ||
-          data.code === "stripe_error"
-        ) {
-          navigate("/pix-auto");
-          return;
-        }
-        setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
-        return;
-      }
-
-      console.log("[upgrade] → redirecting to Stripe checkout");
-      window.location.href = data.url;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[upgrade] error:", msg);
+      console.error("[checkout] fetch error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
@@ -538,12 +455,10 @@ export default function Upgrade() {
             )}
           </AnimatePresence>
 
-          {/* ── Primary button ─────────────────────────────────────────── */}
-          {/* Monthly plan → handleCheckout (fixed price, fast path)      */}
-          {/* Yearly plan  → handleUpgrade  (dynamic price lookup)         */}
+          {/* ── Primary button — sends selected plan to /api/create-checkout */}
           <motion.button
             whileTap={{ scale: 0.985 }}
-            onClick={selected === "monthly" ? handleCheckout : handleUpgrade}
+            onClick={handleCheckout}
             disabled={isLoading}
             style={{
               display: "block",
