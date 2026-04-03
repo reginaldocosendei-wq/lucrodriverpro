@@ -799,6 +799,164 @@ function ManualEarningModal({ initialDate, onClose, showToast }: {
   );
 }
 
+// ─── Single Day Card ──────────────────────────────────────────────────────────
+// Shown when exactly one imported record exists for a date
+function SingleDayCard({
+  record,
+  onEdit,
+  onDelete,
+}: {
+  record: DailySummary;
+  onEdit: (s: DailySummary) => void;
+  onDelete: (s: DailySummary) => void;
+}) {
+  const { t } = useT();
+  const s = record;
+  const perTrip = s.trips > 0 ? s.earnings / s.trips : null;
+  const perKm   = s.kmDriven   && s.kmDriven   > 0 ? s.earnings / s.kmDriven   : null;
+  const perHour = s.hoursWorked && s.hoursWorked > 0 ? s.earnings / s.hoursWorked : null;
+
+  const { data: extraEntries = [] } = useExtraEarnings(s.date);
+  const extraTotal = extraEntries.reduce((sum, e) => sum + e.amount, 0);
+  const dayTotal   = s.earnings + extraTotal;
+
+  return (
+    <div style={{
+      background: "#111",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 22,
+      overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    }}>
+      {/* ── Card top: date · earnings · actions ─────────── */}
+      <div style={{ padding: "16px 18px 14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+
+          {/* Left: date + platform + earnings breakdown */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexWrap: "wrap" }}>
+              <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                <Calendar size={11} /> {formatDate(s.date)}
+              </span>
+              {s.platform && (
+                <span style={{ background: platformColor(s.platform), borderRadius: 5, padding: "2px 7px", color: "#fff", fontSize: 10, fontWeight: 700 }}>
+                  {s.platform}
+                </span>
+              )}
+            </div>
+
+            {/* Corridas de app — always labeled */}
+            <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", marginBottom: 3 }}>
+              Corridas de app
+            </p>
+            <p style={{ fontSize: 28, fontWeight: 900, color: "#00ff88", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", lineHeight: 1, marginBottom: 4 }}>
+              {formatBRL(s.earnings)}
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 500 }}>
+              {s.trips} {t("history.tripsCount").toLowerCase()}
+              {perTrip != null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700 }}> · {formatBRL(perTrip)}/{t("history.perTrip")}</span>}
+            </p>
+
+            {/* Breakdown — only when extras exist */}
+            {extraTotal > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>Corridas de app</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>{formatBRL(s.earnings)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                  <span style={{ fontSize: 11, color: "rgba(74,222,128,0.75)", fontWeight: 600 }}>+ Ganhos extras</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>+{formatBRL(extraTotal)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 7, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#f9fafb" }}>= Total do dia</span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(dayTotal)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: action buttons */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => onEdit(s)}
+              style={{
+                width: 36, height: 36, borderRadius: 11, border: "none",
+                background: "rgba(99,102,241,0.1)",
+                color: "#818cf8", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+              title={t("common.edit")}
+            >
+              <Pencil size={14} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={() => onDelete(s)}
+              style={{
+                width: 36, height: 36, borderRadius: 11, border: "none",
+                background: "rgba(239,68,68,0.08)",
+                color: "#ef4444", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+              title={t("common.delete")}
+            >
+              <Trash2 size={14} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card bottom: secondary metrics ───────────────── */}
+      {(perKm != null || perHour != null || s.kmDriven != null || s.hoursWorked != null || s.rating != null) && (
+        <div style={{
+          borderTop: "1px solid rgba(255,255,255,0.04)",
+          padding: "10px 18px",
+          display: "flex", flexWrap: "wrap", gap: 14,
+          background: "rgba(255,255,255,0.01)",
+        }}>
+          {perKm   != null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Navigation size={12} color="#6b7280" />
+              <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{formatBRL(perKm)}</span>
+              <span style={{ color: "#4b5563", fontSize: 11 }}>/km</span>
+            </div>
+          )}
+          {perHour != null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Clock size={12} color="#6b7280" />
+              <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{formatBRL(perHour)}</span>
+              <span style={{ color: "#4b5563", fontSize: 11 }}>/h</span>
+            </div>
+          )}
+          {s.kmDriven    != null && perKm   == null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Navigation size={12} color="#6b7280" />
+              <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.kmDriven.toFixed(1)}</span>
+              <span style={{ color: "#4b5563", fontSize: 11 }}>km</span>
+            </div>
+          )}
+          {s.hoursWorked != null && perHour == null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Clock size={12} color="#6b7280" />
+              <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.hoursWorked.toFixed(1)}</span>
+              <span style={{ color: "#4b5563", fontSize: 11 }}>h</span>
+            </div>
+          )}
+          {s.rating != null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Star size={12} color="#eab308" />
+              <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.rating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Extra earnings panel ──────────────────────────── */}
+      <HistoryExtrasPanel date={s.date} appEarnings={s.earnings} />
+    </div>
+  );
+}
+
 // ─── Day Group Card ───────────────────────────────────────────────────────────
 // Shown when multiple imported records exist for the same date (multi-platform)
 function DayGroupCard({
@@ -817,6 +975,10 @@ function DayGroupCard({
   const perTrip       = totalTrips > 0 ? totalEarnings / totalTrips : null;
   const [expanded, setExpanded] = useState(false);
 
+  const { data: extraEntries = [] } = useExtraEarnings(date);
+  const extraTotal = extraEntries.reduce((s, e) => s + e.amount, 0);
+  const dayTotal   = totalEarnings + extraTotal;
+
   return (
     <div style={{
       background: "#111",
@@ -829,7 +991,8 @@ function DayGroupCard({
       <div style={{ padding: "16px 18px 14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+            {/* Date + platform + sources */}
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexWrap: "wrap" }}>
               <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
                 <Calendar size={11} /> {formatDate(date)}
               </span>
@@ -852,6 +1015,11 @@ function DayGroupCard({
                 {records.length} fontes
               </span>
             </div>
+
+            {/* Corridas de app — always labeled */}
+            <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", marginBottom: 3 }}>
+              Corridas de app
+            </p>
             <p style={{
               fontSize: 28, fontWeight: 900, color: "#00ff88",
               letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums",
@@ -867,6 +1035,24 @@ function DayGroupCard({
                 </span>
               )}
             </p>
+
+            {/* Breakdown — only when extras exist */}
+            {extraTotal > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>Corridas de app</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>{formatBRL(totalEarnings)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                  <span style={{ fontSize: 11, color: "rgba(74,222,128,0.75)", fontWeight: 600 }}>+ Ganhos extras</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>+{formatBRL(extraTotal)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 7, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#f9fafb" }}>= Total do dia</span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{formatBRL(dayTotal)}</span>
+                </div>
+              </div>
+            )}
           </div>
           {/* Expand/collapse sub-records */}
           <button
@@ -1633,128 +1819,17 @@ export default function RidesPage() {
                       );
                     }
 
-                    const perTrip = s.trips > 0 ? s.earnings / s.trips : null;
-                    const perKm   = s.kmDriven   && s.kmDriven   > 0 ? s.earnings / s.kmDriven   : null;
-                    const perHour = s.hoursWorked && s.hoursWorked > 0 ? s.earnings / s.hoursWorked : null;
-
                     return (
                       <motion.div
                         key={`${s.source}-${s.date}-${s.id}`}
                         variants={cardVariants}
                         exit={{ opacity: 0, x: -24, transition: { duration: 0.22 } }}
                       >
-                        <div style={{
-                          background: "#111",
-                          border: "1px solid rgba(255,255,255,0.06)",
-                          borderRadius: 22,
-                          overflow: "hidden",
-                          boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-                        }}>
-                          {/* ── Card top: date · earnings · actions ─────────── */}
-                          <div style={{ padding: "16px 18px 14px" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-
-                              {/* Left: date + platform + earnings */}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
-                                  <span style={{ color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
-                                    <Calendar size={11} /> {formatDate(s.date)}
-                                  </span>
-                                  {s.platform && (
-                                    <span style={{ background: platformColor(s.platform), borderRadius: 5, padding: "2px 7px", color: "#fff", fontSize: 10, fontWeight: 700 }}>
-                                      {s.platform}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Big earnings number */}
-                                <p style={{ fontSize: 28, fontWeight: 900, color: "#00ff88", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", lineHeight: 1, marginBottom: 4 }}>
-                                  {formatBRL(s.earnings)}
-                                </p>
-                                <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 500 }}>
-                                  {s.trips} {t("history.tripsCount").toLowerCase()}
-                                  {perTrip != null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700 }}> · {formatBRL(perTrip)}/{t("history.perTrip")}</span>}
-                                </p>
-                              </div>
-
-                              {/* Right: action buttons */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                                <button
-                                  onClick={() => setEditTarget(s)}
-                                  style={{
-                                    width: 36, height: 36, borderRadius: 11, border: "none",
-                                    background: "rgba(99,102,241,0.1)",
-                                    color: "#818cf8", cursor: "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                  }}
-                                  title={t("common.edit")}
-                                >
-                                  <Pencil size={14} strokeWidth={2.5} />
-                                </button>
-                                <button
-                                  onClick={() => setConfirmTarget({ id: s.id, date: s.date, source: s.source })}
-                                  style={{
-                                    width: 36, height: 36, borderRadius: 11, border: "none",
-                                    background: "rgba(239,68,68,0.08)",
-                                    color: "#ef4444", cursor: "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                  }}
-                                  title={t("common.delete")}
-                                >
-                                  <Trash2 size={14} strokeWidth={2.5} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* ── Card bottom: secondary metrics ───────────────── */}
-                          {(perKm != null || perHour != null || s.kmDriven != null || s.hoursWorked != null || s.rating != null) && (
-                            <div style={{
-                              borderTop: "1px solid rgba(255,255,255,0.04)",
-                              padding: "10px 18px",
-                              display: "flex", flexWrap: "wrap", gap: 14,
-                              background: "rgba(255,255,255,0.01)",
-                            }}>
-                              {perKm   != null && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Navigation size={12} color="#6b7280" />
-                                  <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{formatBRL(perKm)}</span>
-                                  <span style={{ color: "#4b5563", fontSize: 11 }}>/km</span>
-                                </div>
-                              )}
-                              {perHour != null && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Clock size={12} color="#6b7280" />
-                                  <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{formatBRL(perHour)}</span>
-                                  <span style={{ color: "#4b5563", fontSize: 11 }}>/h</span>
-                                </div>
-                              )}
-                              {s.kmDriven    != null && perKm   == null && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Navigation size={12} color="#6b7280" />
-                                  <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.kmDriven.toFixed(1)}</span>
-                                  <span style={{ color: "#4b5563", fontSize: 11 }}>km</span>
-                                </div>
-                              )}
-                              {s.hoursWorked != null && perHour == null && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Clock size={12} color="#6b7280" />
-                                  <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.hoursWorked.toFixed(1)}</span>
-                                  <span style={{ color: "#4b5563", fontSize: 11 }}>h</span>
-                                </div>
-                              )}
-                              {s.rating != null && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Star size={12} color="#eab308" />
-                                  <span style={{ color: "#f9fafb", fontSize: 12, fontWeight: 600 }}>{s.rating.toFixed(1)}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* ── Extra earnings panel ──────────────────────────── */}
-                          <HistoryExtrasPanel date={s.date} appEarnings={s.earnings} />
-                        </div>
+                        <SingleDayCard
+                          record={s}
+                          onEdit={(r) => setEditTarget(r)}
+                          onDelete={(r) => setConfirmTarget({ id: r.id, date: r.date, source: r.source })}
+                        />
                       </motion.div>
                     );
                   })}
