@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RefreshCw, PlusSquare, Check, Info } from "lucide-react";
+import { ChevronLeft, RefreshCw, PlusSquare, Check, Info, Smartphone } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getApiBase } from "@/lib/api";
 
@@ -120,6 +120,122 @@ function ModeCard({
   );
 }
 
+// ─── INSTALL SECTION ──────────────────────────────────────────────────────────
+function InstallSection() {
+  const isStandalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true);
+
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS = /iP(hone|od|ad)/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+
+  const cardStyle: CSSProperties = {
+    background: "#0e0e0e",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 20,
+    padding: "20px 18px",
+    marginBottom: 16,
+  };
+
+  const sectionLabel: CSSProperties = {
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    color: "rgba(255,255,255,0.35)",
+    textTransform: "uppercase",
+  };
+
+  if (isStandalone) {
+    return (
+      <div style={cardStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <Smartphone size={14} color="rgba(255,255,255,0.35)" />
+          <span style={sectionLabel}>Instalar aplicativo</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: "rgba(0,255,136,0.1)",
+            border: "1px solid rgba(0,255,136,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, flexShrink: 0,
+          }}>✓</span>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#00ff88", margin: 0 }}>
+              App instalado
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "2px 0 0" }}>
+              Você está usando a versão instalada do Lucro Driver.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <Smartphone size={14} color="rgba(255,255,255,0.35)" />
+        <span style={sectionLabel}>Instalar aplicativo</span>
+      </div>
+
+      {isIOS ? (
+        <div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: "0 0 14px", lineHeight: 1.6 }}>
+            Instale o Lucro Driver na tela inicial do iPhone ou iPad:
+          </p>
+          {[
+            { n: "1", text: 'Toque no ícone Compartilhar ↑ na barra inferior do Safari' },
+            { n: "2", text: 'Role e toque em "Adicionar à Tela de Início"' },
+            { n: "3", text: 'Confirme tocando em "Adicionar" no canto superior direito' },
+          ].map(({ n, text }) => (
+            <div key={n} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+              <span style={{
+                width: 20, height: 20, borderRadius: "50%",
+                background: "rgba(0,255,136,0.08)",
+                border: "1px solid rgba(0,255,136,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 10, fontWeight: 800, color: "#00ff88", flexShrink: 0,
+              }}>{n}</span>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.55 }}>{text}</p>
+            </div>
+          ))}
+          <div style={{
+            background: "rgba(234,179,8,0.05)",
+            border: "1px solid rgba(234,179,8,0.12)",
+            borderRadius: 10, padding: "10px 12px", marginTop: 4,
+          }}>
+            <p style={{ fontSize: 11, color: "rgba(234,179,8,0.65)", margin: 0, lineHeight: 1.55 }}>
+              Disponível apenas no Safari. Chrome e outros navegadores no iPhone não suportam instalação de PWA.
+            </p>
+          </div>
+        </div>
+      ) : isAndroid ? (
+        <div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: "0 0 12px", lineHeight: 1.6 }}>
+            O Chrome mostrará automaticamente um banner de instalação na parte inferior da tela.
+          </p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.6 }}>
+            Se não aparecer, toque no menu <strong style={{ color: "rgba(255,255,255,0.6)" }}>⋮</strong> e escolha <strong style={{ color: "rgba(255,255,255,0.6)" }}>"Adicionar à tela inicial"</strong>.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: "0 0 12px", lineHeight: 1.6 }}>
+            No Chrome ou Edge, clique no ícone de instalação <strong style={{ color: "rgba(255,255,255,0.6)" }}>⊕</strong> na barra de endereços para instalar o Lucro Driver como aplicativo no desktop.
+          </p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.6 }}>
+            Firefox e Safari no desktop não suportam instalação de PWA.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -224,6 +340,9 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {/* Install section */}
+      <InstallSection />
 
       {/* Info note */}
       <div style={{

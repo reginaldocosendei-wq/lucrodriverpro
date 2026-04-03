@@ -1,6 +1,6 @@
-/* Lucro Driver Service Worker — v1.0 */
+/* Lucro Driver Service Worker — v1.1 */
 
-const CACHE_VERSION = 'lucro-driver-v1';
+const CACHE_VERSION = 'lucro-driver-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -102,4 +102,11 @@ self.addEventListener('fetch', (event) => {
         .catch(() => cache.match(request))
     )
   );
+});
+
+/* ── MESSAGE: handle SKIP_WAITING from main thread ──────── */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
