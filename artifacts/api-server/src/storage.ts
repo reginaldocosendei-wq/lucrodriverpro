@@ -7,6 +7,14 @@ export class Storage {
     return user ?? null;
   }
 
+  async getUserByEmail(email: string) {
+    const normalized = email.trim().toLowerCase();
+    const result = await db.execute(
+      sql`SELECT * FROM users WHERE lower(email) = ${normalized} LIMIT 1`,
+    );
+    return (result.rows[0] as typeof usersTable.$inferSelect) ?? null;
+  }
+
   async getUserByStripeCustomerId(customerId: string) {
     const [user] = await db
       .select()
@@ -22,6 +30,7 @@ export class Storage {
       stripeSubscriptionId?: string;
       plan?: string;
       trialStartDate?: string | null;
+      activatedAt?: Date | null;
     },
   ) {
     const [user] = await db

@@ -16,26 +16,32 @@ app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
 // ─── Stripe webhook — MUST be before express.json() ──────────────────────────
 // Stripe sends a raw Buffer; if express.json() runs first it consumes the body
 // and the HMAC signature check fails with a 400.
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
-    if (!sig) {
-      res.status(400).json({ error: "Missing stripe-signature header" });
-      return;
-    }
-    try {
-      const { WebhookHandlers } = await import("./webhookHandlers");
-      const s = Array.isArray(sig) ? sig[0] : sig;
-      await WebhookHandlers.processWebhook(req.body as Buffer, s);
-      res.status(200).json({ received: true });
-    } catch (err: any) {
-      console.error("[webhook] processing error:", err.message);
-      res.status(400).json({ error: "Webhook processing error" });
-    }
-  },
-);
+//
+// Two paths are registered for flexibility:
+//   /api/stripe/webhook   — original path (keeps existing Stripe dashboard configs working)
+//   /api/stripe-webhook   — alternate path (as requested; use whichever is in Stripe dashboard)
+async function handleStripeWebhook(
+  req: import("express").Request,
+  res: import("express").Response,
+): Promise<void> {
+  const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    res.status(400).json({ error: "Missing stripe-signature header" });
+    return;
+  }
+  try {
+    const { WebhookHandlers } = await import("./webhookHandlers");
+    const s = Array.isArray(sig) ? sig[0] : sig;
+    await WebhookHandlers.processWebhook(req.body as Buffer, s);
+    res.status(200).json({ received: true });
+  } catch (err: any) {
+    console.error("[webhook] processing error:", err.message);
+    res.status(400).json({ error: "Webhook processing error" });
+  }
+}
+
+app.post("/api/stripe/webhook",  express.raw({ type: "application/json" }), handleStripeWebhook);
+app.post("/api/stripe-webhook",  express.raw({ type: "application/json" }), handleStripeWebhook);
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 // MUST come before the domain redirect so that browser OPTIONS preflight

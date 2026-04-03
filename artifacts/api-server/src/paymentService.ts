@@ -224,7 +224,10 @@ export class PaymentService {
 
   private async _syncPlanFromEvent(payload: Buffer, signature: string): Promise<void> {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret) return; // no secret configured — skip plan sync
+    if (!webhookSecret) {
+      console.warn("[PaymentService] STRIPE_WEBHOOK_SECRET not set — skipping plan sync from webhook");
+      return;
+    }
 
     try {
       const stripe = await getUncachableStripeClient();
@@ -232,13 +235,22 @@ export class PaymentService {
       const obj    = event.data?.object as any;
       if (!obj) return;
 
+      // checkout.session.completed is handled separately because the user must
+      // be looked up by email (not customer ID) for new checkouts where the
+      // stripeCustomerId may not yet be stored in the database.
+      if (event.type === "checkout.session.completed") {
+        await this._handleCheckoutCompleted(obj);
+        return;
+      }
+
+      // All other events: find user by Stripe customer ID
       const customerId: string | undefined =
         typeof obj.customer === "string" ? obj.customer : obj.customer?.id;
       if (!customerId) return;
 
       const user = await storage.getUserByStripeCustomerId(customerId);
       if (!user) {
-        console.warn(`[PaymentService] No user found for Stripe customer ${customerId}`);
+        console.warn(`[PaymentService] No user found for Stripe customer ${customerId} (event: ${event.type})`);
         return;
       }
 
@@ -249,15 +261,6 @@ export class PaymentService {
             stripeCustomerId:    customerId,
             stripeSubscriptionId: obj.id,
           });
-          break;
-
-        // Checkout paid → activate PRO
-        case "checkout.session.completed":
-          if (obj.payment_status === "paid") {
-            await this._applyStripeStatus(user.id, "active", {
-              stripeCustomerId: customerId,
-            });
-          }
           break;
 
         // Renewal paid → keep PRO
@@ -283,11 +286,57 @@ export class PaymentService {
           break;
       }
 
-      console.log(`[PaymentService] Webhook ${event.type} → userId=${user.id}`);
+      console.log(`[PaymentService] Webhook ${event.type} → userId=${user.id} email=${user.email}`);
     } catch (err: any) {
       // Non-fatal: /me syncs on every request as a belt-and-suspenders fallback
       console.error("[PaymentService] webhook event error:", err.message);
     }
+  }
+
+  // ── checkout.session.completed ─────────────────────────────────────────────
+  //
+  // Stripe sends this after a successful checkout.  We must look the user up by
+  // email (from session.customer_details.email) because, on a fresh checkout,
+  // the stripeCustomerId may not yet be saved in the database.
+  //
+  // Lookup order:
+  //   1. email from customer_details   — most reliable for new checkouts
+  //   2. Stripe customer ID            — fallback for returning customers
+  //
+  private async _handleCheckoutCompleted(obj: any): Promise<void> {
+    if (obj.payment_status !== "paid") {
+      console.log(`[PaymentService] checkout.session.completed — payment_status="${obj.payment_status}", no action taken`);
+      return;
+    }
+
+    const rawEmail   = obj.customer_details?.email as string | undefined;
+    const email      = rawEmail?.trim().toLowerCase();
+    const customerId = typeof obj.customer === "string" ? obj.customer : (obj.customer?.id as string | undefined);
+
+    // 1️⃣ Look up by email
+    let user: Awaited<ReturnType<typeof storage.getUserByEmail>> = null;
+    if (email) {
+      user = await storage.getUserByEmail(email);
+    }
+
+    // 2️⃣ Fallback: look up by Stripe customer ID
+    if (!user && customerId) {
+      user = await storage.getUserByStripeCustomerId(customerId);
+    }
+
+    if (!user) {
+      console.error(
+        `[PaymentService] checkout.session.completed — user not found.` +
+        ` email=${email ?? "unknown"} customerId=${customerId ?? "unknown"}`,
+      );
+      return;
+    }
+
+    await this._applyStripeStatus(user.id, "active", {
+      ...(customerId ? { stripeCustomerId: customerId } : {}),
+    });
+
+    console.log(`[PaymentService] User upgraded to PRO: ${user.email}`);
   }
 
   private async _applyStripeStatus(
@@ -297,7 +346,8 @@ export class PaymentService {
   ): Promise<void> {
     const shouldBePro = ["active", "trialing"].includes(stripeStatus);
     await storage.updateUserStripeInfo(userId, {
-      plan: shouldBePro ? "pro" : "free",
+      plan:          shouldBePro ? "pro" : "free",
+      activatedAt:   shouldBePro ? new Date() : null,
       ...(shouldBePro ? { trialStartDate: null } : {}),
       ...(opts.stripeCustomerId     ? { stripeCustomerId:     opts.stripeCustomerId }     : {}),
       ...(opts.stripeSubscriptionId ? { stripeSubscriptionId: opts.stripeSubscriptionId } : {}),
