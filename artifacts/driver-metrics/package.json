@@ -85,6 +85,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.3",
     "@capacitor/core": "^8.3.0",
+    "@react-oauth/google": "^0.13.4",
     "qrcode.react": "^4.2.0"
   }
 }

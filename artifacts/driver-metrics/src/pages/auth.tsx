@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { useLogin, useRegister } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { GoogleLogin } from "@react-oauth/google";
 import { Input, Label } from "@/components/ui";
 import { Mail, Lock, User, ArrowRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { useLocation } from "wouter";
+
+const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const VITE_API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
 // ─── AUTH FORM ────────────────────────────────────────────────────────────────
 function AuthForm({
@@ -26,6 +30,29 @@ function AuthForm({
   const queryClient = useQueryClient();
   const loginMutation    = useLogin();
   const registerMutation = useRegister();
+
+  const googleMutation = useMutation({
+    mutationFn: async (credential: string) => {
+      const res = await fetch(`${VITE_API_BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? t("auth.googleError"));
+      }
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
+      onSuccess?.();
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message ?? t("auth.googleError"));
+    },
+  });
 
   const loginSchema = z.object({
     email:    z.string().email(t("auth.invalidEmail")),
@@ -80,7 +107,7 @@ function AuthForm({
     });
   });
 
-  const isPending = loginMutation.isPending || registerMutation.isPending;
+  const isPending = loginMutation.isPending || registerMutation.isPending || googleMutation.isPending;
 
   const labelStyle: React.CSSProperties = {
     color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700,
@@ -89,6 +116,38 @@ function AuthForm({
 
   return (
     <div style={{ width: "100%" }}>
+
+      {/* Google login button — only shown when VITE_GOOGLE_CLIENT_ID is configured */}
+      {VITE_GOOGLE_CLIENT_ID && (
+        <>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <GoogleLogin
+              theme="filled_black"
+              size="large"
+              shape="rectangular"
+              width={330}
+              text="continue_with"
+              onSuccess={(response) => {
+                if (response.credential) {
+                  setErrorMsg("");
+                  googleMutation.mutate(response.credential);
+                }
+              }}
+              onError={() => setErrorMsg(t("auth.googleError"))}
+            />
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.04em" }}>
+              {t("auth.orDivider")}
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+          </div>
+        </>
+      )}
+
       {/* Tab switcher */}
       <div style={{
         display: "flex", background: "rgba(255,255,255,0.04)",

@@ -1,8 +1,11 @@
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { setBaseUrl } from "@workspace/api-client-react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import "./index.css";
+
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? "";
 
 console.log("APP START: main.tsx loaded", {
   base: import.meta.env.BASE_URL,
@@ -41,4 +44,8 @@ if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <App />
+  </GoogleOAuthProvider>
+);

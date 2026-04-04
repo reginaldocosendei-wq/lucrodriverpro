@@ -56,7 +56,10 @@
     "loginError": "Correo o contraseña incorrectos.",
     "registerError": "No se pudo crear tu cuenta.",
     "appSubtitle": "Tu panel inteligente de ganancias",
-    "goBack": "volver"
+    "goBack": "volver",
+    "btnGoogle": "Continuar con Google",
+    "googleError": "Error al iniciar con Google. Intenta de nuevo.",
+    "orDivider": "o"
   },
   "layout": {
     "trialLastDay": "🚨 ¡Último día!",

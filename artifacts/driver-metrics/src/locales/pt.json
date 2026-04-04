@@ -56,7 +56,10 @@
     "loginError": "E-mail ou senha incorretos.",
     "registerError": "Não foi possível criar sua conta.",
     "appSubtitle": "Seu painel inteligente de ganhos",
-    "goBack": "voltar"
+    "goBack": "voltar",
+    "btnGoogle": "Continuar com Google",
+    "googleError": "Falha no login com Google. Tente novamente.",
+    "orDivider": "ou"
   },
   "layout": {
     "trialLastDay": "🚨 Último dia!",

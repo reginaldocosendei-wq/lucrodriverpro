@@ -15,7 +15,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
-- **Auth**: Session-based auth with bcryptjs
+- **Auth**: Session-based auth with bcryptjs + Google OAuth (ID token verification via google-auth-library)
 - **Payments**: Stripe (via Replit integration) + stripe-replit-sync for webhooks & DB sync
 
 ## Structure

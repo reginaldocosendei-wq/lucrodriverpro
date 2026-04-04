@@ -56,7 +56,10 @@
     "loginError": "Incorrect email or password.",
     "registerError": "Could not create your account.",
     "appSubtitle": "Your smart earnings dashboard",
-    "goBack": "back"
+    "goBack": "back",
+    "btnGoogle": "Continue with Google",
+    "googleError": "Google login failed. Try again.",
+    "orDivider": "or"
   },
   "layout": {
     "trialLastDay": "🚨 Last day!",

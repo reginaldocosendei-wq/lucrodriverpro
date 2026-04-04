@@ -1,8 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { computeEffectivePlan, syncStripeStatusForUser, TRIAL_MS } from "../lib/planSync";
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -117,6 +121,13 @@ router.post("/login", async (req, res) => {
       return;
     }
 
+    // Google-only account — no password is set
+    if (user.passwordHash === "GOOGLE_OAUTH_NO_PASSWORD") {
+      console.log(`[auth/login] Google-only account, password login rejected — userId: ${user.id}`);
+      res.status(401).json({ error: "Esta conta usa o login com Google. Use o botão 'Continuar com Google'." });
+      return;
+    }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
     console.log(`[auth/login] password match: ${valid}`);
 
@@ -150,6 +161,102 @@ router.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.json({ message: "Logout realizado com sucesso" });
   });
+});
+
+// ── POST /auth/google ──────────────────────────────────────────────────────────
+// Receives a Google ID token from the frontend, verifies it, then finds or
+// creates the user and sets the session — identical outcome to /auth/login.
+//
+// User lookup order:
+//   1. By googleId                    — returning Google user
+//   2. By email (case-insensitive)    — links an existing email/password account
+//   3. Not found                      — create new account
+router.post("/google", async (req, res) => {
+  const { credential } = req.body ?? {};
+
+  if (!credential || typeof credential !== "string") {
+    res.status(400).json({ error: "Token do Google ausente ou inválido" });
+    return;
+  }
+
+  if (!googleClient) {
+    console.error("[auth/google] GOOGLE_CLIENT_ID not configured");
+    res.status(503).json({ error: "Login com Google não configurado no servidor" });
+    return;
+  }
+
+  try {
+    // Verify the ID token signature and claims
+    const ticket = await googleClient.verifyIdToken({
+      idToken:  credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) {
+      res.status(401).json({ error: "Token do Google inválido" });
+      return;
+    }
+
+    const googleId = payload.sub;
+    const email    = normalizeEmail(payload.email ?? "");
+    const name     = (payload.name ?? payload.email ?? "Usuário").trim();
+
+    if (!email) {
+      res.status(400).json({ error: "Email não disponível na conta Google" });
+      return;
+    }
+
+    console.log(`[auth/google] verified — googleId=${googleId} email=${email}`);
+
+    // ── 1. Find by googleId (fast path for returning users)
+    let [user] = await db.select().from(usersTable)
+      .where(eq(usersTable.googleId, googleId))
+      .limit(1);
+
+    if (user) {
+      console.log(`[auth/google] found by googleId — userId=${user.id}`);
+    }
+
+    // ── 2. Find by email (links existing email/password account)
+    if (!user) {
+      const rows = await db.select().from(usersTable)
+        .where(sql`lower(${usersTable.email}) = ${email}`)
+        .limit(1);
+      user = rows[0];
+
+      if (user) {
+        console.log(`[auth/google] found by email — userId=${user.id} — linking googleId`);
+        // Link googleId so future logins hit the fast path
+        await db.update(usersTable)
+          .set({ googleId })
+          .where(eq(usersTable.id, user.id));
+        user = { ...user, googleId };
+      }
+    }
+
+    // ── 3. Create new account
+    if (!user) {
+      console.log(`[auth/google] creating new user — email=${email}`);
+      const [created] = await db.insert(usersTable).values({
+        name,
+        email,
+        passwordHash: "GOOGLE_OAUTH_NO_PASSWORD",
+        googleId,
+        plan: "free",
+      }).returning();
+      user = created;
+      console.log(`[auth/google] new user created — userId=${user.id}`);
+    }
+
+    user = await syncStripeStatusForUser(user);
+    req.session.userId = user.id;
+    await saveSession(req);
+    console.log(`[auth/google] session saved — userId=${user.id}`);
+    res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
+  } catch (err: any) {
+    console.error("[auth/google] ERROR:", err.message);
+    res.status(401).json({ error: "Falha na verificação do token Google. Tente novamente." });
+  }
 });
 
 router.get("/me", async (req, res) => {
