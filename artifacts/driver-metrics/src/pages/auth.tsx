@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLogin, useRegister } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -311,6 +311,20 @@ export default function AuthScreen({
   const { t } = useT();
   const [, navigate] = useLocation();
 
+  // Scroll-based sticky CTA: becomes visible once the hero sentinel scrolls out of view
+  const [scrolled, setScrolled] = useState(false);
+  const heroSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (startWithForm) return;
+    const sentinel = heroSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [startWithForm]);
 
   if (startWithForm) {
     // ── Form-only view (used on /login route) ───────────────────────────────
@@ -377,6 +391,54 @@ export default function AuthScreen({
   // ── Landing view (used on "/" when unauthenticated) ─────────────────────────
   return (
     <div style={{ background: "#060808", color: "#f9fafb", fontFamily: "inherit", overflowX: "hidden" }}>
+
+      {/* ── Sticky bottom CTA — appears once hero scrolls out of view ─────── */}
+      <AnimatePresence>
+        {scrolled && (
+          <motion.div
+            key="sticky-cta"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", damping: 22, stiffness: 280 }}
+            style={{
+              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+              padding: "12px 20px calc(12px + env(safe-area-inset-bottom, 0px))",
+              background: "linear-gradient(to top, rgba(6,8,8,0.98) 0%, rgba(6,8,8,0.92) 100%)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderTop: "1px solid rgba(0,255,136,0.12)",
+            }}
+          >
+            <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Live dot */}
+              <motion.div
+                animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
+                transition={{ duration: 1.4, repeat: Infinity }}
+                style={{ width: 7, height: 7, borderRadius: "50%", background: "#00ff88", flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", flex: 1, lineHeight: 1.3 }}>
+                Cada minuto sem rastrear é dinheiro perdido
+              </span>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/import")}
+                style={{
+                  height: 44, borderRadius: 14, border: "none", flexShrink: 0,
+                  background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
+                  color: "#000", fontWeight: 900, fontSize: 14, letterSpacing: "-0.01em",
+                  cursor: "pointer", fontFamily: "inherit", padding: "0 18px",
+                  display: "flex", alignItems: "center", gap: 7,
+                  boxShadow: "0 4px 20px rgba(0,255,136,0.3)",
+                }}
+              >
+                <Zap size={14} strokeWidth={2.8} />
+                Começar grátis
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 1 — HERO
@@ -508,6 +570,109 @@ export default function AuthScreen({
             <div style={{ width: 3, height: 8, borderRadius: 999, background: "rgba(255,255,255,0.25)" }} />
           </motion.div>
         </motion.div>
+      </div>
+
+      {/* Hero sentinel — when this exits viewport, sticky CTA appears */}
+      <div ref={heroSentinelRef} style={{ height: 1 }} />
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 1.5 — PAIN NUMBERS (Shock of Reality)
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ padding: "0 0 0", position: "relative", overflow: "hidden" }}>
+        {/* Bleeding red top glow */}
+        <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 500, height: 260, background: "radial-gradient(ellipse, rgba(239,68,68,0.12) 0%, transparent 65%)", pointerEvents: "none" }} />
+
+        <motion.div
+          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
+          viewport={{ once: true }} transition={{ duration: 0.6 }}
+          style={{ maxWidth: 480, margin: "0 auto", padding: "60px 24px 56px", position: "relative", zIndex: 1, textAlign: "center" }}
+        >
+          {/* Eyebrow */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 20 }}>
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+              style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444" }}
+            />
+            <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(239,68,68,0.75)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              Calculamos a perda média de um motorista brasileiro
+            </span>
+          </div>
+
+          {/* Big loss number */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            style={{ marginBottom: 8 }}
+          >
+            <span style={{
+              fontSize: "clamp(56px, 18vw, 88px)", fontWeight: 900, lineHeight: 1,
+              color: "#f87171", letterSpacing: "-0.04em",
+              textShadow: "0 0 48px rgba(239,68,68,0.35), 0 0 16px rgba(239,68,68,0.2)",
+              fontVariantNumeric: "tabular-nums",
+              display: "block",
+            }}>
+              R$ 850
+            </span>
+          </motion.div>
+          <p style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 32, maxWidth: 320, margin: "0 auto 32px" }}>
+            é o que um motorista típico{" "}
+            <span style={{ color: "#fca5a5", fontWeight: 800 }}>perde por mês</span>{" "}
+            por não rastrear seu desempenho
+          </p>
+
+          {/* Loss breakdown */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 36 }}>
+            {[
+              { value: "R$280", label: "Combustível\nnão calculado", color: "#f87171" },
+              { value: "R$340", label: "Corridas\nruins aceitas", color: "#fb923c" },
+              { value: "R$230", label: "Horas\nfora do pico", color: "#fbbf24" },
+            ].map((item) => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.4 }}
+                style={{
+                  background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)",
+                  borderRadius: 16, padding: "14px 10px", textAlign: "center",
+                }}
+              >
+                <p style={{ fontSize: "clamp(17px, 4.5vw, 22px)", fontWeight: 900, color: item.color, letterSpacing: "-0.02em", marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
+                  -{item.value}
+                </p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1.4, fontWeight: 600, whiteSpace: "pre-line" }}>
+                  {item.label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Contrast: with Lucro Driver */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.15 }}
+            style={{
+              background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.14)",
+              borderRadius: 18, padding: "18px 20px",
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            }}
+          >
+            <div style={{ textAlign: "left" }}>
+              <p style={{ fontSize: 11, color: "rgba(0,255,136,0.55)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Com Lucro Driver PRO</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>
+                Motoristas recuperam em média{" "}
+                <span style={{ color: "#00ff88", fontWeight: 900 }}>+R$ 680/mês</span>{" "}
+                otimizando suas corridas
+              </p>
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              <span style={{ fontSize: 30 }}>📈</span>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.05) 70%, transparent)", margin: "0 24px" }} />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
