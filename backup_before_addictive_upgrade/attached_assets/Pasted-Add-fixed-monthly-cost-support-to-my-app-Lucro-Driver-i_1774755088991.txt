@@ -1,0 +1,159 @@
+Add fixed monthly cost support to my app "Lucro Driver" in a clean, stable, bug-safe way.
+
+GOAL:
+Improve the financial accuracy of the app by including fixed monthly costs in the daily profit calculation.
+
+IMPORTANT:
+- Keep the current mobile and desktop UI style
+- Do NOT break the existing variable daily cost flow
+- Implement this carefully and predictably
+- Fixed monthly costs must be handled separately from variable daily costs
+- The app must remain stable even if the user has no fixed costs configured
+
+======================================
+1. COST TYPES
+======================================
+
+Introduce two explicit cost types:
+
+1. Variable daily costs
+Examples:
+- combustível
+- manutenção pontual
+- lavagem
+- pedágio
+- alimentação do dia
+
+2. Fixed monthly costs
+Examples:
+- aluguel do carro
+- financiamento/parcela
+- seguro
+- internet/plano
+- rastreador
+- other recurring monthly expenses
+
+These two types must be clearly separated in data and UI.
+
+======================================
+2. FIXED COST CALCULATION
+======================================
+
+Create a stable calculation rule:
+
+dailyFixedCostQuota = totalFixedMonthlyCosts / 30
+
+Then update daily real profit:
+
+realProfit =
+dailyEarnings
+- dailyVariableCosts
+- dailyFixedCostQuota
+
+Use safe numeric handling and avoid NaN or undefined crashes.
+
+If no fixed monthly costs exist:
+- dailyFixedCostQuota = 0
+
+======================================
+3. COSTS PAGE
+======================================
+
+Update the Costs page so the user can create costs with a selected type:
+
+- Variable
+- Fixed monthly
+
+For fixed monthly costs:
+- name
+- category
+- monthly amount
+- optional note
+
+For variable daily costs:
+- keep the current behavior
+
+Make the type selection very clear.
+
+======================================
+4. DASHBOARD / HOME PAGE
+======================================
+
+Update the financial summary block to show:
+
+- Faturamento do dia
+- Custos variáveis do dia
+- Custos fixos (cota diária)
+- Lucro real
+
+Example:
+Faturamento do dia: R$ 475,72
+Custos variáveis do dia: - R$ 100,00
+Custos fixos (dia): - R$ 70,00
+Lucro real: R$ 305,72
+
+This must be visually clear and trustworthy.
+
+======================================
+5. MAIN PROFIT CARD
+======================================
+
+The top profit card should now reflect the true real profit including:
+- variable daily costs
+- fixed monthly cost quota
+
+Do not show misleading profit values anymore.
+
+======================================
+6. INTELLIGENT MESSAGES
+======================================
+
+Improve analysis messages using fixed costs too.
+
+Examples:
+- "Você bateu a meta do dia, mas seus custos fixos ainda reduzem bastante o lucro real."
+- "Hoje o lucro líquido foi forte mesmo após cobrir os custos fixos."
+- "Atenção: seus custos fixos estão consumindo boa parte do resultado."
+
+Only show these messages when supported by real calculations.
+
+======================================
+7. MONTHLY COVERAGE INSIGHT
+======================================
+
+Add a simple insight block or metric showing how much of the user's monthly fixed costs has already been covered.
+
+Example:
+- Custos fixos mensais: R$ 2.100,00
+- Já coberto no mês: R$ 800,00
+- Cobertura: 38%
+
+If monthly tracking data is not available yet, structure the logic safely for future support.
+
+======================================
+8. DATA SAFETY
+======================================
+
+Requirements:
+- Do not break existing stored costs
+- Do not convert old records incorrectly
+- Default old daily costs to variable if needed
+- If cost type is missing in old records, treat them safely
+- Avoid duplicated subtraction
+- Never subtract fixed costs twice
+
+======================================
+9. ERROR SAFETY
+======================================
+
+Ensure:
+- no crashes if cost arrays are empty
+- no broken UI if monthly fixed costs are missing
+- no negative weird values from bad parsing
+- use safe fallback values everywhere
+
+======================================
+10. FINAL RESULT
+======================================
+
+The app must become financially more accurate by including fixed monthly costs in the real profit logic, while remaining stable, readable, and premium.

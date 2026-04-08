@@ -1,0 +1,86 @@
+The app is still crashing and showing the custom fallback error screen after certain actions.
+
+IMPORTANT:
+Do not only improve the error screen UI.
+Find and fix the ROOT CAUSE of the crash.
+
+GOAL:
+Detect the exact component, function, route, or state update causing the app to fail.
+
+TASKS:
+
+1. TRACE THE REAL ERROR
+- Add detailed console.error logs
+- Log the exact error message, stack trace, component name, and route
+- Identify where the crash starts
+
+2. CHECK THESE CRITICAL FLOWS
+Inspect and fix all code related to:
+- login
+- dashboard rendering
+- ride update
+- ride save
+- screenshot import
+- route navigation after submit
+- payment buttons
+- trial banner
+- header rendering
+
+3. FIND COMMON REACT CRASH CAUSES
+Search the whole project for:
+- rendering data before it exists
+- accessing properties of undefined/null
+- invalid map() without keys
+- duplicated components
+- bad conditional rendering
+- navigate() before state update
+- async actions without try/catch
+- useEffect loops
+- stale state references
+
+4. ADD SAFE GUARDS
+Before rendering dynamic values, check that objects exist.
+
+Examples:
+if (!user) return null;
+if (!ride) return null;
+if (!dashboardData) return <LoadingState />;
+
+Do not render properties like:
+user.name
+ride.total
+report.items.length
+unless the parent object exists.
+
+5. FIX FORM SUBMITS
+In all forms:
+- use event.preventDefault()
+- wait for save/update to complete before navigating
+- do not reload page
+- do not redirect on failed save
+
+6. FIX ROUTING
+- Ensure all routes exist
+- Ensure protected routes do not crash when user/session is temporarily null
+- Refreshing a page must not break the app
+
+7. IMPROVE ERROR BOUNDARY
+Keep the error boundary, but make it log:
+- route
+- component
+- action being performed
+- error stack
+
+8. RETURN A DEBUG SUMMARY
+After fixing, output a summary in the Replit chat with:
+- what was causing the crash
+- which files were changed
+- what was fixed
+
+9. FINAL RESULT
+The app must no longer crash after:
+- updating a ride
+- saving daily data
+- importing screenshot
+- refreshing a page
+- navigating between screens

@@ -1,0 +1,51 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import ridesRouter from "./rides";
+import costsRouter from "./costs";
+import goalsRouter from "./goals";
+import dashboardRouter from "./dashboard";
+import reportsRouter from "./reports";
+import stripeRouter from "./stripe";
+import importRouter from "./import";
+import dailySummariesRouter from "./dailySummaries";
+import insightsRouter from "./insights";
+import weeklyPerformanceRouter from "./weeklyPerformance";
+import devAdminRouter from "./devAdmin";
+import pixRouter from "./pix";
+import pixAdminRouter from "./pixAdmin";
+import mercadopagoRouter from "./mercadopago";
+import adminUsersRouter from "./adminUsers";
+import adminActivateProRouter from "./adminActivatePro";
+import preferencesRouter from "./preferences";
+import extraEarningsRouter from "./extraEarnings";
+import createCheckoutRouter from "./createCheckout";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use("/auth", authRouter);
+router.use("/rides", ridesRouter);
+router.use("/costs", costsRouter);
+router.use("/goals", goalsRouter);
+router.use("/dashboard", dashboardRouter);
+router.use("/reports", reportsRouter);
+router.use("/stripe", stripeRouter);
+router.use("/import", importRouter);
+router.use("/daily-summaries", dailySummariesRouter);
+router.use("/insights", insightsRouter);
+router.use("/weekly-performance", weeklyPerformanceRouter);
+
+router.use("/pix", pixRouter);
+router.use("/pix/mp", mercadopagoRouter);
+router.use("/admin/pix", pixAdminRouter);
+router.use("/admin/users", adminUsersRouter);
+router.use("/admin/activate-pro", adminActivateProRouter);
+router.use("/preferences", preferencesRouter);
+router.use("/extra-earnings", extraEarningsRouter);
+router.use("/create-checkout", createCheckoutRouter);
+
+// Dev-only utilities — the router itself refuses all requests in production
+router.use("/dev", devAdminRouter);
+
+export default router;

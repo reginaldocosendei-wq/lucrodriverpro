@@ -1,0 +1,79 @@
+Fix the desktop login redirect loop in my app "Lucro Driver".
+
+GOAL:
+On desktop, the login page opens, credentials are submitted, but the app returns to the login page again instead of entering the app.
+
+IMPORTANT:
+Do NOT redesign the UI.
+Do NOT change mobile behavior unnecessarily.
+Focus only on fixing desktop login persistence and post-login routing.
+
+TASKS:
+
+1. TRACE THE LOGIN FLOW
+Add temporary logs for:
+- login form submit
+- login API response status
+- returned user data
+- returned token/session
+- auth state after login
+- route after login
+- route guard decision
+
+2. VERIFY LOGIN SUCCESS
+Check whether the backend login request is actually succeeding on desktop.
+If successful:
+- confirm response status is 200
+- confirm user/session/token is returned correctly
+
+3. FIX AUTH PERSISTENCE
+Inspect how auth is stored:
+- localStorage
+- sessionStorage
+- cookies
+
+Make sure desktop actually stores auth after successful login.
+
+4. FIX AUTH READING
+After login, ensure the app reads the stored auth/session correctly before route guards run.
+
+5. PREVENT PREMATURE REDIRECT
+If auth is still initializing/loading, protected routes must WAIT.
+Do not redirect to login before auth initialization finishes.
+
+Correct behavior:
+- authLoading = true → wait
+- authLoading = false and authenticated → allow dashboard
+- authLoading = false and unauthenticated → redirect to login
+
+6. CHECK COOKIES / CREDENTIALS
+If the app uses backend session or cookies:
+- ensure fetch/axios sends credentials properly
+- ensure session cookie is accepted on desktop
+- use credentials: "include" if required
+
+7. FIX POST-LOGIN NAVIGATION
+After successful login:
+- navigate to the correct next page (dashboard or import)
+- do not navigate back to /login
+- do not reset to login on app boot if session exists
+
+8. TEMP DEBUG PANEL
+On desktop only, temporarily show:
+- authLoading
+- isAuthenticated
+- current route
+- currentUser exists or not
+
+9. TEMP SAFE TEST
+After successful login, set:
+localStorage.setItem("login_test", "ok");
+Then verify that this value still exists on the next screen.
+If it disappears, persistence is broken.
+
+10. FINAL RESULT
+On desktop:
+- user logs in once
+- session persists
+- app enters the dashboard/import flow
+- app does not return to login again

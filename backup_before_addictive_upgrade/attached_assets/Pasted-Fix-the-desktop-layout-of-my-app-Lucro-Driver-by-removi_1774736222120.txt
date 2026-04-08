@@ -1,0 +1,89 @@
+Fix the desktop layout of my app "Lucro Driver" by removing the mobile-width shell on large screens.
+
+CURRENT PROBLEM:
+The desktop version still looks like a phone screen in the center.
+The dashboard cards are narrow, numbers break into multiple lines, and the app is not using desktop width properly.
+
+IMPORTANT:
+This is NOT a generic responsiveness task anymore.
+The main problem is that the app is still constrained by a mobile-width wrapper/container on desktop.
+
+GOAL:
+Keep mobile exactly as it is.
+On desktop, remove the narrow phone-shell layout and create a true wide dashboard.
+
+TASKS:
+
+1. FIND THE MAIN WIDTH CONSTRAINT
+Inspect the main app shell / wrapper / container and find any desktop width constraints such as:
+- max-width: 430px
+- max-width: 480px
+- max-width: 520px
+- fixed narrow width
+- phone-frame wrapper
+- centered shell meant only for mobile
+
+2. REMOVE MOBILE SHELL ON DESKTOP
+On screens above 1024px:
+- disable the narrow mobile-width wrapper
+- allow the main layout container to expand to about 1200px–1400px
+- keep content centered with proper horizontal padding
+
+3. KEEP MOBILE SHELL ON MOBILE ONLY
+On screens below 768px:
+- preserve the current mobile layout exactly as it is
+
+4. DESKTOP DASHBOARD LAYOUT
+Rebuild the dashboard desktop grid like this:
+
+TOP AREA:
+- full-width header/top bar
+- full-width trial/upgrade banner
+
+MAIN GRID:
+- left column: wide main profit card
+- right column: indicators grid
+
+SECOND ROW:
+- left column: daily analysis card
+- right column: daily goal card
+
+THIRD ROW:
+- secondary actions such as import button or other cards
+
+Use a real desktop grid with enough width and spacing.
+
+5. EXPLICIT DESKTOP GRID
+On desktop, use something like:
+- main content max-width: 1280px
+- two-column dashboard grid
+- left column wider than right column
+- enough gap between cards
+
+6. PREVENT NARROW CARDS
+Indicator cards must not become tiny vertical pills.
+The main profit card must be clearly wider.
+Goal and analysis cards must have comfortable width.
+
+7. PREVENT NUMBER WRAPPING
+Large values must never wrap into multiple lines.
+Protect values like:
+- R$ 475,72
+- R$ 1.250,90
+
+Use:
+- white-space: nowrap where appropriate
+- responsive font sizing
+- enough card width
+
+8. ONLY DESKTOP
+Do not touch mobile layout.
+Do not break phone UX.
+
+9. FINAL RESULT
+Desktop must no longer look like a phone mockup.
+It must look like a real web dashboard:
+- wide
+- readable
+- balanced
+- premium

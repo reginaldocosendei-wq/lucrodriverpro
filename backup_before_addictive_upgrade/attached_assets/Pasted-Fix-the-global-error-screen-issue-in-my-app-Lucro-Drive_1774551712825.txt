@@ -1,0 +1,89 @@
+Fix the global error screen issue in my app "Lucro Driver" so users never see the generic page "Algo deu errado" during normal app usage.
+
+GOAL:
+Remove unstable behavior across the app and make all main flows safe, especially on mobile.
+
+PROBLEM:
+The app sometimes shows a generic error page with:
+"Algo deu errado"
+"Recarregue uma página para continuar"
+
+This happens after actions like updating rides, saving data, navigating between screens, or refreshing pages.
+
+REQUIRED FIXES:
+
+1. ADD GLOBAL ERROR BOUNDARY
+- Implement a React Error Boundary to catch rendering errors
+- Show a friendly fallback UI instead of crashing the app
+
+Fallback text:
+Título: "Algo não saiu como esperado"
+Texto: "Tente novamente em instantes."
+Botão: "Voltar ao início"
+
+2. SAFE ROUTING
+- Review all routes in the app
+- Ensure all navigation targets exist
+- Prevent redirects to missing or invalid routes
+- Add a safe default route to dashboard/home
+
+3. PREVENT CRASH ON REFRESH
+- Make sure refreshing any page does not break the app
+- Fix route handling for direct page reloads
+- Ensure protected routes handle missing user/session state safely
+
+4. FORM SAFETY
+- Add event.preventDefault() to all forms
+- Use try/catch in all submit handlers
+- Never navigate before async save/update completes
+
+5. REMOVE FORCED RELOADS
+- Search the project for:
+  - window.location.reload
+  - location.reload
+  - unstable redirects
+- Remove or replace with state updates or safe navigation
+
+6. NULL / UNDEFINED SAFETY
+- Review components and add guards before rendering dynamic data
+- Example:
+  if (!data) return <LoadingState />
+
+- Avoid accessing properties like:
+  user.name
+  ride.total
+  report.items
+  unless the object exists
+
+7. ASYNC LOADING STATES
+- Add loading states to all save/update/import actions
+- While saving, show:
+  "Salvando..."
+- After success, show:
+  "Salvo com sucesso"
+
+8. MOBILE STABILITY
+- Ensure app works correctly in mobile browsers
+- Avoid layout/render issues after submit or navigation
+- Respect safe areas and avoid unstable fixed elements
+
+9. STRIPE / PAYMENT SAFETY
+- Ensure payment buttons fail gracefully
+- If Stripe request fails, show:
+  "Não foi possível iniciar o pagamento. Tente novamente."
+
+10. SCREENSHOT IMPORT SAFETY
+- If screenshot reading fails, do not crash the app
+- Show:
+  "Não foi possível ler o print. Tente outra imagem."
+
+11. LOGGING FOR DEBUG
+- Add console.error logs in all catch blocks
+- Identify where the crash is happening
+
+12. FINAL RESULT
+The app must:
+- never show the generic crash page during normal flows
+- handle save/update/import/payment errors gracefully
+- stay stable after refresh
+- work smoothly on mobile and desktop

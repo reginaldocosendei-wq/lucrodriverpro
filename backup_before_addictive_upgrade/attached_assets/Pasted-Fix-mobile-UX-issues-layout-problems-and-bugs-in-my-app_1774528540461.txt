@@ -1,0 +1,151 @@
+Fix mobile UX issues, layout problems, and bugs in my app "Lucro Driver".
+
+---
+
+## 🎯 GOAL
+
+Make the app fully mobile-friendly, smooth, and bug-free, especially for screenshot import and form interactions.
+
+---
+
+## 📸 1. IMAGE UPLOAD (GALLERY ACCESS)
+
+Fix screenshot upload so user can easily access phone gallery.
+
+Requirements:
+
+- When user clicks "Import screenshot":
+  → Open file picker directly (mobile gallery)
+
+- Accept:
+  image/png
+  image/jpeg
+
+- Use proper input:
+
+<input type="file" accept="image/*" capture="environment" />
+
+- On mobile:
+  → Allow choosing from gallery OR camera
+
+---
+
+## 📱 2. MOBILE LAYOUT FIX (CRITICAL)
+
+Fix layout overlapping system UI (bottom navigation / phone buttons).
+
+Problems:
+- Buttons hidden behind phone UI
+- User cannot click "Confirm"
+
+---
+
+### ✅ SOLUTION:
+
+- Add bottom spacing:
+
+padding-bottom: 100px;
+
+- Use safe area:
+
+padding-bottom: env(safe-area-inset-bottom);
+
+---
+
+### ✅ FIX BUTTON POSITION
+
+- Move "Confirm" button UP
+- Make it sticky:
+
+position: fixed;
+bottom: 20px;
+left: 0;
+right: 0;
+
+- Add margin so it never touches system UI
+
+---
+
+## 🧠 3. REMOVE BROKEN HEADLINE
+
+Remove completely:
+
+"Não se trata de uma questão de..."
+
+Also remove any unused or broken headline.
+
+Do NOT show any broken text on home screen.
+
+---
+
+## 🔄 4. FIX ERROR PAGE AFTER SUBMIT (CRITICAL BUG)
+
+Problem:
+After submitting data → app shows error page → works after refresh
+
+---
+
+### ✅ FIX:
+
+- Prevent page reload:
+
+Use:
+event.preventDefault()
+
+- Ensure async functions are handled correctly:
+
+async function handleSubmit(e) {
+  e.preventDefault();
+
+  try {
+    await saveData();
+    navigate("/dashboard");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+---
+
+- Do NOT redirect before data is saved
+
+---
+
+## 🔁 5. FIX ROUTING
+
+- Ensure all routes exist before navigation
+- Avoid broken redirects
+
+---
+
+## 📲 6. UX IMPROVEMENT (SMOOTH EXPERIENCE)
+
+After user action:
+
+- Show loading:
+"Saving your data..."
+
+- Then success:
+"Your day has been recorded"
+
+---
+
+## 🎨 7. MOBILE-FIRST DESIGN
+
+- All elements must:
+  - Fit screen width
+  - Have proper spacing
+  - Be touch-friendly
+
+- Buttons must be:
+  - Large
+  - Easy to tap
+
+---
+
+## 🚀 FINAL RESULT
+
+- User can upload screenshot easily from gallery
+- No buttons blocked by phone UI
+- No broken pages after submit
+- Clean and smooth mobile experience

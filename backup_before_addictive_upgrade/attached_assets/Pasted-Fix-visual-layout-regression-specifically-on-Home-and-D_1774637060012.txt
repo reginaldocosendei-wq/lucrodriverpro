@@ -1,0 +1,193 @@
+Fix visual/layout regression specifically on Home and Dashboard pages in my app "Lucro Driver".
+
+GOAL:
+Restore the previous clean, premium, aligned layout for Home and Dashboard.
+Do NOT redesign. Do NOT change branding. Only fix broken layout and spacing.
+
+---
+
+## 🔥 CONTEXT
+
+The app was visually perfect before.
+Now:
+- texts are misaligned
+- elements are out of place
+- spacing is broken
+- some components overlap or look distorted
+
+We need a precise UI recovery.
+
+---
+
+## 🎯 PRIORITY 1 — HOME SCREEN
+
+Fix the hero section:
+
+1. CENTER ALIGNMENT
+- Ensure headline, subtext and buttons are centered correctly
+- No horizontal shift or overflow
+
+2. TYPOGRAPHY
+- Headline:
+  "Faturamento engana."
+  Must be bold, large, but NOT overflowing
+
+- Subtext:
+  "Veja seu lucro real em segundos."
+  Must be readable and properly spaced
+
+3. BUTTONS
+
+Main button:
+"Importar meu dia"
+
+Fix:
+- correct width
+- proper padding
+- clickable area
+- no overlap
+
+Secondary button:
+"Já tenho conta — Entrar"
+
+Fix spacing below main button
+
+4. BACKGROUND EFFECT
+
+- Grid/glow background must stay behind content
+- Ensure:
+  pointer-events: none
+  z-index lower than content
+
+5. SAFE LAYOUT
+
+Wrap content in a container:
+
+max-width: 480px
+margin: 0 auto
+padding: 24px
+
+---
+
+## 🎯 PRIORITY 2 — DASHBOARD
+
+Fix the main dashboard structure:
+
+---
+
+### 💰 MAIN CARD
+
+"Seu lucro real hoje"
+
+Fix:
+
+- reduce font size slightly
+- prevent overflow
+- ensure currency fits:
+  R$ 1.250,90
+  R$ 12.450,75
+
+- add spacing:
+  title → value → subtitle
+
+---
+
+### 📊 METRICS GRID
+
+Fix:
+
+- ensure grid alignment
+- no overlapping cards
+- equal spacing
+
+Cards:
+- trips
+- R$/hora
+- R$/km
+
+Use:
+
+display: grid
+grid-template-columns: 1fr 1fr
+gap: 12px
+
+---
+
+### 🧠 INSIGHT CARD
+
+Fix:
+
+- text must stay inside card
+- no overflow
+- proper padding
+
+---
+
+### 🎯 GOAL SECTION
+
+Fix:
+
+- progress bar width
+- text alignment
+- spacing
+
+---
+
+## ⚠️ GLOBAL FIXES (ONLY FOR THESE PAGES)
+
+1. REMOVE BROKEN CSS
+- Remove any:
+  overflow: hidden (if hiding content)
+  fixed width (px)
+  broken flex/grid rules
+
+2. FIX POSITIONING
+- Avoid:
+  position: absolute (unless necessary)
+- Prefer:
+  flex + column layout
+
+3. TEXT SAFETY
+- Add:
+  word-break: break-word
+  overflow-wrap: break-word
+
+4. PREVENT UI BREAK
+- Ensure no text overlaps
+- Ensure no card stretches incorrectly
+
+---
+
+## 🎨 STYLE (KEEP SAME)
+
+- dark theme
+- green highlights
+- gold accents
+- rounded cards
+- clean spacing
+
+---
+
+## 🚀 FINAL RESULT
+
+Home:
+- centered
+- clean
+- clickable
+- visually balanced
+
+Dashboard:
+- readable
+- no overflow
+- clean cards
+- premium look restored
+
+---
+
+## 🧠 DEBUG
+
+Before finishing:
+- inspect both pages visually
+- ensure no text is outside layout
+- ensure no element overlaps
+- ensure spacing is consistent

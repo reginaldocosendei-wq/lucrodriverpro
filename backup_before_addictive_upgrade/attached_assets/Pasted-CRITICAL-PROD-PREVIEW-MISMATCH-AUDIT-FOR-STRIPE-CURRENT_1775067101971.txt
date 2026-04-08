@@ -1,0 +1,60 @@
+CRITICAL PROD/PREVIEW MISMATCH AUDIT FOR STRIPE
+
+CURRENT STATE:
+- Stripe checkout works in Replit Preview
+- Stripe checkout does NOT work in the published production app
+- In production, the app shows: "Stripe não está configurado"
+- This means preview and production are not using the same effective configuration
+
+IMPORTANT RULES:
+- Do NOT refactor unrelated code
+- Do NOT touch PIX
+- Do NOT touch auth
+- Do NOT touch admin panel
+- Do NOT break the currently working app
+- Focus ONLY on why Stripe works in preview but not in published production
+
+GOAL:
+Find the exact reason production says Stripe is not configured while preview works.
+
+TASKS:
+
+1. Inspect the exact code path that shows:
+   "Stripe não está configurado"
+
+2. Identify ALL env vars checked by:
+   - frontend Stripe UI
+   - backend checkout/session route
+   - any production config loader
+
+3. Compare Preview vs Published Production behavior:
+   - determine whether production publish is receiving different env vars
+   - determine whether production requires separate secrets/configuration
+   - determine whether the deployed build is stale and missing the latest env/config
+
+4. Check whether the published app needs:
+   - republish after secret changes
+   - production-specific secrets
+   - production config variables
+   - rebuild to inject Vite env vars
+
+5. Confirm whether VITE_STRIPE_PUBLIC_KEY is correctly included in the production frontend build
+6. Confirm whether STRIPE_SECRET_KEY is available in the published backend runtime
+7. Check for caching/stale build issues
+
+8. DO NOT make risky changes yet.
+9. Create a report:
+   backup_notes/STRIPE_PRODUCTION_MISMATCH_REPORT.md
+
+INCLUDE:
+- exact root cause
+- whether issue is frontend env, backend env, or stale publish
+- exact safest fix
+- whether republish alone is enough
+- whether production needs different secret/config values
+
+FINAL OUTPUT:
+Tell me clearly:
+- why preview works and production does not
+- exactly what I must do next
+- whether I need to republish, rebuild, or add production-specific secrets

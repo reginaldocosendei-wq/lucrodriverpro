@@ -1,0 +1,105 @@
+Fix remaining functional bugs in my app "Lucro Driver" and improve desktop responsiveness without breaking mobile.
+
+GOAL:
+Keep the mobile version exactly as good as it is now, while fixing remaining bugs and making the desktop version truly responsive and professional.
+
+IMPORTANT:
+- Do NOT break mobile
+- Do NOT redesign everything from scratch
+- Preserve the current premium dark fintech style
+
+======================================
+1. FIX REMAINING FUNCTIONAL BUGS
+======================================
+
+Fix these current issues:
+
+1. History page
+- fix error when loading records
+- make saved records load correctly
+- show proper empty state if there are no records
+
+2. Goals page
+- fix error when saving goals
+- ensure goals save correctly for authenticated users
+- show success feedback after saving
+
+3. Import page
+- fix false "Não autenticado" message when the user is actually logged in
+- ensure authenticated users can import screenshots normally
+
+4. Protected buttons / actions
+- inspect buttons that still fail or do nothing
+- reconnect them to working logic
+- ensure authenticated user actions work on desktop and mobile
+
+5. Error handling
+- replace generic silent failures with clear messages
+- do not break the app if one request fails
+
+======================================
+2. DESKTOP RESPONSIVENESS
+======================================
+
+Current issue:
+On desktop the app still looks too much like a narrow mobile screen.
+
+GOAL:
+Create a responsive desktop layout while keeping the mobile layout intact.
+
+REQUIREMENTS:
+
+1. MOBILE
+- preserve the current vertical mobile layout
+- do not change the mobile UX that is already working well
+
+2. DESKTOP
+- use a wider centered layout
+- allow content to expand horizontally
+- stop forcing the whole app into a narrow phone-sized column on large screens
+
+3. HOME PAGE DESKTOP
+- wider layout
+- better spacing
+- still elegant and centered
+- CTA buttons remain prominent
+
+4. DASHBOARD DESKTOP
+- main profit card can be wider
+- metrics should use a multi-column grid
+- analysis and goals should use desktop space better
+- keep visual hierarchy clean
+
+5. OTHER PAGES
+Improve desktop layout for:
+- History
+- Goals
+- Import
+- Upgrade
+
+6. LAYOUT RULES
+- use responsive breakpoints
+- use max-width containers for desktop
+- use grid/flex layouts appropriately
+- no cropped text
+- no oversized narrow phone-frame feel on desktop
+
+======================================
+3. UI SAFETY
+======================================
+
+- keep dark theme
+- keep green highlights
+- keep premium/gold accents
+- keep rounded cards
+- keep current branding
+
+======================================
+4. FINAL RESULT
+======================================
+
+The app must:
+- keep mobile great
+- fix remaining functional bugs
+- feel like a true responsive web app on desktop
+- remain stable and premium

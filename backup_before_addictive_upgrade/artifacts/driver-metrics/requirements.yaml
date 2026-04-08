@@ -1,0 +1,21 @@
+packages:
+  "recharts": "For the earnings and reports charts"
+  "framer-motion": "For smooth page transitions and card animations"
+  "date-fns": "For formatting dates in Brazilian Portuguese"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For Zod schema validation in forms"
+  "zod": "For defining form validation schemas"
+
+images:
+  - path: "artifacts/driver-metrics/public/images/pro-bg.png"
+    description: "Abstract luxurious dark background with subtle golden geometric glowing lines and particles, very premium feel"
+    aspect_ratio: "16:9"
+  - path: "artifacts/driver-metrics/public/images/auth-bg.png"
+    description: "Abstract dark background with subtle neon green light streaks giving a sense of speed and driving at night"
+    aspect_ratio: "9:16"
+
+notes:
+  - React Query hooks are imported directly from @workspace/api-client-react
+  - Using a mobile-first layout with bottom navigation for the primary interface

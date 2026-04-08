@@ -1,0 +1,128 @@
+Restore manual earnings entry on the rides page of my app "Lucro Driver" with strong bug prevention and safe data handling.
+
+GOAL:
+Allow users to manually add earnings individually, without breaking screenshot import, dashboard totals, profit calculations, goals, or history.
+
+IMPORTANT:
+- Keep screenshot import as the main flow
+- Manual earnings must be a complementary flow
+- Implement this carefully to avoid bugs, duplication, and broken totals
+- Preserve the current premium design on desktop and mobile
+
+======================================
+1. SAFE DATA MODEL
+======================================
+
+Each ride/earning entry must have a clear source:
+- source = "imported"
+- source = "manual"
+
+Manual earnings must have their own unique records and IDs.
+Do not mix imported and manual entries invisibly.
+
+======================================
+2. ADD MANUAL EARNING ACTION
+======================================
+
+On the rides page, add a clean action such as:
+- "Adicionar ganho manual"
+or
+- "+ Novo ganho"
+
+This must open a safe manual form.
+
+======================================
+3. MANUAL FORM FIELDS
+======================================
+
+Allow:
+- type
+- amount
+- optional note
+- date (or date/time if already supported)
+
+Suggested types:
+- Corrida em dinheiro
+- Gorjeta em Pix
+- Ajuste
+- Outro ganho
+
+======================================
+4. NO DUPLICATION
+======================================
+
+Manual earnings must not duplicate screenshot totals.
+
+Rules:
+- imported earnings remain imported
+- manual earnings remain manual
+- final totals are the sum of both
+- do not merge records in a way that causes double counting
+
+======================================
+5. DASHBOARD INTEGRATION
+======================================
+
+Manual earnings must safely affect:
+- daily earnings
+- dashboard totals
+- real profit
+- weekly and monthly goal progress
+
+But only once.
+
+======================================
+6. HISTORY
+======================================
+
+Manual entries must appear in history with a visible label such as:
+- Manual
+- Importado
+
+The user must be able to understand where each value came from.
+
+======================================
+7. EDIT / DELETE SAFETY
+======================================
+
+Users must be able to:
+- edit manual earnings
+- delete manual earnings
+
+These actions must immediately and safely update:
+- dashboard totals
+- profit values
+- goals progress
+- history
+
+======================================
+8. BACKWARD SAFETY
+======================================
+
+Do not break existing imported records.
+Do not alter old data incorrectly.
+If old records have no source field, default safely:
+- imported if they came from screenshot/import flow
+- otherwise preserve existing logic carefully
+
+======================================
+9. UI / UX
+======================================
+
+Keep the manual earning flow:
+- simple
+- premium
+- minimal
+- trustworthy
+
+It must feel native to the app, not bolted on.
+
+======================================
+10. FINAL RESULT
+======================================
+
+Users must be able to:
+- import earnings via screenshot
+- manually add earnings safely
+- see both reflected correctly in totals
+- avoid duplication and bugs

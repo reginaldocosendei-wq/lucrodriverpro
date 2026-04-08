@@ -1,0 +1,75 @@
+Fix desktop click/interactivity issues in my app "Lucro Driver".
+
+GOAL:
+The app already renders on desktop, but buttons and interactions do not work properly.
+Make the home screen fully clickable and functional on desktop browsers.
+
+IMPORTANT:
+This is not a layout-loading problem anymore.
+The page appears, but desktop interactions are failing.
+
+CHECK AND FIX THE FOLLOWING:
+
+1. OVERLAY / LAYER ISSUES
+- Search for any overlay, background layer, glow effect, grid effect, animated layer, or absolute/fixed element sitting above the main content
+- Make sure decorative layers do not block clicks
+- For decorative elements, use:
+  pointer-events: none;
+
+2. BUTTON CLICKABILITY
+- Ensure the main buttons are clickable on desktop:
+  - "Importar meu dia"
+  - "Já tenho conta — Entrar"
+
+- Confirm they have:
+  - valid onClick handlers
+  - correct z-index
+  - no covering element above them
+
+3. Z-INDEX FIX
+- Make the interactive content sit above decorative background layers
+- Example:
+  background layer: z-index 0
+  content/buttons: z-index 10 or higher
+
+4. POINTER EVENTS
+- Check all wrappers and parent containers
+- Remove anything causing blocked interaction
+- Avoid:
+  pointer-events: none;
+  on interactive containers
+- Use:
+  pointer-events: none;
+  only on purely decorative layers
+
+5. POSITIONING
+- Review absolute/fixed positioned elements near the home page
+- Ensure no invisible full-screen div is covering the content
+
+6. DESKTOP TEST
+- Make sure buttons work with:
+  - mouse click
+  - hover
+  - keyboard enter/space if possible
+
+7. NAVIGATION
+- Confirm button actions work:
+  - "Importar meu dia" should navigate correctly
+  - "Já tenho conta — Entrar" should navigate correctly
+
+8. DEBUG
+- Inspect home page in desktop mode
+- Identify any element covering the buttons
+- Fix the exact element causing blocked clicks
+
+9. VISUAL SAFETY
+- Keep the same visual style
+- Do not remove the premium design
+- Only fix interaction and layering
+
+10. FINAL RESULT
+The home screen must:
+- render correctly on desktop
+- allow normal clicking
+- navigate properly
+- keep the same premium look

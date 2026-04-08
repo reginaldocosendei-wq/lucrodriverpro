@@ -1,0 +1,162 @@
+Update my app "Lucro Driver" to improve daily entry aggregation and update the PIX payment key.
+
+GOAL:
+1. When the user imports or adds multiple records/screenshots for the same day, the app must SUM the values instead of replacing the previous record.
+2. Update the PIX payment key to: 41999653965
+
+-----------------------------------
+1. DAILY DATA AGGREGATION
+-----------------------------------
+
+CURRENT ISSUE:
+When I import a new screenshot or add a new record for the same day, the app is only keeping the latest record instead of summing the day totals.
+
+REQUIRED FIX:
+If a record already exists for the same date, the app must merge and accumulate the values.
+
+EXAMPLE:
+Existing record for 2026-03-28:
+- earnings: 120
+- trips: 5
+
+New imported record for the same date:
+- earnings: 80
+- trips: 3
+
+Final stored daily record must become:
+- earnings: 200
+- trips: 8
+
+-----------------------------------
+2. MERGE RULES
+-----------------------------------
+
+For the same date, sum these fields:
+- earnings
+- trips
+- km (if available)
+- hours (if available)
+- expenses (if applicable and intended as cumulative)
+
+For rating:
+- do NOT sum ratings
+- use one of these safe strategies:
+  - keep the latest rating if imported
+  OR
+  - calculate average rating only if there are multiple valid rating values
+
+If a field is null in the new record, do not overwrite a valid existing value unnecessarily.
+
+-----------------------------------
+3. SAVE LOGIC
+-----------------------------------
+
+When importing screenshot or manually saving data:
+
+- check if a daily record already exists for that date
+- if yes:
+  merge data
+- if no:
+  create a new daily record
+
+Do NOT overwrite the full day by default.
+
+-----------------------------------
+4. UI FEEDBACK
+-----------------------------------
+
+After importing data for an existing day, show:
+
+"Os dados deste dia foram somados com sucesso."
+
+If it's a new day:
+"Registro salvo com sucesso."
+
+Also show updated totals immediately in:
+- dashboard
+- history page
+- daily analysis
+
+-----------------------------------
+5. HISTORY PAGE
+-----------------------------------
+
+Ensure the history page shows the final accumulated daily total for each date.
+
+Optional:
+allow expanding a date to see imported partial entries if such structure exists.
+
+-----------------------------------
+6. SAFETY
+-----------------------------------
+
+- prevent duplicate overwrite behavior
+- ensure aggregation is based on DATE
+- do not crash if some fields are missing
+- use safe backend logic and database update flow
+
+-----------------------------------
+7. PIX PAYMENT UPDATE
+-----------------------------------
+
+Update the PIX payment configuration in the app.
+
+NEW PIX KEY:
+41999653965
+
+REQUIREMENTS:
+- replace old PIX destination with this new key
+- show this key on the PIX payment screen
+- add a "Copiar chave Pix" button
+- keep PIX amount display (e.g. R$19,90)
+- keep "Já paguei" button
+
+-----------------------------------
+8. PIX UX IMPROVEMENTS
+-----------------------------------
+
+On the PIX screen, show:
+
+Title:
+"Pagamento via Pix"
+
+Value:
+"R$19,90"
+
+PIX key:
+"41999653965"
+
+Buttons:
+- "Copiar chave Pix"
+- "Já paguei"
+
+Optional:
+- generate/update QR Code using this PIX key if static QR generation is already implemented
+- if QR generation is not ready, prioritize copy-to-clipboard flow
+
+After copying:
+show message:
+"Chave Pix copiada com sucesso."
+
+-----------------------------------
+9. WHATSAPP CONFIRMATION
+-----------------------------------
+
+When clicking "Já paguei", open WhatsApp with a pre-filled message:
+
+"Olá, acabei de pagar o Lucro Driver PRO via Pix.
+Meu email é: ______
+Segue o comprovante:"
+
+Keep this flow working on mobile.
+
+-----------------------------------
+10. FINAL RESULT
+-----------------------------------
+
+The app must:
+- sum multiple records from the same day
+- stop replacing same-day data with only the last screenshot
+- update dashboard totals correctly
+- use the new PIX key 41999653965
+- provide a smooth PIX copy/share confirmation flow

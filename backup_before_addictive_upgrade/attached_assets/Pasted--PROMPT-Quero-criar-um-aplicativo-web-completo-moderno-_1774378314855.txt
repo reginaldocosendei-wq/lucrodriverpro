@@ -1,0 +1,141 @@
+🧠 PROMPT:
+
+Quero criar um aplicativo web completo, moderno e responsivo chamado "Lucro Driver", focado em motoristas de aplicativos como Uber, 99 e similares. O objetivo é mostrar o lucro real do motorista, e não apenas o faturamento.
+
+🎯 OBJETIVO PRINCIPAL
+
+Criar um sistema inteligente que permita ao motorista:
+
+Registrar corridas
+Calcular ganhos reais
+Controlar custos
+Acompanhar metas
+Tomar decisões mais lucrativas
+📱 ESTRUTURA DO APP
+1. 🔐 Sistema de Login
+Login com email e senha
+Cadastro de usuário
+Armazenar dados por usuário
+2. 🚗 Cadastro de Corridas
+
+Criar formulário com os campos:
+
+Valor da corrida (R$)
+Distância (km)
+Tempo (minutos)
+Plataforma (Uber, 99, outro)
+Nota do passageiro
+Comissão da plataforma (%)
+
+📊 Cálculos automáticos:
+
+Valor por km
+Comissão em R$
+Ganho líquido por corrida
+3. 📊 Dashboard Inteligente (TELA PRINCIPAL)
+
+Mostrar:
+
+💰 Ganho do dia
+📅 Ganho da semana
+📆 Ganho do mês
+🚗 Total de corridas
+📈 Média por corrida
+📍 Média por km
+🏆 Melhor corrida
+🔥 Plataforma mais lucrativa
+4. 💸 Controle de Custos (DIFERENCIAL PRINCIPAL)
+
+Campos:
+
+Combustível
+Alimentação
+Manutenção
+Aluguel do carro
+Outros custos
+
+📊 Calcular:
+
+Custo diário
+Custo semanal
+Custo mensal
+💰 Lucro real (ganhos - custos)
+5. 🎯 Sistema de Metas
+Meta diária
+Meta semanal
+Meta mensal
+
+Mostrar:
+
+% atingido
+Quanto falta
+Previsão de atingir meta
+6. 📈 Relatórios e Gráficos
+Evolução dos ganhos
+Comparativo Uber vs 99
+Histórico de corridas
+Melhor dia da semana
+
+Usar gráficos interativos.
+
+7. 🧠 Inteligência do App (DIFERENCIAL)
+
+Criar funcionalidades como:
+
+⚠️ Alerta:
+“Você está abaixo da meta hoje”
+💡 Sugestão:
+“Hoje não está compensando rodar”
+📊 Simulador:
+“Se você rodar X horas por dia, vai ganhar R$ X no mês”
+8. 🔒 MODELO FREEMIUM
+
+Criar dois níveis:
+
+🟢 Gratuito:
+Cadastro de corridas
+Ganhos básicos
+Meta diária
+🔴 PRO:
+Relatórios completos
+Lucro real detalhado
+Comparativos
+Simulador
+Alertas inteligentes
+
+💰 Bloquear funcionalidades PRO com mensagem:
+
+“Descubra seu lucro real e ganhe mais com o Lucro Driver PRO”
+
+9. 🎨 DESIGN (MUITO IMPORTANTE)
+Tema escuro (dark mode)
+Cores:
+Verde = lucro
+Vermelho = prejuízo
+Dourado = destaque premium
+Estilo moderno, minimalista
+Layout estilo app mobile (prioridade celular)
+10. 🧱 TECNOLOGIAS
+Frontend: React + TailwindCSS
+Backend: Node.js (Express)
+Banco de dados: SQLite (ou Firebase)
+Gráficos: Chart.js
+11. 📲 PWA (APP INSTALÁVEL)
+Permitir instalar no celular
+Ícone do app
+Funcionamento rápido
+12. 💾 BANCO DE DADOS
+
+Tabelas:
+
+Usuários
+Corridas
+Custos
+Metas
+13. 🔮 FUTURO (DEIXAR PREPARADO)
+Integração com APIs de apps de corrida
+Importação automática de corridas
+IA para análise de desempenho
+🧩 RESULTADO FINAL
+
+Quero um app funcional, bonito, rápido, com foco em ajudar motoristas a ganhar mais dinheiro mostrando o lucro real.

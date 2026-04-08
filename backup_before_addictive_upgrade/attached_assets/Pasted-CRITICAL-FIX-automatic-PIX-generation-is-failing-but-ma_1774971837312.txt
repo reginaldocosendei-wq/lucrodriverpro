@@ -1,0 +1,81 @@
+CRITICAL FIX: automatic PIX generation is failing, but manual PIX works.
+
+CURRENT STATE:
+- New account creation works
+- Login works
+- App is live
+- Manual PIX fallback works
+- Automatic PIX flow shows: "Algo deu errado ao gerar o PIX. Tente novamente."
+
+IMPORTANT RULES:
+- Do NOT touch auth
+- Do NOT touch register/login/session
+- Do NOT touch Stripe/card flow
+- Do NOT touch deployment settings
+- Do NOT touch manual PIX fallback
+- Do NOT refactor unrelated code
+- Fix ONLY the automatic PIX generation flow
+- Be minimal-risk and surgical
+
+GOAL:
+Make automatic PIX generation work without breaking the currently working app.
+
+TASKS:
+
+1. TRACE THE FULL AUTOMATIC PIX FLOW:
+   - frontend button/action that triggers PIX generation
+   - backend endpoint used to create PIX
+   - payment provider integration (Mercado Pago or current provider)
+   - request payload
+   - response payload
+   - error handling path
+
+2. FIND THE ROOT CAUSE:
+   - check whether required env vars are missing
+   - check whether provider credentials are invalid
+   - check whether the endpoint is failing before provider call
+   - check whether provider returns an error that is being swallowed
+   - check whether frontend expects fields not returned by backend
+
+3. VERIFY ENV / CONFIG:
+   - identify all required PIX env vars
+   - confirm whether MERCADOPAGO_ACCESS_TOKEN or equivalent is missing/invalid
+   - confirm whether webhook URL is required for generation or only confirmation
+   - do not guess; inspect actual code paths
+
+4. FIX THE AUTOMATIC PIX GENERATION:
+   - backend must return usable PIX data
+   - frontend must render:
+     - qr code
+     - copy-paste pix code
+     - payment id/status if applicable
+   - preserve the current manual PIX fallback
+
+5. IMPROVE ERROR VISIBILITY:
+   - log the real backend error
+   - log provider response status/message
+   - show a safe but more useful failure reason in logs
+   - do NOT expose secrets to frontend
+
+6. DO NOT CHANGE PRO ACTIVATION YET:
+   - only fix PIX creation/generation first
+   - keep manual flow intact
+   - keep future approval logic isolated
+
+7. CREATE A REPORT FILE:
+   backup_notes/AUTO_PIX_GENERATION_FIX_REPORT.md
+
+IN THE REPORT INCLUDE:
+- root cause
+- files changed
+- required env vars
+- whether current provider credentials are missing or invalid
+- exact test steps to validate automatic PIX generation safely
+- confirmation that manual PIX fallback was not changed
+
+FINAL OUTPUT:
+Tell me clearly:
+- root cause of automatic PIX generation failure
+- files changed
+- env vars I must add or fix
+- how to test automatic PIX generation safely

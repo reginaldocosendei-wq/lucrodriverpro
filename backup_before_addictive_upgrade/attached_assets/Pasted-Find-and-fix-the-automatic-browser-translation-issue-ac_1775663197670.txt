@@ -1,0 +1,56 @@
+Find and fix the automatic browser translation issue across the entire app.
+
+The problem:
+Google Chrome is auto-translating parts of the page, changing words and breaking the UI and functionality. Some texts appear, disappear, or change after refresh because browser translation is modifying the DOM.
+
+Apply these fixes carefully across the project:
+
+1. In the main HTML document, add this inside <head>:
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="pt-BR">
+
+2. Make sure the root html tag uses Brazilian Portuguese:
+<html lang="pt-BR">
+
+3. Add protection against translation in the main app container and critical UI elements by using:
+translate="no"
+
+Examples:
+- buttons
+- menus
+- navigation labels
+- dashboard cards
+- financial values
+- dynamic labels
+- status badges
+- counters
+- tabs
+- modal titles
+- summary widgets
+- form labels that must remain stable
+
+4. Do not break styling or component behavior.
+Only add anti-translation protection where necessary and globally where safe.
+
+5. If this is a React/Vite app:
+- update index.html
+- inspect App.tsx / App.jsx
+- inspect layout components, navbar, sidebar, dashboard cards, summary cards, modals, buttons, and dynamic value components
+- add translate="no" to critical containers that should never be altered by browser translation
+
+6. If there are reusable UI components for money, metrics, totals, labels, statuses or counters, protect them too.
+
+7. Ensure currency values, totals, earnings, costs, profits, KPI cards, trial labels, subscription labels and admin numbers are not translated or reformatted by the browser.
+
+8. After applying changes, verify the app still builds successfully and does not introduce hydration or rendering issues.
+
+9. Return a summary of:
+- files changed
+- exact anti-translation protections added
+- any components that were protected
+
+Important:
+Do not redesign the UI.
+Do not rename components unnecessarily.
+Do not remove existing functionality.
+This is a surgical fix focused on preventing browser auto-translation from breaking the app.

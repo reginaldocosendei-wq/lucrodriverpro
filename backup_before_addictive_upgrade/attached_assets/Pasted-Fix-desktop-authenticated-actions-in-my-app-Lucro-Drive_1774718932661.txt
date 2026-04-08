@@ -1,0 +1,80 @@
+Fix desktop authenticated actions in my app "Lucro Driver".
+
+GOAL:
+The app now opens on desktop, but protected actions are failing because the desktop session/auth state is missing.
+
+CURRENT SYMPTOMS:
+- app opens on desktop
+- route changes work
+- debug panel shows:
+  - isAuthenticated: false
+  - currentUser: none
+- protected actions fail, such as:
+  - loading history
+  - saving goals
+  - loading user records
+  - premium/pro actions
+
+IMPORTANT:
+Do NOT redesign the UI.
+Do NOT change mobile behavior unless necessary.
+Focus on restoring desktop authentication/session persistence and authenticated API access.
+
+TASKS:
+
+1. IDENTIFY AUTH SOURCE
+Inspect how auth is managed:
+- cookie session
+- localStorage token
+- sessionStorage
+- auth bootstrap request
+
+2. FIX DESKTOP SESSION PERSISTENCE
+Ensure that after login on desktop:
+- the user stays authenticated
+- currentUser is correctly loaded
+- isAuthenticated becomes true
+- protected API calls include the correct credentials/token
+
+3. FIX REQUEST AUTH
+For all protected requests, ensure auth is sent correctly.
+If using fetch:
+- include credentials when needed
+If using token:
+- attach Authorization header properly
+
+4. FIX AUTH BOOTSTRAP
+On app startup:
+- load session correctly
+- do not leave desktop in false unauthenticated state if session exists
+- wait for auth initialization before protected pages act
+
+5. CHECK /api/auth/me OR EQUIVALENT
+Ensure the current-user/session endpoint works on desktop and returns 200 when logged in.
+
+6. PROTECTED DATA QUERIES
+Fix authenticated data loading for:
+- goals
+- rides/history
+- dashboard user data
+- premium state
+
+These must only fail when the user is truly unauthenticated, not because desktop auth is broken.
+
+7. ERROR HANDLING
+If unauthenticated, show a clear message.
+Do not silently fail.
+Do not break buttons.
+
+8. DEBUG PANEL
+Keep the temporary debug panel and make sure after login on desktop it shows:
+- isAuthenticated: true
+- currentUser: populated
+
+9. FINAL RESULT
+On desktop:
+- user logs in successfully
+- session persists
+- goals can be saved
+- history loads
+- protected buttons work normally

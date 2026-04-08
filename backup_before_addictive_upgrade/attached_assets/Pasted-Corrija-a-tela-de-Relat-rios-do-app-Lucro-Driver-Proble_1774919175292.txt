@@ -1,0 +1,87 @@
+Corrija a tela de Relatórios do app Lucro Driver.
+
+Problema atual:
+Os cards “Ganhos por Plataforma” e “Melhores Dias da Semana” aparecem, mas os gráficos não respondem e ficam mostrando estado vazio, mesmo quando houver dados cadastrados/importados.
+
+Quero que você faça uma correção completa, segura e objetiva.
+
+TAREFAS:
+
+1) Verifique toda a cadeia de dados da tela de Relatórios:
+- frontend da página de relatórios
+- hooks/queries de carregamento
+- rotas da API
+- consultas ao banco
+- transformação dos dados para os gráficos
+
+2) Descubra por que os gráficos estão vazios.
+Investigue especialmente:
+- filtro por userId
+- filtro de datas/período
+- campos platform, date, earnings/amount/netAmount
+- dados importados x dados digitados manualmente
+- formato retornado pela API
+- nomes de propriedades incompatíveis entre backend e frontend
+
+3) Corrija o backend para garantir que a API de relatórios sempre retorne dados no formato exato que o frontend precisa.
+Quero pelo menos estes endpoints funcionando corretamente:
+- resumo por plataforma
+- resumo por dia da semana
+
+4) Padronize a estrutura de resposta da API, por exemplo:
+{
+  success: true,
+  platformEarnings: [
+    { platform: "Uber", total: 1200 },
+    { platform: "99", total: 800 }
+  ],
+  weekdayPerformance: [
+    { day: "Seg", total: 300, trips: 12 },
+    { day: "Ter", total: 450, trips: 17 }
+  ]
+}
+
+5) No frontend:
+- corrija o carregamento dos gráficos
+- garanta re-render após o fetch
+- trate loading, error e empty state corretamente
+- mostre gráfico real quando houver dados
+- só mostre “nenhuma plataforma registrada” ou “sem dados suficientes” quando realmente não houver dados no banco
+
+6) Adicione logs temporários úteis para depuração:
+- resultado bruto da API
+- quantidade de registros encontrados
+- dados transformados antes de enviar para o gráfico
+
+7) Se houver erro de nomes de campos, normalize:
+- platform/platformName/app
+- date/createdAt/day
+- amount/netAmount/earnings/total
+
+8) Faça uma checagem real no banco:
+- veja se existem corridas/summaries para o usuário logado
+- se existirem, use esses dados nos gráficos
+- se não existirem, mantenha o empty state corretamente
+
+9) Garanta que os gráficos funcionem no mobile e não travem.
+Se estiver usando Recharts ou biblioteca similar, confira:
+- data prop
+- dataKey corretos
+- width/height responsivos
+- container renderizando com altura válida
+
+10) Depois da correção, me entregue:
+- lista dos arquivos alterados
+- o que causava o bug
+- como você corrigiu
+- se precisou ajustar backend, frontend e banco
+
+IMPORTANTE:
+- não quebre o restante do app
+- não altere o visual premium atual
+- mantenha a navegação inferior e o design como estão
+- faça a correção completa, não apenas paliativa
+- se necessário, crie uma rota temporária de debug /api/reports/debug para inspecionar os dados do usuário logado
+
+Objetivo final:
+Ao abrir Relatórios, os gráficos “Ganhos por Plataforma” e “Melhores Dias da Semana” devem mostrar os dados reais do usuário logado sempre que existirem corridas salvas/importadas.

@@ -1,0 +1,556 @@
+import { useState } from "react";
+import { useLogin, useRegister } from "@workspace/api-client-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { GoogleLogin } from "@react-oauth/google";
+import { Input, Label } from "@/components/ui";
+import { Mail, Lock, User, ArrowRight, ChevronLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useT } from "@/lib/i18n";
+import { useLocation } from "wouter";
+
+const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const VITE_API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+
+// ─── AUTH FORM ────────────────────────────────────────────────────────────────
+function AuthForm({
+  defaultMode,
+  onSuccess,
+  onBack,
+}: {
+  defaultMode: "login" | "register";
+  onSuccess?: () => void;
+  onBack?: () => void;
+}) {
+  const { t } = useT();
+  const [mode, setMode] = useState<"login" | "register">(defaultMode);
+  const [errorMsg, setErrorMsg] = useState("");
+  const queryClient = useQueryClient();
+  const loginMutation    = useLogin();
+  const registerMutation = useRegister();
+
+  const googleMutation = useMutation({
+    mutationFn: async (credential: string) => {
+      const res = await fetch(`${VITE_API_BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? t("auth.googleError"));
+      }
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
+      onSuccess?.();
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message ?? t("auth.googleError"));
+    },
+  });
+
+  const loginSchema = z.object({
+    email:    z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(6, t("auth.passwordTooShort")),
+  });
+  const registerSchema = loginSchema.extend({
+    name: z.string().min(2, t("auth.nameRequired")),
+  });
+
+  const loginForm = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const registerForm = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", email: "", password: "" },
+  });
+
+  const onLogin = loginForm.handleSubmit((data) => {
+    setErrorMsg("");
+    loginMutation.mutate({ data }, {
+      onSuccess: async () => {
+        // refetchQueries (not resetQueries) waits for the network round-trip
+        // to complete before resolving. That guarantees the user object is in
+        // the React Query cache BEFORE navigate("/") fires, so HomeRoute sees
+        // an authenticated user immediately and never flashes the landing page.
+        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
+        console.debug("[AuthForm] login error:", msg);
+        setErrorMsg(msg);
+      },
+    });
+  });
+
+  const onRegister = registerForm.handleSubmit((data) => {
+    setErrorMsg("");
+    console.debug("[AuthForm] submitting register", { email: data.email });
+    registerMutation.mutate({ data }, {
+      onSuccess: async () => {
+        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        const msg = err?.data?.error || err?.response?.data?.error || t("auth.registerError");
+        console.debug("[AuthForm] register error:", msg);
+        setErrorMsg(msg);
+      },
+    });
+  });
+
+  const isPending = loginMutation.isPending || registerMutation.isPending || googleMutation.isPending;
+
+  const labelStyle: React.CSSProperties = {
+    color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700,
+    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block",
+  };
+
+  return (
+    <div style={{ width: "100%" }}>
+
+      {/* Google login button — only shown when VITE_GOOGLE_CLIENT_ID is configured */}
+      {VITE_GOOGLE_CLIENT_ID && (
+        <>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <GoogleLogin
+              theme="filled_black"
+              size="large"
+              shape="rectangular"
+              width={330}
+              text="continue_with"
+              onSuccess={(response) => {
+                if (response.credential) {
+                  setErrorMsg("");
+                  googleMutation.mutate(response.credential);
+                }
+              }}
+              onError={() => setErrorMsg(t("auth.googleError"))}
+            />
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.04em" }}>
+              {t("auth.orDivider")}
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+          </div>
+        </>
+      )}
+
+      {/* Tab switcher */}
+      <div style={{
+        display: "flex", background: "rgba(255,255,255,0.04)",
+        borderRadius: 14, padding: 4, marginBottom: 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}>
+        {(["login", "register"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); setErrorMsg(""); }}
+            style={{
+              flex: 1, padding: "11px 0", fontSize: 13, fontWeight: 700,
+              borderRadius: 11, border: "none", cursor: "pointer",
+              transition: "all 0.2s ease",
+              background: mode === m ? "#00ff88" : "transparent",
+              color: mode === m ? "#000" : "rgba(255,255,255,0.4)",
+              boxShadow: "none",
+              fontFamily: "inherit",
+            }}
+          >
+            {m === "login" ? t("auth.tabLogin") : t("auth.tabRegister")}
+          </button>
+        ))}
+      </div>
+
+      {/* Error */}
+      {errorMsg && (
+        <div style={{
+          marginBottom: 18, padding: "12px 14px", borderRadius: 12,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+          fontSize: 13, color: "#fca5a5", fontWeight: 500, textAlign: "center",
+        }}>
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Forms */}
+      <AnimatePresence mode="wait">
+        {mode === "login" ? (
+          <motion.form
+            key="login"
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={onLogin}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            <div>
+              <Label style={labelStyle}>{t("auth.labelEmail")}</Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder={t("auth.placeholderEmail")} {...loginForm.register("email")} />
+              {loginForm.formState.errors.email && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{loginForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <Label style={labelStyle}>{t("auth.labelPassword")}</Label>
+              <Input type="password" icon={<Lock size={17} />} placeholder="••••••" {...loginForm.register("password")} />
+            </div>
+            <button
+              type="submit" disabled={isPending}
+              style={{
+                marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
+                background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
+                cursor: isPending ? "not-allowed" : "pointer",
+                opacity: isPending ? 0.6 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+                fontFamily: "inherit",
+              }}
+            >
+              {isPending ? t("auth.btnLoginLoading") : t("auth.btnLogin")}
+            </button>
+          </motion.form>
+        ) : (
+          <motion.form
+            key="register"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={onRegister}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            <div>
+              <Label style={labelStyle}>{t("auth.labelName")}</Label>
+              <Input type="text" icon={<User size={17} />} placeholder={t("auth.placeholderName")} {...registerForm.register("name")} />
+              {registerForm.formState.errors.name && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div>
+              <Label style={labelStyle}>{t("auth.labelEmail")}</Label>
+              <Input type="email" icon={<Mail size={17} />} placeholder={t("auth.placeholderEmail")} {...registerForm.register("email")} />
+              {registerForm.formState.errors.email && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <Label style={labelStyle}>{t("auth.labelPassword")}</Label>
+              <Input type="password" icon={<Lock size={17} />} placeholder={t("auth.placeholderPassword")} {...registerForm.register("password")} />
+              {registerForm.formState.errors.password && (
+                <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>{registerForm.formState.errors.password.message}</p>
+              )}
+            </div>
+            <button
+              type="submit" disabled={isPending}
+              style={{
+                marginTop: 6, width: "100%", height: 52, borderRadius: 14, border: "none",
+                background: "#00ff88", color: "#000", fontWeight: 800, fontSize: 15,
+                cursor: isPending ? "not-allowed" : "pointer",
+                opacity: isPending ? 0.6 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 8px 28px rgba(0,255,136,0.3)", transition: "opacity 0.2s",
+                fontFamily: "inherit",
+              }}
+            >
+              {isPending ? t("auth.btnRegisterLoading") : t("auth.btnRegister")}
+            </button>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {/* Trial note */}
+      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 18, lineHeight: 1.6 }}>
+        {t("auth.trialNote")}
+      </p>
+
+      {/* Back link */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            marginTop: 20, background: "transparent", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 4,
+            color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+            width: "100%", justifyContent: "center",
+          }}
+        >
+          <ChevronLeft size={13} />
+          {t("auth.goBack")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── MAIN AUTH SCREEN ─────────────────────────────────────────────────────────
+// Props:
+//   startWithForm — when true (e.g. on the /login route), skip the landing and
+//                   show the login/register form immediately.
+//   onSuccess     — called after a successful login or registration so the
+//                   caller can navigate away (e.g. LoginRoute → navigate("/")).
+export default function AuthScreen({
+  startWithForm = false,
+  onSuccess,
+}: {
+  startWithForm?: boolean;
+  onSuccess?: () => void;
+}) {
+  const { t } = useT();
+  const [, navigate] = useLocation();
+
+
+  if (startWithForm) {
+    // ── Form-only view (used on /login route) ───────────────────────────────
+    return (
+      <div style={{
+        minHeight: "100dvh", background: "#080808",
+        display: "flex", flexDirection: "column",
+        position: "relative",
+      }}>
+        {/* Top glow */}
+        <div style={{
+          position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
+          width: 500, height: 400, pointerEvents: "none",
+          background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
+        }} />
+
+        <div
+          style={{
+            flex: 1, display: "flex", flexDirection: "column",
+            justifyContent: "center", alignItems: "center",
+            position: "relative", zIndex: 2,
+            padding: "32px 24px calc(32px + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          {/* Logo + brand */}
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.35 }}
+            style={{ textAlign: "center", marginBottom: 24 }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 13, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(0,255,136,0.15)", margin: "0 auto 12px" }}>
+              <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+            </div>
+            <p style={{ fontSize: 20, fontWeight: 900, color: "#f9fafb", letterSpacing: "-0.02em", margin: 0 }}>
+              Lucro <span style={{ color: "#00ff88" }}>Driver</span>
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500, marginTop: 4 }}>
+              {t("auth.appSubtitle")}
+            </p>
+          </motion.div>
+
+          {/* Form card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              width: "100%", maxWidth: 380,
+              background: "#111111",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 24, padding: "28px 24px 24px",
+            }}
+          >
+            <AuthForm
+              defaultMode="login"
+              onSuccess={onSuccess}
+              onBack={() => navigate("/")}
+            />
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Landing view (used on "/" when unauthenticated) ─────────────────────────
+  return (
+    <div style={{
+      minHeight: "100dvh", background: "#080808",
+      display: "flex", flexDirection: "column",
+      position: "relative",
+    }}>
+
+      {/* Top glow */}
+      <div style={{
+        position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
+        width: 500, height: 400, pointerEvents: "none",
+        background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 65%)",
+      }} />
+
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          padding: "0 28px", textAlign: "center", position: "relative", zIndex: 2,
+        }}
+      >
+        {/* Logo */}
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ marginBottom: 32, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div style={{
+            width: 72, height: 72, borderRadius: 20, overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+            position: "relative", zIndex: 1,
+          }}>
+            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Lucro Driver"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+          </div>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontSize: "clamp(32px, 10vw, 46px)", fontWeight: 900, lineHeight: 1.1, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
+        >
+          {t("auth.tagline").split(" ").slice(0, -1).join(" ")}<br />
+          <span style={{ color: "#00ff88" }}>
+            {t("auth.tagline").split(" ").slice(-1)[0]}
+          </span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.65, color: "rgba(255,255,255,0.52)", marginBottom: 24, maxWidth: 320 }}
+        >
+          {t("auth.subtitle")}
+        </motion.p>
+
+        {/* Testimonials */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: "100%", marginBottom: 28 }}
+        >
+          <div style={{
+            display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4,
+            scrollSnapType: "x mandatory",
+            msOverflowStyle: "none", scrollbarWidth: "none",
+          }}>
+            {[
+              {
+                quote: "Descobri que estava aceitando corridas que me davam prejuízo. Hoje só pego as que realmente valem a pena.",
+                author: "Motorista Uber",
+              },
+              {
+                quote: "Eu achava que ganhava bem... mas quando vi o lucro real, mudei totalmente minha estratégia.",
+                author: "Motorista 99",
+              },
+              {
+                quote: "Depois que comecei a usar, meu lucro aumentou sem precisar trabalhar mais horas.",
+                author: "Motorista App",
+              },
+            ].map(({ quote, author }) => (
+              <div
+                key={author}
+                style={{
+                  flexShrink: 0, width: 230, scrollSnapAlign: "start",
+                  background: "#111111",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 18, padding: "16px 16px 14px",
+                  textAlign: "left",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Stars */}
+                <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
+                  {[0,1,2,3,4].map((i) => (
+                    <svg key={i} width="12" height="12" viewBox="0 0 12 12" fill="#eab308">
+                      <path d="M6 1l1.3 2.6L10 4l-2 1.9.5 2.7L6 7.3 3.5 8.6 4 5.9 2 4l2.7-.4z"/>
+                    </svg>
+                  ))}
+                </div>
+                {/* Quote */}
+                <p style={{
+                  fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,0.72)",
+                  fontWeight: 500, marginBottom: 12,
+                  fontStyle: "italic",
+                }}>
+                  "{quote}"
+                </p>
+                {/* Author */}
+                <p style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: "#00ff88", letterSpacing: "0.02em",
+                }}>
+                  — {author}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Proof line */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.44, duration: 0.4 }}
+          style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: "0.01em", marginBottom: 36 }}
+        >
+          7 dias grátis · Sem cartão necessário
+        </motion.p>
+
+        <div style={{ width: "100%", maxWidth: 340 }}>
+          {/* Primary CTA */}
+          <button
+            onClick={() => navigate("/import")}
+            style={{
+              width: "100%", height: 58, borderRadius: 18, border: "none",
+              background: "#00ff88", color: "#000",
+              fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: "0 4px 20px rgba(0,255,136,0.2)",
+              fontFamily: "inherit",
+            }}
+          >
+            Importar meu dia
+            <ArrowRight size={20} strokeWidth={2.5} />
+          </button>
+
+          {/* Secondary CTA */}
+          <button
+            onClick={() => navigate("/login")}
+            style={{
+              marginTop: 12, width: "100%", height: 50, borderRadius: 14,
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 15,
+              cursor: "pointer", fontFamily: "inherit", letterSpacing: "-0.01em",
+            }}
+          >
+            {t("auth.alreadyHaveAccount")}
+          </button>
+        </div>
+
+        {/* Trust */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.55, duration: 0.4 }}
+          style={{ marginTop: 28, fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.03em" }}
+        >
+          {t("auth.trustLine")}
+        </motion.p>
+
+      </motion.div>
+    </div>
+  );
+}

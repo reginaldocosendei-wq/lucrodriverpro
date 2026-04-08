@@ -1,0 +1,84 @@
+Fix the desktop login loop issue in my app "Lucro Driver".
+
+GOAL:
+On desktop, the user can open the login screen and submit credentials, but after login the app returns to the same login page instead of entering the app.
+
+IMPORTANT:
+This is a login/session persistence issue, not a layout issue.
+
+PROBLEM SUMMARY:
+- desktop opens login
+- user enters credentials
+- login seems to submit
+- app returns to login page again
+- user never stays authenticated
+
+TASKS:
+
+1. DEBUG LOGIN FLOW
+Add temporary console logs to trace:
+- login form submit
+- login API response
+- auth state after login
+- token/session save
+- route after login
+- auth check on protected pages
+
+2. VERIFY LOGIN RESPONSE
+Check whether the backend login response is successful.
+Confirm:
+- status 200
+- user data returned correctly
+- token/session returned correctly if used
+
+3. SAVE AUTH PROPERLY
+Inspect how authentication is persisted:
+- localStorage
+- sessionStorage
+- cookies
+
+Make sure desktop actually stores auth/session after successful login.
+
+4. READ AUTH PROPERLY
+After login, ensure the app correctly reads the stored auth state on page transition and app reload.
+
+5. FIX AUTH LOOP
+Inspect route guards / protected routes.
+If auth check runs before initialization finishes, do NOT redirect immediately.
+
+Example desired behavior:
+- auth is loading → wait
+- auth loaded and valid → allow access
+- auth loaded and invalid → redirect to login
+
+6. CHECK LOCALSTORAGE / SESSIONSTORAGE
+If using localStorage:
+- confirm token/user is saved after login
+- confirm token/user is read correctly on desktop
+
+7. CHECK COOKIES / CREDENTIALS
+If using cookies or backend session:
+- ensure fetch/axios uses credentials properly
+- ensure desktop browser receives and sends the cookie/session correctly
+
+8. FIX LOGIN REDIRECT
+After successful login:
+- navigate to dashboard (or correct post-login page)
+- do not navigate back to login
+
+9. PREVENT FALSE LOGOUT
+Do not clear auth state accidentally on app mount, route change, or failed optional request.
+
+10. ADD TEMP DEBUG PANEL
+On desktop only, temporarily show:
+- authLoading
+- isAuthenticated
+- currentUser present or not
+- current route
+
+11. FINAL RESULT
+On desktop:
+- user logs in successfully
+- session persists
+- app enters dashboard/import flow
+- app does not return to login page again

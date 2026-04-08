@@ -1,0 +1,118 @@
+Create a premium "History" page for my app "Lucro Driver" where users can view, filter, edit, and delete saved records.
+
+GOAL:
+Build a clean, mobile-first history page that shows all saved daily records in a professional way.
+
+REQUIREMENTS:
+
+1. PAGE NAME
+Create a page called:
+"Histórico"
+
+2. SHOW SAVED RECORDS
+Display all saved daily entries ordered by newest first.
+
+Each record card should show:
+- Date
+- Total earnings
+- Trips
+- Optional km
+- Optional hours
+- Optional rating
+- Profit
+
+3. FILTER BY DATE
+Add a simple and elegant filter section with:
+- Today
+- This week
+- This month
+- All
+- Custom date range
+
+4. SEARCH / FILTER UX
+Allow filtering by:
+- date
+- earnings range (optional)
+- trips count (optional)
+
+Keep it simple and mobile-friendly.
+
+5. EDIT BUTTON
+Each record must have an:
+- "Editar" button
+
+When clicked:
+- open edit modal or edit page
+- allow changing:
+  - earnings
+  - trips
+  - km
+  - hours
+  - rating
+  - expenses
+
+After save:
+- update UI immediately
+- show message:
+  "Registro atualizado com sucesso."
+
+6. DELETE BUTTON
+Each record must have an:
+- "Excluir" button
+
+Before deleting:
+Show confirmation modal:
+"Tem certeza que deseja excluir este registro?"
+
+Buttons:
+- Cancelar
+- Excluir
+
+After successful deletion:
+- remove record from UI immediately
+- show message:
+  "Registro excluído com sucesso."
+
+If deletion fails:
+- show:
+  "Não foi possível excluir este registro."
+
+7. EMPTY STATE
+If there are no records:
+Show a beautiful empty state with:
+"Você ainda não tem registros salvos."
+
+Add button:
+"Adicionar registro"
+
+8. VISUAL DESIGN
+Make the page look premium and modern.
+
+STYLE:
+- Dark mode
+- Clean card layout
+- Rounded corners
+- Soft shadows
+- Good spacing
+- Large touch-friendly buttons
+- Mobile first
+
+9. CARD DESIGN
+Each record card should have:
+- highlighted profit value
+- secondary metrics below
+- edit and delete actions aligned cleanly
+
+10. PERFORMANCE
+- Load records safely
+- Do not crash if fields are null
+- Use loading state:
+  "Carregando histórico..."
+
+11. FINAL RESULT
+The History page must:
+- look premium
+- show all saved records
+- allow edit and delete
+- support date filters
+- work smoothly on mobile and desktop

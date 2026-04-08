@@ -1,0 +1,90 @@
+Add an AI-powered full-day analysis system to my app "Lucro Driver".
+
+GOAL:
+Create a smart assistant that analyzes the driver's full workday and provides clear financial insights, warnings, and recommendations.
+
+IMPORTANT:
+This is not real-time ride screening.
+This is a smart daily analysis system based on the driver's full-day results.
+
+INPUT DATA:
+- total earnings
+- total trips
+- total km
+- total hours worked
+- total expenses
+- passenger rating (optional)
+- daily goal (optional)
+
+CORE CALCULATIONS:
+- real profit = earnings - expenses
+- earnings per trip = earnings / trips
+- earnings per km = earnings / km
+- earnings per hour = earnings / hours
+
+AI ANALYSIS OUTPUT:
+Generate:
+
+1. STATUS
+Possible values:
+- great_day
+- good_day
+- weak_day
+- not_worth_it
+
+2. MAIN MESSAGE
+Examples:
+- "Hoje foi um ótimo dia. Seu lucro ficou forte e consistente."
+- "Seu dia foi razoável, mas seus custos reduziram seu resultado."
+- "Hoje não compensou. Seus custos consumiram boa parte do ganho."
+
+3. WARNINGS
+Examples:
+- "Seu custo ficou acima do ideal."
+- "Seu ganho por hora caiu."
+- "Seu número de corridas foi baixo para o tempo trabalhado."
+
+4. RECOMMENDATIONS
+Examples:
+- "Considere encerrar quando seu ganho por hora cair."
+- "Tente reduzir custos para melhorar seu lucro real."
+- "Sua meta diária pode ser ajustada para ficar mais realista."
+
+BUSINESS LOGIC:
+- If profit <= 0:
+  status = not_worth_it
+- If expenses are too high compared to earnings:
+  add warning about high costs
+- If earnings per hour is low:
+  add warning about low hourly performance
+- If trips are low for the hours worked:
+  suggest improving efficiency
+- If daily goal exists:
+  compare result against goal and comment on it
+
+UI REQUIREMENTS:
+Create a premium dashboard card called:
+"Análise inteligente do dia"
+
+This card must show:
+- status badge
+- main message
+- warnings
+- recommendations
+
+STYLE:
+- dark mode
+- premium fintech look
+- green for good results
+- yellow for average
+- red for poor results
+- clean spacing
+- mobile first
+
+SAFETY:
+- if any value is missing, do not crash
+- show partial analysis when possible
+- show "Dados insuficientes" only when truly necessary
+
+FINAL RESULT:
+A smart assistant that tells the driver if the day was worth it, what reduced profit, and what to improve next time.

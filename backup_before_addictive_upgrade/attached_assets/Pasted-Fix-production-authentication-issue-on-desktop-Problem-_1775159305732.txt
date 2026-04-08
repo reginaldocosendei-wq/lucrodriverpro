@@ -1,0 +1,71 @@
+Fix production authentication issue on desktop.
+
+Problem:
+- In production, on desktop browser, user cannot log in
+- Also cannot create account
+- Mobile access is working
+- Current UI only shows generic messages:
+  - "E-mail ou senha incorretos"
+  - "Não foi possível criar sua conta"
+
+GOAL:
+Diagnose and fix the real production auth issue without changing UI design.
+
+CHECK THESE ITEMS:
+
+1. FRONTEND AUTH REQUESTS
+- Verify login form and signup form are calling the correct production API endpoints
+- Verify they are not pointing to localhost or preview URLs
+- Verify fetch/axios uses credentials correctly if sessions/cookies are required
+
+2. SESSION / COOKIE
+- Check cookie/session settings for production
+- Verify secure, sameSite, domain, and credentials settings
+- Ensure session cookie can be set on desktop production domain
+
+3. BACKEND AUTH ROUTES
+- Check signup route and login route logs
+- Return the real backend error in server logs
+- Keep user-facing message simple, but log exact cause
+
+4. DATABASE
+- Verify production database is connected
+- Verify users table is readable/writable in production
+- Test:
+  - create user
+  - find user by email
+  - verify password compare logic
+
+5. PASSWORD HASH / AUTH LOGIC
+- Check if signup hashes password correctly
+- Check if login compares hash correctly
+- Check if there is any mismatch between signup and login auth logic
+
+6. ENVIRONMENT
+- Verify production env variables are present
+- Verify auth uses production database, not local database
+- Verify SESSION_SECRET exists in production
+
+7. DESKTOP-SPECIFIC ISSUE
+- Check for CORS/cookie issues affecting desktop browser only
+- Make auth work in production desktop Chrome
+
+8. DEBUGGING
+- Add temporary server logs for:
+  - signup request received
+  - login request received
+  - user found or not
+  - password match true/false
+  - session/cookie created or not
+- Do not expose sensitive data to users
+
+9. SAFETY
+- Do not modify Stripe, checkout, pricing, dashboard, reports, rides, costs, or goals
+- Only fix auth
+
+10. AFTER FIXING
+Tell me clearly:
+- root cause
+- files changed
+- whether signup works in production desktop
+- whether login works in production desktop

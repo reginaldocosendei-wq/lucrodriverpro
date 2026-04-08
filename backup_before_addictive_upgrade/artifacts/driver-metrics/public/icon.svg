@@ -1,0 +1,31 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0A0A0A"/>
+  <rect width="512" height="512" rx="112" fill="url(#bg_grad)"/>
+  <circle cx="256" cy="230" r="175" fill="#00ff88" fill-opacity="0.06"/>
+  <path d="M 156 310 L 168 268 Q 174 252 190 248 L 248 236 Q 256 234 264 236 L 322 248 Q 338 252 344 268 L 356 310 Q 360 322 352 330 L 344 338 Q 334 346 322 342 L 322 350 Q 322 358 314 358 L 296 358 Q 288 358 288 350 L 288 342 L 224 342 L 224 350 Q 224 358 216 358 L 198 358 Q 190 358 190 350 L 190 342 Q 178 346 168 338 L 160 330 Q 152 322 156 310 Z" fill="white" fill-opacity="0.08"/>
+  <path d="M 160 312 L 171 272 Q 177 256 193 252 L 249 240 Q 256 238 263 240 L 319 252 Q 335 256 341 272 L 352 312 Q 356 324 347 332 L 338 340 Q 328 346 318 342 L 318 352 Q 318 358 311 358 L 293 358 Q 286 358 286 352 L 286 342 L 226 342 L 226 352 Q 226 358 219 358 L 201 358 Q 194 358 194 352 L 194 342 Q 184 346 174 340 L 165 332 Q 156 324 160 312 Z" fill="#00ff88" fill-opacity="0.15"/>
+  <path d="M 174 304 L 183 274 Q 187 262 199 259 L 249 248 Q 256 246 263 248 L 313 259 Q 325 262 329 274 L 338 304 Q 341 313 334 318 Q 320 328 256 328 Q 192 328 178 318 Q 171 313 174 304 Z" fill="#00ff88"/>
+  <circle cx="200" cy="336" r="18" fill="#0A0A0A" stroke="#00ff88" stroke-width="4"/>
+  <circle cx="312" cy="336" r="18" fill="#0A0A0A" stroke="#00ff88" stroke-width="4"/>
+  <circle cx="200" cy="336" r="7" fill="#00ff88"/>
+  <circle cx="312" cy="336" r="7" fill="#00ff88"/>
+  <path d="M 220 270 L 240 260 L 272 260 L 292 270" stroke="#0A0A0A" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <rect x="228" y="142" width="6" height="22" rx="3" fill="#00ff88"/>
+  <rect x="248" y="136" width="6" height="28" rx="3" fill="#00ff88" fill-opacity="0.7"/>
+  <rect x="268" y="142" width="6" height="22" rx="3" fill="#00ff88" fill-opacity="0.5"/>
+  <rect x="288" y="148" width="6" height="16" rx="3" fill="#00ff88" fill-opacity="0.3"/>
+  <rect x="208" y="148" width="6" height="16" rx="3" fill="#00ff88" fill-opacity="0.3"/>
+  <circle cx="375" cy="365" r="46" fill="#0A0A0A"/>
+  <circle cx="375" cy="365" r="42" fill="url(#coin_grad)"/>
+  <text x="375" y="381" text-anchor="middle" fill="#000000" font-family="Arial Black, sans-serif" font-weight="900" font-size="38">R$</text>
+  <defs>
+    <linearGradient id="bg_grad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <linearGradient id="coin_grad" x1="355" y1="345" x2="395" y2="385" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#FFA500"/>
+    </linearGradient>
+  </defs>
+</svg>
