@@ -1,0 +1,89 @@
+Create a premium PRO upgrade screen for Lucro Driver with a high-converting mobile-first design.
+
+Goal:
+Make the upgrade page feel like a premium SaaS product built for app drivers, with strong emotional appeal, clear value, and high conversion potential.
+
+Requirements:
+
+1. Overall style
+- Keep the existing Lucro Driver visual identity
+- Dark premium background
+- Green highlight accents
+- Elegant spacing
+- Strong typography hierarchy
+- Modern cards with subtle glow/shadow
+- Mobile-first responsive layout
+- Feel like a premium fintech / productivity app
+
+2. Hero section
+At the top of the PRO screen, add:
+- Badge: "PRO"
+- Headline:
+  "Drive smarter. Earn more. Waste less."
+- Subheadline:
+  "Unlock the full intelligence behind your daily profit."
+
+3. Main value proposition card
+Create a strong featured card showing:
+- "With PRO you stop guessing and start deciding"
+- Visual emphasis on real profit, time efficiency, and performance
+
+4. Benefits section
+Add a premium benefits list with icons/cards for:
+- Real profit analysis
+- Profit per km
+- Profit per hour
+- Daily goal tracking
+- Weekly and monthly comparisons
+- Smart missions and XP
+- Monthly reality projection
+- Better decision-making for every workday
+
+5. Emotional persuasion section
+Add a section with persuasive copy like:
+- "Most drivers look at revenue. PRO shows what actually stays in your pocket."
+- "Working more is not always earning more."
+- "The difference between a busy driver and a profitable driver is data."
+
+6. Pricing section
+Create a pricing card that feels premium and trustworthy:
+- Monthly plan: R$19,90/month
+- Optional yearly plan if available in current billing logic
+- Highlight:
+  "Less than R$1 per day"
+- Include reassurance:
+  "Cancel anytime"
+  "Instant activation"
+  "Built for Brazilian app drivers"
+
+7. CTA section
+Add a very strong CTA area with:
+- Main button: "Unlock PRO now"
+- Secondary line:
+  "Start using smarter profit intelligence today"
+
+8. Social proof / authority style section
+Create a section that implies confidence and seriousness, such as:
+- "Built for drivers who want real control"
+- "Used to understand the real value of every workday"
+Do not invent fake testimonials or fake numbers.
+
+9. Conversion principles
+- Make the screen visually persuasive
+- Reduce friction
+- Reinforce value before price
+- Make the upgrade feel like an investment, not a cost
+- Prioritize clarity and emotional impact
+
+10. Technical constraints
+- Do not break existing Stripe logic
+- Do not break PIX logic
+- Do not break auth or dashboard
+- Reuse existing billing actions/buttons where possible
+- Keep everything production-safe
+
+11. Final instruction
+- Do not explain
+- Do not summarize
+- Implement the screen directly
+- Make it feel premium, addictive, and conversion-focused

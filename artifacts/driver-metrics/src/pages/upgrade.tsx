@@ -6,6 +6,7 @@ import { useIsDesktop } from "@/lib/useBreakpoint";
 import {
   Check, ArrowLeft, Shield, Zap, AlertTriangle,
   Clock, ChevronRight, TrendingUp, MapPin, Timer, Award,
+  Target, BarChart2, Brain, CalendarDays,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { getApiBase } from "@/lib/api";
@@ -14,18 +15,15 @@ import { DEV_SKIP_STRIPE_CHECKOUT } from "@/lib/dev-flags";
 
 const BASE = getApiBase();
 
-// ─── Animations ───────────────────────────────────────────────────────────────
 const stagger = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
 const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.45 } },
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.5 } },
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// UPGRADE PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Upgrade() {
   const { data: user }             = useGetMe();
@@ -36,22 +34,17 @@ export default function Upgrade() {
   const [error, setError]          = useState<string | null>(null);
   const { t, currency }            = useT();
 
-  // Clear error on every navigation to this page — handles both fresh mounts
-  // and SPA re-visits where the component may have stayed in the tree.
   useEffect(() => { setError(null); }, [location]);
 
   const isBRL = currency === "BRL";
-
   const u              = user as any;
   const trialExpired   = u?.trialExpired === true;
   const trialActive    = u?.trialActive  === true;
   const trialDaysLeft  = u?.trialDaysLeft ?? 7;
   const isExpiredParam = typeof window !== "undefined" && window.location.search.includes("expired=1");
   const showExpired    = trialExpired || isExpiredParam;
+  const isDesktop      = useIsDesktop();
 
-  const isDesktop = useIsDesktop();
-
-  // ── Dynamic plans by currency ────────────────────────────────────────────────
   const PLANS = useMemo(() => [
     {
       id:       "monthly",
@@ -75,39 +68,33 @@ export default function Upgrade() {
     },
   ], [isBRL, t]);
 
-  // ── Benefits ─────────────────────────────────────────────────────────────────
-  const BENEFITS = useMemo(() => [
-    { icon: TrendingUp, text: t("upgrade.benefit1"), sub: t("upgrade.benefit1sub") },
-    { icon: MapPin,     text: t("upgrade.benefit2"), sub: t("upgrade.benefit2sub") },
-    { icon: Timer,      text: t("upgrade.benefit3"), sub: t("upgrade.benefit3sub") },
-    { icon: Award,      text: t("upgrade.benefit4"), sub: t("upgrade.benefit4sub") },
-  ], [t]);
+  const BENEFITS_EXPANDED = [
+    { icon: TrendingUp,   color: "#00ff88", label: "Análise de lucro real",         sub: "Veja o que sobra no bolso após todos os custos, não só o faturamento." },
+    { icon: MapPin,       color: "#60a5fa", label: "Lucro real por km rodado",       sub: "Descubra se cada quilômetro vale realmente a pena." },
+    { icon: Timer,        color: "#a78bfa", label: "Lucro real por hora trabalhada", sub: "Saiba quanto você ganha de verdade por hora — sem ilusões." },
+    { icon: Target,       color: "#fb923c", label: "Acompanhamento de meta diária",  sub: "Defina quanto quer ganhar e veja seu progresso em tempo real." },
+    { icon: BarChart2,    color: "#f472b6", label: "Comparação semanal e mensal",    sub: "Compare semanas e meses automaticamente. Evolua com dados." },
+    { icon: Award,        color: "#eab308", label: "Missões inteligentes e XP",      sub: "Gamificação que transforma hábito em evolução consistente." },
+    { icon: CalendarDays, color: "#34d399", label: "Projeção mensal de realidade",   sub: "Veja a tempo se o mês vai fechar bem — antes que seja tarde." },
+    { icon: Brain,        color: "#c084fc", label: "Decisões melhores todo dia",     sub: "Dados que transformam intuição em inteligência operacional." },
+  ];
 
-  // ── Trust badges ─────────────────────────────────────────────────────────────
   const TRUST = useMemo(() => [
     { icon: "🔒", label: t("upgrade.trust1"), sub: t("upgrade.trust1sub") },
     { icon: "🤝", label: t("upgrade.trust2"), sub: t("upgrade.trust2sub") },
     { icon: "⚡", label: t("upgrade.trust3"), sub: t("upgrade.trust3sub") },
   ], [t]);
 
-  // ── Unified checkout handler ──────────────────────────────────────────────
-  // Sends the currently-selected plan ("monthly" | "yearly") to the backend.
-  // Backend resolves the Stripe price ID from env vars per-request.
   const handleCheckout = async () => {
     if (!user) {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       return;
     }
-
-    // Dev-only bypass — skips Stripe and activates PRO instantly.
     if (DEV_SKIP_STRIPE_CHECKOUT) {
       setIsLoading(true);
       setError(null);
       try {
-        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, {
-          method: "POST",
-          credentials: "include",
-        });
+        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, { method: "POST", credentials: "include" });
         if (!r.ok) throw new Error("simulate failed");
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/?upgraded=1");
@@ -121,7 +108,6 @@ export default function Upgrade() {
 
     setIsLoading(true);
     setError(null);
-    console.log("[checkout] start — plan:", selected, "userId:", (user as any)?.id);
 
     const basePath   = import.meta.env.BASE_URL.replace(/\/$/, "");
     const origin     = window.location.origin;
@@ -135,34 +121,22 @@ export default function Upgrade() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: selected, successUrl, cancelUrl }),
       });
-
       if (res.status === 401) {
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/login");
         return;
       }
-
       const data = await res.json();
-      console.log("[checkout] response:", res.status, data?.code ?? "(ok)");
-
       if (!res.ok || !data.url) {
-        if (
-          data.code === "stripe_auth"    ||
-          data.code === "stripe_invalid" ||
-          data.code === "stripe_error"
-        ) {
+        if (["stripe_auth", "stripe_invalid", "stripe_error"].includes(data.code)) {
           navigate("/pix-auto");
           return;
         }
         setError("Não foi possível processar o pagamento. Tente via PIX abaixo.");
         return;
       }
-
-      console.log("[checkout] → redirecting to Stripe checkout for plan:", selected);
       window.location.href = data.url;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[checkout] fetch error:", msg);
       setError(t("upgrade.errorGeneral"));
     } finally {
       setIsLoading(false);
@@ -201,86 +175,202 @@ export default function Upgrade() {
     <motion.div
       variants={stagger} initial="hidden" animate="show"
       style={{
-        display: "flex", flexDirection: "column", gap: 0, paddingBottom: 40,
+        display: "flex", flexDirection: "column", gap: 0, paddingBottom: 60,
         width: "100%",
         maxWidth: isDesktop ? 720 : undefined,
         margin: isDesktop ? "0 auto" : undefined,
       }}
     >
 
-      {/* ── Back button ─────────────────────────────────────────────────────── */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+      {/* ── Back ─────────────────────────────────────────────────────────────── */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 24 }}>
         <button
           onClick={() => navigate("/")}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontFamily: "inherit", padding: 0, fontSize: 14, fontWeight: 600 }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)", fontFamily: "inherit", padding: 0, fontSize: 14, fontWeight: 600 }}
         >
           <ArrowLeft size={16} /> {t("upgrade.back")}
         </button>
       </motion.div>
 
-
-      {/* ══════════════════════════════════════════════════════════════
-          HERO HEADER
-      ══════════════════════════════════════════════════════════════ */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 28, position: "relative" }}>
-
-        {/* Expired alert */}
-        {showExpired && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
+      {/* ── Alerts ───────────────────────────────────────────────────────────── */}
+      {showExpired && (
+        <motion.div variants={fadeUp} style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px" }}>
             <AlertTriangle size={14} color="#f87171" />
             <span style={{ fontSize: 12, fontWeight: 700, color: "#f87171" }}>{t("upgrade.expiredAlert")}</span>
           </div>
-        )}
-
-        {/* Trial urgency */}
-        {trialActive && !showExpired && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.18)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
+        </motion.div>
+      )}
+      {trialActive && !showExpired && (
+        <motion.div variants={fadeUp} style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.18)", borderRadius: 12, padding: "10px 14px" }}>
             <Clock size={14} color="#eab308" />
             <span style={{ fontSize: 12, fontWeight: 600, color: "#eab308" }}>
-              {trialDaysLeft <= 1
-                ? t("upgrade.trialLastDay")
-                : t("upgrade.trialEndsIn", { days: trialDaysLeft })}
+              {trialDaysLeft <= 1 ? t("upgrade.trialLastDay") : t("upgrade.trialEndsIn", { days: trialDaysLeft })}
             </span>
           </div>
-        )}
+        </motion.div>
+      )}
 
-        {/* PRO badge */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.25)", borderRadius: 20, padding: "6px 14px" }}>
-            <motion.div
-              animate={{ opacity: [1, 0.4, 1] }}
-              transition={{ duration: 1.8, repeat: Infinity }}
-              style={{ width: 6, height: 6, borderRadius: "50%", background: "#eab308" }}
-            />
-            <span style={{ fontSize: 10, fontWeight: 800, color: "#eab308", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              ✦ Lucro Driver PRO
-            </span>
+      {/* ══════════════════════════════════════════════════════════════
+          HERO
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 32, position: "relative" }}>
+
+        {/* Ambient glow behind hero */}
+        <div style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)", width: 340, height: 200, background: "radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
+
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {/* PRO badge */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.28)", borderRadius: 20, padding: "6px 14px" }}>
+              <motion.div
+                animate={{ opacity: [1, 0.35, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+                style={{ width: 6, height: 6, borderRadius: "50%", background: "#eab308" }}
+              />
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#eab308", letterSpacing: "0.12em", textTransform: "uppercase" }}>✦ Lucro Driver PRO</span>
+            </div>
+          </div>
+
+          {/* Headline */}
+          <h1 style={{ fontSize: isDesktop ? 36 : 28, fontWeight: 900, lineHeight: 1.15, color: "#f9fafb", letterSpacing: "-0.03em", marginBottom: 14 }}>
+            {showExpired ? (
+              <span style={{ color: "#00ff88" }}>{t("upgrade.headlineExpired")}</span>
+            ) : (
+              <>
+                Dirija mais inteligente.<br />
+                <span style={{ color: "#00ff88" }}>Ganhe mais.</span>{" "}
+                Desperdice menos.
+              </>
+            )}
+          </h1>
+
+          {/* Sub */}
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, maxWidth: 500 }}>
+            {showExpired
+              ? t("upgrade.expiredSub")
+              : "Desbloqueie a inteligência completa por trás do seu lucro diário — e pare de trabalhar no escuro."
+            }
+          </p>
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          MAIN VALUE PROP CARD
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <div style={{
+          position: "relative", borderRadius: 22, overflow: "hidden",
+          background: "linear-gradient(135deg, #0d1a12 0%, #0a0f18 100%)",
+          border: "1px solid rgba(0,255,136,0.18)",
+          boxShadow: "0 0 60px rgba(0,255,136,0.06) inset, 0 16px 48px rgba(0,0,0,0.5)",
+          padding: "24px 20px",
+        }}>
+          <div style={{ position: "absolute", top: -30, right: -20, width: 220, height: 180, background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(0,255,136,0.5)", textTransform: "uppercase", marginBottom: 10 }}>
+              A diferença que faz tudo mudar
+            </p>
+            <p style={{ fontSize: isDesktop ? 19 : 17, fontWeight: 900, color: "#f9fafb", lineHeight: 1.3, letterSpacing: "-0.02em", marginBottom: 20 }}>
+              Com o PRO você para de adivinhar<br />
+              <span style={{ color: "#00ff88" }}>e começa a decidir.</span>
+            </p>
+
+            {/* Contrast row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { label: "Sem PRO", items: ["Fatura sem saber o lucro", "Horas perdidas invisíveis", "Custos que crescem sozinhos", "Decisões no feeling"], color: "rgba(239,68,68,0.6)", bg: "rgba(239,68,68,0.05)", border: "rgba(239,68,68,0.15)", prefix: "✗" },
+                { label: "Com PRO", items: ["Lucro real por corrida", "Melhor hora para rodar", "Custos sob controle", "Decisões com inteligência"], color: "#00ff88", bg: "rgba(0,255,136,0.05)", border: "rgba(0,255,136,0.15)", prefix: "✓" },
+              ].map((col) => (
+                <div key={col.label} style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 14, padding: "12px 14px" }}>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: col.color, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>{col.label}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {col.items.map((item) => (
+                      <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: col.color, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{col.prefix}</span>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", lineHeight: 1.35 }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </motion.div>
 
-        {/* Headline */}
-        <h1 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.2, color: "#f9fafb", letterSpacing: "-0.025em", marginBottom: 12 }}>
-          {showExpired
-            ? <><span style={{ color: "#00ff88" }}>{t("upgrade.headlineExpired")}</span></>
-            : t("upgrade.headline").split(". ").map((part, i, arr) => (
-                <span key={i}>
-                  {i === 1 ? <span style={{ color: "#00ff88" }}>{part}</span> : part}
-                  {i < arr.length - 1 ? ". " : ""}
-                </span>
-              ))
-          }
-        </h1>
-
-        {/* Sub */}
-        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.6 }}>
-          {showExpired ? t("upgrade.expiredSub") : t("upgrade.headlineSub")}
+      {/* ══════════════════════════════════════════════════════════════
+          BENEFITS — 8 items
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 12 }}>
+          Tudo que você desbloqueia
         </p>
+        <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 22, overflow: "hidden" }}>
+          {BENEFITS_EXPANDED.map(({ icon: Icon, color, label, sub }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + i * 0.055, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
+                borderBottom: i < BENEFITS_EXPANDED.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+              }}
+            >
+              <div style={{
+                width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+                background: `${color}12`, border: `1px solid ${color}22`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Icon size={17} color={color} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#f9fafb", marginBottom: 2 }}>{label}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", lineHeight: 1.4 }}>{sub}</p>
+              </div>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Check size={9} color="#00ff88" strokeWidth={3} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          EMOTIONAL PERSUASION
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { emoji: "💡", text: "A maioria dos motoristas olha para o faturamento. O PRO mostra o que realmente fica no bolso." },
+            { emoji: "⏱️", text: "Trabalhar mais não é sempre ganhar mais. Os dados mostram o caminho certo." },
+            { emoji: "📊", text: "A diferença entre um motorista ocupado e um motorista lucrativo são os dados." },
+          ].map((item) => (
+            <div
+              key={item.emoji}
+              style={{
+                display: "flex", alignItems: "flex-start", gap: 12,
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+                borderRadius: 14, padding: "14px 16px",
+              }}
+            >
+              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{item.emoji}</span>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.55, fontStyle: "italic" }}>
+                "{item.text}"
+              </p>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════════
           PLAN SELECTOR
       ══════════════════════════════════════════════════════════════ */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+      <motion.div variants={fadeUp} style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.22)", textTransform: "uppercase", marginBottom: 10 }}>
           {t("upgrade.choosePlan")}
         </p>
@@ -301,20 +391,16 @@ export default function Upgrade() {
                   fontFamily: "inherit",
                 }}
               >
-                {/* Best value badge */}
                 {plan.badge && (
                   <div style={{ position: "absolute", top: -9, right: 12, background: "linear-gradient(135deg,#eab308,#ca8a04)", color: "#000", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 999, letterSpacing: "0.04em" }}>
                     {plan.badge}
                   </div>
                 )}
-
-                {/* Active checkmark */}
                 {active && (
                   <div style={{ position: "absolute", top: 10, right: 10, width: 18, height: 18, borderRadius: "50%", background: "#00ff88", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Check size={10} color="#000" strokeWidth={3} />
                   </div>
                 )}
-
                 <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: active ? "rgba(0,255,136,0.7)" : "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 6 }}>
                   {plan.label}
                 </p>
@@ -336,43 +422,49 @@ export default function Upgrade() {
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
         <div style={{
-          position: "relative", borderRadius: 24, overflow: "hidden",
+          position: "relative", borderRadius: 22, overflow: "hidden",
           background: "#0e0e0e",
           border: "1px solid rgba(0,255,136,0.15)",
-          boxShadow: "0 0 0 1px rgba(0,255,136,0.05) inset, 0 12px 40px rgba(0,0,0,0.4)",
+          boxShadow: "0 0 0 1px rgba(0,255,136,0.04) inset, 0 12px 40px rgba(0,0,0,0.45)",
           padding: "22px 20px",
         }}>
-          {/* Glow */}
           <div style={{ position: "absolute", top: -40, right: -20, width: 200, height: 160, background: "radial-gradient(ellipse,rgba(0,255,136,0.12) 0%,transparent 70%)", pointerEvents: "none" }} />
-
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
               <div>
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 4 }}>{t("upgrade.youPay")}</p>
                 <AnimatePresence mode="wait">
                   <motion.p
                     key={selected}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.25 }}
-                    style={{ fontSize: 46, fontWeight: 900, color: "#00ff88", letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums", textShadow: "0 0 40px rgba(0,255,136,0.4)" }}
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.22 }}
+                    style={{ fontSize: 44, fontWeight: 900, color: "#00ff88", letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums", textShadow: "0 0 36px rgba(0,255,136,0.38)" }}
                   >
                     {activePlan.price}
-                    <span style={{ fontSize: 16, fontWeight: 600, color: "rgba(0,255,136,0.55)" }}>{activePlan.period}</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "rgba(0,255,136,0.5)" }}>{activePlan.period}</span>
                   </motion.p>
                 </AnimatePresence>
               </div>
               <div style={{ textAlign: "right" }}>
                 <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{t("upgrade.perDay")}</p>
-                <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>
-                  {perDayFmt}
+                <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums" }}>{perDayFmt}</p>
+              </div>
+            </div>
+
+            {/* Less than R$1/day framing */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.12)", borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
+              <span style={{ fontSize: 18 }}>💰</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.8)" }}>
+                  {isBRL ? "Menos de R$1 por dia" : "Less than $0.15 per day"}
+                </p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                  {isBRL ? "Menos que um café. Impacto de uma consultoria." : "Less than a coffee. Impact of real analytics."}
                 </p>
               </div>
             </div>
 
-            {/* Value anchor */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.12)", borderRadius: 12, padding: "10px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px" }}>
               <span style={{ fontSize: 16 }}>🚗</span>
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{t("upgrade.anchor")}</p>
@@ -384,55 +476,32 @@ export default function Upgrade() {
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════════
-          BENEFITS
-      ══════════════════════════════════════════════════════════════ */}
-      <motion.div variants={fadeUp} style={{ marginBottom: 24 }}>
-        <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 22, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.04) inset" }}>
-          {BENEFITS.map(({ icon: Icon, text, sub }, i) => (
-            <motion.div
-              key={text}
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 + i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", borderBottom: i < BENEFITS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 13, flexShrink: 0, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.14)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon size={18} color="#00ff88" strokeWidth={2} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#f9fafb", marginBottom: 2 }}>{text}</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>{sub}</p>
-              </div>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Check size={10} color="#00ff88" strokeWidth={3} />
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          CTA BLOCK — error · primary button · PIX
+          CTA BLOCK
       ══════════════════════════════════════════════════════════════ */}
       <motion.div
         variants={fadeUp}
         style={{
-          marginBottom: 28,
+          marginBottom: 24,
           maxWidth: isDesktop ? 680 : undefined,
           marginLeft: isDesktop ? "auto" : undefined,
           marginRight: isDesktop ? "auto" : undefined,
           width: "100%",
         }}
       >
-        {/* Card shell */}
         <div style={{
-          background: "rgba(255,255,255,0.03)",
+          background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.08)",
           borderRadius: 28,
           padding: isDesktop ? "28px 28px 22px" : "22px 18px 18px",
         }}>
 
-          {/* Error — injected above button only after a real failure */}
+          {/* CTA intro copy */}
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.55)", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
+            Comece hoje a usar inteligência de lucro real —<br />
+            <span style={{ color: "rgba(255,255,255,0.75)" }}>a única ferramenta feita para o motorista brasileiro.</span>
+          </p>
+
+          {/* Error */}
           <AnimatePresence>
             {error && (
               <motion.div
@@ -443,166 +512,131 @@ export default function Upgrade() {
                 transition={{ duration: 0.2 }}
                 style={{ overflow: "hidden" }}
               >
-                <div style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 12, padding: "11px 14px",
-                  fontSize: 13, color: "#f87171", textAlign: "center", lineHeight: 1.5,
-                }}>
+                <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "11px 14px", fontSize: 13, color: "#f87171", textAlign: "center", lineHeight: 1.5 }}>
                   {error}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ── Primary button — sends selected plan to /api/create-checkout */}
+          {/* Primary CTA */}
           <motion.button
             whileTap={{ scale: 0.985 }}
             onClick={handleCheckout}
             disabled={isLoading}
             style={{
-              display: "block",
-              width: "100%",
-              height: 66,
-              borderRadius: 18,
-              border: "none",
-              background: isLoading
-                ? "rgba(0,255,136,0.4)"
-                : "linear-gradient(135deg,#00ff88 0%,#00d974 100%)",
-              color: "#000",
-              fontWeight: 900,
-              fontSize: 18,
-              letterSpacing: "-0.01em",
+              display: "block", width: "100%", height: 68,
+              borderRadius: 18, border: "none",
+              background: isLoading ? "rgba(0,255,136,0.4)" : "linear-gradient(135deg,#00ff88 0%,#00d974 100%)",
+              color: "#000", fontWeight: 900, fontSize: 18, letterSpacing: "-0.01em",
               cursor: isLoading ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              position: "relative",
-              overflow: "hidden",
-              boxShadow: isLoading
-                ? "none"
-                : "0 10px 36px rgba(0,255,136,0.4), 0 2px 10px rgba(0,0,0,0.4)",
+              fontFamily: "inherit", position: "relative", overflow: "hidden",
+              boxShadow: isLoading ? "none" : "0 10px 36px rgba(0,255,136,0.42), 0 2px 10px rgba(0,0,0,0.4)",
               transition: "opacity 0.2s, box-shadow 0.2s",
             }}
           >
-            {/* Shine sweep */}
             {!isLoading && (
               <motion.span
                 aria-hidden
                 animate={{ x: ["-110%", "210%"] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 2.2 }}
-                style={{
-                  position: "absolute", inset: 0, width: "38%",
-                  background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)",
-                  pointerEvents: "none",
-                }}
+                style={{ position: "absolute", inset: 0, width: "38%", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)", pointerEvents: "none" }}
               />
             )}
-
             {isLoading ? (
               <span style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <motion.span
                   animate={{ rotate: 360 }}
                   transition={{ duration: 0.75, repeat: Infinity, ease: "linear" }}
-                  style={{
-                    display: "block", width: 22, height: 22, borderRadius: "50%",
-                    border: "2.5px solid rgba(0,0,0,0.18)", borderTopColor: "#000",
-                  }}
+                  style={{ display: "block", width: 22, height: 22, borderRadius: "50%", border: "2.5px solid rgba(0,0,0,0.18)", borderTopColor: "#000" }}
                 />
               </span>
             ) : (
-              <span style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                gap: 10, position: "relative",
-              }}>
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, position: "relative" }}>
                 <Zap size={20} strokeWidth={2.5} style={{ flexShrink: 0 }} />
-                {t("upgrade.cta")}
+                Desbloquear PRO agora
                 <ChevronRight size={20} strokeWidth={2.5} style={{ flexShrink: 0 }} />
               </span>
             )}
           </motion.button>
 
-          {/* Reassurance row */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexWrap: "wrap", gap: "6px 14px",
-            marginTop: 14,
-          }}>
+          {/* Reassurance */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: "6px 14px", marginTop: 14 }}>
             {["✓ 7 dias grátis", "✓ Sem cobrança agora", "✓ Cancele quando quiser"].map((txt) => (
-              <span key={txt} style={{ fontSize: 11.5, color: "rgba(255,255,255,0.38)", whiteSpace: "nowrap" }}>
-                {txt}
-              </span>
+              <span key={txt} style={{ fontSize: 11.5, color: "rgba(255,255,255,0.38)", whiteSpace: "nowrap" }}>{txt}</span>
             ))}
           </div>
 
-          {/* ── PIX — secondary (BRL only) ─────────────────────────────── */}
+          {/* PIX */}
           {isBRL && (
             <>
-              {/* Divider */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 16px" }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-                  color: "rgba(255,255,255,0.25)", textTransform: "uppercase",
-                }}>ou</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>ou</span>
                 <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
               </div>
-
-              {/* PIX link — text-level, not a competing CTA */}
               <button
                 onClick={() => navigate("/pix-auto")}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                  width: "100%", background: "none", border: "none", padding: "4px 0",
-                  color: "rgba(255,255,255,0.5)", fontSize: 13.5, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", background: "none", border: "none", padding: "4px 0", color: "rgba(255,255,255,0.5)", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
               >
                 <span style={{ fontSize: 15 }}>📲</span>
                 {t("upgrade.ctaPix")}
               </button>
             </>
           )}
-
-        </div>{/* /card shell */}
+        </div>
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════════
-          TRUST BADGES — supporting, not competing
+          AUTHORITY / SOCIAL PROOF
+      ══════════════════════════════════════════════════════════════ */}
+      <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
+        <div style={{
+          borderRadius: 20,
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+          padding: "20px 18px",
+        }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 16 }}>Por que o PRO existe</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { icon: "🎯", headline: "Feito para motoristas que querem controle real", body: "Não é para quem quer ver só números — é para quem quer transformar dados em decisões." },
+              { icon: "📱", headline: "Criado para o dia a dia do motorista brasileiro", body: "Uber, 99, iFood — cada corrida registrada vira inteligência estratégica no seu bolso." },
+              { icon: "📈", headline: "Cada dia registrado tem mais valor", body: "Quanto mais histórico, mais precisa a análise. O PRO cresce com você." },
+            ].map((item) => (
+              <div key={item.headline} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                  {item.icon}
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 3 }}>{item.headline}</p>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>{item.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          TRUST BADGES
       ══════════════════════════════════════════════════════════════ */}
       <motion.div variants={fadeUp}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 10,
-          alignItems: "stretch",
-          marginBottom: 16,
-        }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
           {TRUST.map(({ icon, label, sub }) => (
             <div
               key={label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: 16,
-                padding: "14px 8px 12px",
-                textAlign: "center",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
-              }}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 8px 12px", textAlign: "center" }}
             >
-              <p style={{ fontSize: 21, marginBottom: 8, lineHeight: 1 }}>{icon}</p>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", lineHeight: 1.35, marginBottom: 4 }}>{label}</p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.42)", lineHeight: 1.4 }}>{sub}</p>
+              <p style={{ fontSize: 20, marginBottom: 8, lineHeight: 1 }}>{icon}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.8)", lineHeight: 1.35, marginBottom: 4 }}>{label}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", lineHeight: 1.4 }}>{sub}</p>
             </div>
           ))}
         </div>
-
-        {/* Security line */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0 4px" }}>
-          <Shield size={12} color="rgba(255,255,255,0.32)" />
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textAlign: "center" }}>
+          <Shield size={12} color="rgba(255,255,255,0.28)" />
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>
             {t("upgrade.security")}
           </p>
         </div>
