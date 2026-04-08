@@ -300,6 +300,37 @@ export default function Home() {
     }
   }
 
+  // ── Loss awareness — realistic missed-profit estimate (free users only) ────
+  const lossEstimate: { amount: number; reason: string } | null = (() => {
+    if (!isFree || isLoading || totalEarnings <= 0) return null;
+
+    const rptToday = summary?.earningsPerTripToday ?? null;
+    const rptAll   = summary?.earningsPerTripAll   ?? null;
+    const hours    = summary?.hoursToday           ?? null;
+    const rphAll   = summary?.earningsPerHourAll   ?? null;
+
+    // 1) Per-trip gap: today < all-time average
+    if (trips > 0 && rptToday != null && rptAll != null && rptAll > rptToday) {
+      const gap = Math.round((rptAll - rptToday) * trips);
+      if (gap >= 5) return { amount: gap, reason: "corridas abaixo da sua média histórica" };
+    }
+
+    // 2) Per-hour gap: today's hourly rate below all-time baseline
+    if (hours != null && hours > 0 && rph != null && rphAll != null && rphAll > rph) {
+      const gap = Math.round((rphAll - rph) * hours);
+      if (gap >= 5) return { amount: gap, reason: "eficiência por hora abaixo do seu potencial" };
+    }
+
+    // 3) Margin gap: current margin vs realistic 35% target
+    const TARGET_MARGIN = 35;
+    if (marginPct > 0 && marginPct < TARGET_MARGIN) {
+      const gap = Math.round(totalEarnings * (TARGET_MARGIN - marginPct) / 100);
+      if (gap >= 5) return { amount: gap, reason: "custo-benefício abaixo do potencial do dia" };
+    }
+
+    return null;
+  })();
+
   // ── Profit color ───────────────────────────────────────────────────────────
   const pColor = profitPos ? "#00ff88" : "#ef4444";
 
@@ -1174,6 +1205,88 @@ export default function Home() {
       <motion.div variants={item}>
         <ShockRealityPanel data={gData.shockOfReality} />
       </motion.div>
+
+      {/* ── Loss awareness (free users with real data only) ──────────────────── */}
+      {lossEstimate && (
+        <motion.div
+          variants={item}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Link href="/upgrade">
+            <motion.div
+              whileTap={{ scale: 0.985 }}
+              style={{
+                position: "relative", borderRadius: 20, overflow: "hidden",
+                background: "#0e0808",
+                border: "1px solid rgba(251,146,60,0.22)",
+                cursor: "pointer",
+              }}
+            >
+              {/* Ambient warm glow */}
+              <div style={{ position: "absolute", top: -40, right: -30, width: 180, height: 160, background: "radial-gradient(ellipse, rgba(239,68,68,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", bottom: -30, left: -20, width: 140, height: 120, background: "radial-gradient(ellipse, rgba(251,146,60,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+              <div style={{ position: "relative", zIndex: 1, padding: "18px 16px" }}>
+
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 9,
+                      background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 15, flexShrink: 0,
+                    }}>
+                      ⚠️
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#fca5a5", letterSpacing: "0.02em" }}>
+                        Você pode ter deixado dinheiro na mesa hoje
+                      </p>
+                    </div>
+                  </div>
+                  {/* Missed amount chip */}
+                  <div style={{
+                    background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.22)",
+                    borderRadius: 10, padding: "4px 10px", flexShrink: 0, marginLeft: 8,
+                  }}>
+                    <p style={{ fontSize: 14, fontWeight: 900, color: "#f87171", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                      -{formatBRL(lossEstimate.amount)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dynamic insight */}
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.55, marginBottom: 10 }}>
+                  Com base nos seus dados de hoje, você poderia ter ganhado{" "}
+                  <span style={{ color: "#fb923c", fontWeight: 700 }}>+{formatBRL(lossEstimate.amount)} a mais</span>{" "}
+                  corrigindo {lossEstimate.reason}.
+                </p>
+
+                {/* Sub */}
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", lineHeight: 1.45, marginBottom: 14 }}>
+                  A maioria dos motoristas não vê isso. O PRO mostra com clareza.
+                </p>
+
+                {/* CTA row */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "rgba(251,146,60,0.07)", border: "1px solid rgba(251,146,60,0.15)",
+                  borderRadius: 12, padding: "10px 14px",
+                }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c" }}>Ver como melhorar</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fb923c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </div>
+
+              </div>
+            </motion.div>
+          </Link>
+        </motion.div>
+      )}
 
       {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
       <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
