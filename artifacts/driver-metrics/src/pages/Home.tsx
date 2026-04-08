@@ -164,6 +164,10 @@ export default function Home() {
     }
   }, []);
 
+  // ── Success moment popup ─────────────────────────────────────────────────
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const successPopupFired = useRef(false);
+
   // DEV_BYPASS: dashboard queries gated by DEV_DISABLE_DASHBOARD_PRELOAD
   const { data: summary, isLoading } = useGetDashboardSummary(
     DEV_DISABLE_DASHBOARD_PRELOAD ? { query: { enabled: false } } : undefined
@@ -394,6 +398,28 @@ export default function Home() {
     history:              historyRaw ?? [],
   }) : null;
 
+  // ── Success popup trigger: once per day, only free users at peak moments ──
+  useEffect(() => {
+    if (successPopupFired.current) return;
+    if (isLoading || !user || !isFree) return;
+    if (totalEarnings <= 0) return;
+
+    const isSuccessDay = marginPct >= 40 || goalPct >= 100 || profit >= 150;
+    if (!isSuccessDay) return;
+
+    const TODAY = new Date().toISOString().split("T")[0];
+    const lastShown = localStorage.getItem("lucro_success_popup_date");
+    if (lastShown === TODAY) return;
+
+    successPopupFired.current = true;
+    const timer = setTimeout(() => {
+      localStorage.setItem("lucro_success_popup_date", TODAY);
+      setShowSuccessPopup(true);
+    }, 2200);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, totalEarnings, marginPct, goalPct, profit, isFree, user]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   const isDesktop = useIsDesktop();
 
@@ -402,6 +428,153 @@ export default function Home() {
       variants={container} initial="hidden" animate="show"
       style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 20 : 16, paddingBottom: isDesktop ? 40 : 112 }}
     >
+
+      {/* ── Success moment popup ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showSuccessPopup && (
+          <motion.div
+            key="success-popup"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 200,
+              background: "rgba(0,0,0,0.72)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+              padding: "0 16px 24px",
+            }}
+            onClick={() => setShowSuccessPopup(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 60, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.96 }}
+              transition={{ type: "spring", damping: 24, stiffness: 280, delay: 0.06 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 440,
+                position: "relative", borderRadius: 26, overflow: "hidden",
+                background: "#0a0f0c",
+                border: "1px solid rgba(0,255,136,0.2)",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,255,136,0.06) inset",
+              }}
+            >
+              {/* Glows */}
+              <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 280, height: 200, background: "radial-gradient(ellipse, rgba(0,255,136,0.14) 0%, transparent 70%)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", bottom: -40, right: -20, width: 180, height: 160, background: "radial-gradient(ellipse, rgba(234,179,8,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+              {/* Close button */}
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                style={{
+                  position: "absolute", top: 14, right: 14, zIndex: 2,
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "50%", width: 28, height: 28,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", color: "rgba(255,255,255,0.5)",
+                }}
+              >
+                <X size={13} strokeWidth={2.5} />
+              </button>
+
+              <div style={{ position: "relative", zIndex: 1, padding: "28px 22px 22px" }}>
+
+                {/* Fire badge */}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+                  <motion.div
+                    animate={{ scale: [1, 1.12, 1] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                    style={{
+                      width: 64, height: 64, borderRadius: 20,
+                      background: "linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,200,100,0.08))",
+                      border: "1px solid rgba(0,255,136,0.25)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 30,
+                    }}
+                  >
+                    🔥
+                  </motion.div>
+                </div>
+
+                {/* Headline */}
+                <p style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", textAlign: "center", letterSpacing: "-0.025em", lineHeight: 1.2, marginBottom: 10 }}>
+                  {goalPct >= 100
+                    ? "Você bateu sua meta hoje! 🎯"
+                    : marginPct >= 50
+                    ? "Que margem incrível hoje! 💪"
+                    : "Você teve um ótimo dia! 🔥"}
+                </p>
+
+                {/* Message */}
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", textAlign: "center", lineHeight: 1.6, marginBottom: 20 }}>
+                  Imagine fazer isso{" "}
+                  <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 700 }}>todos os dias de forma consistente...</span>
+                </p>
+
+                {/* Value proposition */}
+                <div style={{
+                  background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.12)",
+                  borderRadius: 14, padding: "14px 16px", marginBottom: 20,
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>📊</span>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#f9fafb", marginBottom: 4, lineHeight: 1.35 }}>
+                        O PRO ajuda você a repetir e escalar esses resultados
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
+                        {[
+                          "Identifica os horários que geram mais lucro",
+                          "Compara semanas automaticamente",
+                          "Mostra onde você está perdendo dinheiro",
+                        ].map((line) => (
+                          <div key={line} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                            <Check size={11} color="#00ff88" strokeWidth={3} style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary CTA */}
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setShowSuccessPopup(false); navigate("/upgrade"); }}
+                  style={{
+                    width: "100%", height: 54, borderRadius: 16, border: "none",
+                    background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
+                    color: "#000", fontWeight: 900, fontSize: 16, letterSpacing: "-0.01em",
+                    cursor: "pointer", fontFamily: "inherit", marginBottom: 12,
+                    boxShadow: "0 8px 28px rgba(0,255,136,0.38)",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  <Zap size={17} strokeWidth={2.5} />
+                  Desbloquear PRO agora
+                </motion.button>
+
+                {/* Secondary dismiss */}
+                <button
+                  onClick={() => setShowSuccessPopup(false)}
+                  style={{
+                    width: "100%", background: "none", border: "none",
+                    padding: "8px 0", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 12, color: "rgba(255,255,255,0.3)", textAlign: "center",
+                  }}
+                >
+                  Continuar melhorando meu lucro diariamente
+                </button>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Upgrade success banner ───────────────────────────────────────── */}
       <AnimatePresence>
