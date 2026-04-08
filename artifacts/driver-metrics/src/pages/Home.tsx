@@ -11,6 +11,10 @@ import { SmartInsightCard, type InsightStatus } from "@/components/SmartInsightC
 import { DailyAnalysisCard, DailyAnalysisEmpty } from "@/components/DailyAnalysisCard";
 import { analyzDay, type HistoryEntry } from "@/lib/dailyAnalysis";
 import { useIsDesktop } from "@/lib/useBreakpoint";
+import { GamificationBar, type GamificationData } from "@/components/GamificationBar";
+import { MissionsPanel } from "@/components/MissionsPanel";
+import { WeeklyChartPanel } from "@/components/WeeklyChartPanel";
+import { ShockRealityPanel } from "@/components/ShockRealityPanel";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -161,6 +165,20 @@ export default function Home() {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Gamification data — streak, level, missions, alerts, weekly chart, shock of reality
+  const { data: gamification } = useQuery<GamificationData | null>({
+    queryKey: ["gamification"],
+    enabled: !DEV_DISABLE_DASHBOARD_PRELOAD,
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/gamification`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 3 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
   const { t } = useT();
 
   const isFree  = user?.plan !== "pro";
@@ -369,6 +387,13 @@ export default function Home() {
           </Link>
         )}
       </motion.div>
+
+      {/* ── Gamification bar — streak + level + XP + emotional status + alerts ── */}
+      {gamification && (
+        <motion.div variants={item}>
+          <GamificationBar data={gamification} />
+        </motion.div>
+      )}
 
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1058,6 +1083,27 @@ export default function Home() {
         </motion.div>
       )}
 
+
+      {/* ── Missions panel ──────────────────────────────────────────────────── */}
+      {gamification?.missions && (
+        <motion.div variants={item}>
+          <MissionsPanel missions={gamification.missions} />
+        </motion.div>
+      )}
+
+      {/* ── Weekly chart ────────────────────────────────────────────────────── */}
+      {gamification?.weeklyComparison && (
+        <motion.div variants={item}>
+          <WeeklyChartPanel data={gamification.weeklyComparison} />
+        </motion.div>
+      )}
+
+      {/* ── Shock of reality ────────────────────────────────────────────────── */}
+      {gamification?.shockOfReality && (
+        <motion.div variants={item}>
+          <ShockRealityPanel data={gamification.shockOfReality} />
+        </motion.div>
+      )}
 
       {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
       <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" } : { display: "contents" }}>

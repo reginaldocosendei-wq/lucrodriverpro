@@ -20,6 +20,7 @@ import adminActivateProRouter from "./adminActivatePro";
 import preferencesRouter from "./preferences";
 import extraEarningsRouter from "./extraEarnings";
 import createCheckoutRouter from "./createCheckout";
+import gamificationRouter from "./gamification";
 
 const router: IRouter = Router();
 
@@ -44,6 +45,7 @@ router.use("/admin/activate-pro", adminActivateProRouter);
 router.use("/preferences", preferencesRouter);
 router.use("/extra-earnings", extraEarningsRouter);
 router.use("/create-checkout", createCheckoutRouter);
+router.use("/gamification", gamificationRouter);
 
 // Dev-only utilities — the router itself refuses all requests in production
 router.use("/dev", devAdminRouter);
