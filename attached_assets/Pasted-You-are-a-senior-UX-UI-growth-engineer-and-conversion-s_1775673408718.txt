@@ -1,0 +1,148 @@
+You are a senior UX/UI growth engineer and conversion specialist.
+
+Your mission is to transform this app into a HIGH-CONVERSION PRODUCT focused on emotional impact, urgency, and user retention.
+
+DO NOT change the core functionality.
+ONLY improve UI, UX, copywriting, and conversion triggers.
+
+---
+
+🔥 GOAL:
+Turn this app into something that makes users feel:
+
+"I am losing money if I don't use this."
+
+---
+
+🎯 STEP 1: HERO IMPACT (HOME SCREEN)
+
+Replace the current welcome message with a strong emotional hook:
+
+Instead of:
+"Você está construindo um histórico vencedor"
+
+Use:
+
+"How much money did you REALLY keep today?"
+
+Add subtext:
+"Most drivers lose up to 30% without realizing it."
+
+---
+
+🎯 STEP 2: LOSS VISUALIZATION
+
+Create a new card at the top of dashboard:
+
+Title:
+"Hidden Loss Today"
+
+Example:
+"Without tracking, you could have lost R$182 today."
+
+Style:
+- Red gradient
+- Slight glow
+- Warning icon ⚠️
+
+---
+
+🎯 STEP 3: PROFIT CONTRAST
+
+Right below, show:
+
+"With Lucro Driver"
+"Your real profit: R$514"
+
+Make it:
+- Bright green
+- Bigger than any other number
+- Pulsing animation (subtle)
+
+---
+
+🎯 STEP 4: CONVERSION TRIGGER (PRO)
+
+When user scrolls or views profit:
+
+Show a locked section:
+
+Title:
+"Unlock Advanced Profit Insights 🔓"
+
+Subtext:
+"See where you're losing money and how to increase your profit by up to 27%"
+
+Button:
+"Stop losing money now"
+
+Style:
+- Premium gold/green
+- Slight animation
+
+---
+
+🎯 STEP 5: SOCIAL PROOF
+
+Add small text under dashboard:
+
+"+3,000 drivers are already increasing their profits"
+
+---
+
+🎯 STEP 6: GAMIFICATION BOOST
+
+Enhance current XP system:
+
+Add message:
+
+"You're ahead of 78% of drivers today"
+
+---
+
+🎯 STEP 7: FLOATING CTA BUTTON
+
+Change floating camera button to:
+
+Icon + label:
+"Analyze my day"
+
+When clicked:
+Trigger action + subtle vibration feedback
+
+---
+
+🎯 STEP 8: MICRO-INTERACTIONS
+
+Add:
+
+- Smooth transitions
+- Soft glow on profit numbers
+- Progress bar animation when loading data
+
+---
+
+🎯 STEP 9: LANGUAGE
+
+Keep UI in Portuguese
+But keep tone more impactful and direct.
+
+---
+
+🎯 STEP 10: FINAL TOUCH
+
+Make everything feel:
+
+- Premium
+- Financial
+- Powerful
+- Add subtle shadows and gradients
+
+---
+
+IMPORTANT:
+Do not break existing logic.
+Only improve visuals, texts, and user emotional experience.
+
+This app should feel like:
+A tool that reveals hidden money and increases income.

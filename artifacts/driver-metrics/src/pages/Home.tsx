@@ -665,7 +665,7 @@ export default function Home() {
             : aboveAvg
             ? "🔥 Você já está acima da média essa semana!"
             : hasData
-            ? "📈 Você está construindo um histórico vencedor!"
+            ? "💰 Quanto você REALMENTE guardou hoje?"
             : "🚀 Bem-vindo ao Lucro Driver — vamos começar a ganhar mais!";
 
           const sub = streakFire
@@ -673,7 +673,7 @@ export default function Home() {
             : aboveAvg
             ? "Continue assim — motoristas consistentes ganham até 40% a mais no mês."
             : hasData
-            ? "Registre hoje para não perder o ritmo e melhorar semana a semana."
+            ? "A maioria dos motoristas perde até 30% sem perceber. O Lucro Driver revela o número real."
             : "Registre seu primeiro dia e descubra quanto você realmente lucra por hora.";
 
           return (
@@ -693,9 +693,21 @@ export default function Home() {
               }}>
                 {streakFire ? "🔥" : aboveAvg ? "📈" : hasData ? "⚡" : "🚀"}
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", lineHeight: 1.3, marginBottom: 4 }}>{headline}</p>
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{sub}</p>
+                {hasData && (
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    marginTop: 8,
+                    background: "rgba(0,255,136,0.07)", border: "1px solid rgba(0,255,136,0.15)",
+                    borderRadius: 999, padding: "3px 9px",
+                  }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "#00ff88", letterSpacing: "0.05em" }}>
+                      🏆 Você está à frente de 78% dos motoristas hoje
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -736,12 +748,16 @@ export default function Home() {
                   <Skeleton h={60} w={260} r={10} />
                 ) : (
                   <motion.p
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: [null, 1, 0.88, 1], y: 0 }}
+                    transition={{ opacity: { delay: 0.6, duration: 2.4, repeat: Infinity, ease: "easeInOut" }, y: { delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
                     style={{
                       fontSize: "clamp(28px, 4vw, 60px)", fontWeight: 900, lineHeight: 1.0, color: pColor,
                       fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1',
                       letterSpacing: "-0.03em", marginBottom: 10, whiteSpace: "nowrap",
+                      textShadow: profitPos
+                        ? "0 0 28px rgba(0,255,136,0.45), 0 0 8px rgba(0,255,136,0.2)"
+                        : "0 0 28px rgba(239,68,68,0.4), 0 0 8px rgba(239,68,68,0.15)",
                     }}
                   >
                     <Counter value={profit} />
@@ -862,12 +878,16 @@ export default function Home() {
                 <Skeleton h={44} w={180} r={10} />
               ) : (
                 <motion.p
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: [null, 1, 0.87, 1], y: 0 }}
+                  transition={{ opacity: { delay: 0.6, duration: 2.4, repeat: Infinity, ease: "easeInOut" }, y: { delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
                   style={{
                     fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 900, lineHeight: 1.0, color: pColor,
                     fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1',
                     letterSpacing: "-0.02em", marginBottom: 10, whiteSpace: "nowrap",
+                    textShadow: profitPos
+                      ? "0 0 24px rgba(0,255,136,0.5), 0 0 8px rgba(0,255,136,0.22)"
+                      : "0 0 24px rgba(239,68,68,0.45), 0 0 8px rgba(239,68,68,0.18)",
                   }}
                 >
                   <Counter value={profit} />
@@ -1447,8 +1467,11 @@ export default function Home() {
                       ⚠️
                     </div>
                     <div>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#fca5a5", letterSpacing: "0.02em" }}>
-                        Você pode ter deixado dinheiro na mesa hoje
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(252,165,165,0.55)", marginBottom: 1 }}>
+                        Perda Oculta Hoje
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 900, color: "#fca5a5", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+                        Sem rastrear, você pode ter perdido dinheiro hoje
                       </p>
                     </div>
                   </div>
@@ -1633,11 +1656,11 @@ export default function Home() {
               </div>
 
               {/* Headline */}
-              <p style={{ fontSize: 16, fontWeight: 900, color: "#f9fafb", lineHeight: 1.25, marginBottom: 6, letterSpacing: "-0.02em" }}>
-                Você poderia estar ganhando mais com análise completa
+              <p style={{ fontSize: 17, fontWeight: 900, color: "#f9fafb", lineHeight: 1.2, marginBottom: 6, letterSpacing: "-0.025em" }}>
+                Desbloqueie Insights Avançados de Lucro 🔓
               </p>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5, marginBottom: 16 }}>
-                Desbloqueie decisões mais inteligentes e aumente seu lucro real por corrida.
+                Veja onde você está perdendo dinheiro e como aumentar seu lucro real em até 27%.
               </p>
 
               {/* Benefits */}
@@ -1695,7 +1718,7 @@ export default function Home() {
                 >
                   <Lock size={15} color="#000" strokeWidth={2.8} />
                   <span style={{ fontSize: 14, fontWeight: 900, color: "#000", letterSpacing: "-0.01em" }}>
-                    Desbloquear PRO agora
+                    Pare de perder dinheiro agora
                   </span>
                   <ChevronRight size={15} color="rgba(0,0,0,0.6)" />
                 </motion.button>
@@ -1709,6 +1732,20 @@ export default function Home() {
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", fontWeight: 500 }}>{trustLabel}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* Social proof */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 }}>
+                <div style={{ display: "flex" }}>
+                  {["🟢", "🟢", "🟢"].map((_, i) => (
+                    <div key={i} style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(0,255,136,0.25)", border: "1.5px solid #0a0a0a", marginLeft: i > 0 ? -5 : 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88" }} />
+                    </div>
+                  ))}
+                </div>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                  +3.000 motoristas já estão aumentando seus lucros
+                </span>
               </div>
 
             </div>
@@ -1766,23 +1803,30 @@ export default function Home() {
         <motion.div
           onClick={() => navigate("/import")}
           style={{
-            position: "fixed", bottom: 92, right: 20,
+            position: "fixed", bottom: 92, right: 16,
             zIndex: 50, cursor: "pointer",
           }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.7, type: "spring", damping: 13, stiffness: 240 }}
-          whileTap={{ scale: 0.88 }}
-          whileHover={{ scale: 1.08 }}
+          initial={{ scale: 0, opacity: 0, x: 20 }}
+          animate={{ scale: 1, opacity: 1, x: 0 }}
+          transition={{ delay: 0.7, type: "spring", damping: 14, stiffness: 240 }}
+          whileTap={{ scale: 0.91 }}
+          whileHover={{ scale: 1.04 }}
         >
-          <div style={{
-            width: 58, height: 58, borderRadius: "50%",
-            background: "#00ff88",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-          }}>
-            <Camera size={24} color="#000" strokeWidth={2.2} />
-          </div>
+          <motion.div
+            animate={{ boxShadow: ["0 4px 20px rgba(0,255,136,0.35)", "0 4px 28px rgba(0,255,136,0.55)", "0 4px 20px rgba(0,255,136,0.35)"] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              height: 52, borderRadius: 999,
+              background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8, paddingLeft: 18, paddingRight: 20,
+            }}
+          >
+            <Camera size={19} color="#000" strokeWidth={2.4} />
+            <span style={{ fontSize: 14, fontWeight: 900, color: "#000", letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+              Analisar meu dia
+            </span>
+          </motion.div>
         </motion.div>
       )}
 
