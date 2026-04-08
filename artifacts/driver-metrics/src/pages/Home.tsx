@@ -26,10 +26,12 @@ function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) 
     return () => c.stop();
   }, [value]);
   return (
-    <>{new Intl.NumberFormat("pt-BR", {
-      style: "currency", currency: "BRL",
-      minimumFractionDigits: decimals, maximumFractionDigits: decimals,
-    }).format(display)}</>
+    <span translate="no" style={{ fontVariantNumeric: "tabular-nums" }}>
+      {new Intl.NumberFormat("pt-BR", {
+        style: "currency", currency: "BRL",
+        minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+      }).format(display)}
+    </span>
   );
 }
 
@@ -75,7 +77,7 @@ function SummaryRow({
             </span>
           )}
         </div>
-        <span style={{ fontSize: 14, fontWeight: 800, color: valueColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
+        <span translate="no" style={{ fontSize: 14, fontWeight: 800, color: valueColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
           {prefix && <span style={{ opacity: 0.65, marginRight: 1 }}>{prefix} </span>}
           {value}
         </span>
@@ -1179,7 +1181,7 @@ function MetricTile({
       </div>
 
       {/* Value */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2, minWidth: 0, maxWidth: "100%" }}>
+      <div translate="no" style={{ display: "flex", alignItems: "baseline", gap: 2, minWidth: 0, maxWidth: "100%" }}>
         {loading
           ? <Skeleton h={30} w={60} r={8} />
           : value
