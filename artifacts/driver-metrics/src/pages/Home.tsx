@@ -417,6 +417,55 @@ export default function Home() {
         )}
       </motion.div>
 
+      {/* ── Momentum message ─────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        {(() => {
+          const hasData = totalEarnings > 0;
+          const aboveAvg = hasData && gData.weeklyComparison.thisWeekEarnings > gData.weeklyComparison.lastWeekEarnings;
+          const streakFire = gData.streak.current >= 3;
+
+          const headline = streakFire
+            ? `🔥 ${gData.streak.current} dias seguidos — você está em chamas!`
+            : aboveAvg
+            ? "🔥 Você já está acima da média essa semana!"
+            : hasData
+            ? "📈 Você está construindo um histórico vencedor!"
+            : "🚀 Bem-vindo ao Lucro Driver — vamos começar a ganhar mais!";
+
+          const sub = streakFire
+            ? "Cada dia registrado é um passo à frente dos motoristas que operam no escuro."
+            : aboveAvg
+            ? "Continue assim — motoristas consistentes ganham até 40% a mais no mês."
+            : hasData
+            ? "Registre hoje para não perder o ritmo e melhorar semana a semana."
+            : "Registre seu primeiro dia e descubra quanto você realmente lucra por hora.";
+
+          return (
+            <div style={{
+              borderRadius: 18,
+              background: "linear-gradient(135deg, rgba(0,255,136,0.07) 0%, rgba(96,165,250,0.05) 100%)",
+              border: "1px solid rgba(0,255,136,0.12)",
+              padding: "14px 16px",
+              display: "flex", alignItems: "flex-start", gap: 12,
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 11,
+                background: "rgba(0,255,136,0.1)",
+                border: "1px solid rgba(0,255,136,0.18)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, fontSize: 17,
+              }}>
+                {streakFire ? "🔥" : aboveAvg ? "📈" : hasData ? "⚡" : "🚀"}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", lineHeight: 1.3, marginBottom: 4 }}>{headline}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{sub}</p>
+              </div>
+            </div>
+          );
+        })()}
+      </motion.div>
+
       {/* ── Gamification bar — streak + level + XP + emotional status + alerts ── */}
       <motion.div variants={item}>
         <GamificationBar data={gData} />
@@ -1129,24 +1178,117 @@ export default function Home() {
       {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
       <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" } : { display: "contents" }}>
 
-      {/* ── PRO upsell ──────────────────────────────────────────────────────── */}
+      {/* ── PRO conversion block ─────────────────────────────────────────────── */}
       {isFree && !isLoading && (
         <motion.div variants={item}>
-          <Link href="/upgrade">
-            <motion.div whileTap={{ scale: 0.98 }} style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer" }}>
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(234,179,8,0.1),rgba(217,119,6,0.05))", pointerEvents: "none" }} />
-              <div style={{ position: "relative", zIndex: 1, padding: "14px 18px", border: "1px solid rgba(234,179,8,0.16)", borderRadius: 20, display: "flex", alignItems: "center", gap: 13 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#eab308,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Lock size={18} color="#000" />
+          <div style={{
+            position: "relative", borderRadius: 22, overflow: "hidden",
+            background: "#0a0a0a",
+            border: "1px solid rgba(234,179,8,0.2)",
+          }}>
+            {/* Ambient glow */}
+            <div style={{
+              position: "absolute", top: -60, right: -40,
+              width: 200, height: 200, borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(234,179,8,0.12) 0%, transparent 70%)",
+              pointerEvents: "none",
+            }} />
+
+            <div style={{ position: "relative", zIndex: 1, padding: "20px 18px 18px" }}>
+
+              {/* Badge */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: "rgba(234,179,8,0.12)", border: "1px solid rgba(234,179,8,0.25)",
+                  borderRadius: 999, padding: "3px 10px",
+                }}>
+                  <Lock size={10} color="#eab308" strokeWidth={2.5} />
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#eab308", letterSpacing: "0.08em", textTransform: "uppercase" }}>Lucro Driver PRO</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", marginBottom: 2 }}>{t("home.activatePro")}</p>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{t("home.proSub")}</p>
-                </div>
-                <ChevronRight size={16} color="rgba(234,179,8,0.6)" />
               </div>
-            </motion.div>
-          </Link>
+
+              {/* Headline */}
+              <p style={{ fontSize: 16, fontWeight: 900, color: "#f9fafb", lineHeight: 1.25, marginBottom: 6, letterSpacing: "-0.02em" }}>
+                Você poderia estar ganhando mais com análise completa
+              </p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5, marginBottom: 16 }}>
+                Desbloqueie decisões mais inteligentes e aumente seu lucro real por corrida.
+              </p>
+
+              {/* Benefits */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                {[
+                  { icon: "⏱️", text: "Saiba os melhores horários para rodar" },
+                  { icon: "📍", text: "Veja o lucro real por km rodado" },
+                  { icon: "📊", text: "Comparação semanal automática" },
+                  { icon: "💸", text: "Controle de despesas mais inteligente" },
+                  { icon: "🧠", text: "Decisões diárias melhores com dados reais" },
+                ].map((b) => (
+                  <div key={b.text} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.12)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 13, flexShrink: 0,
+                    }}>
+                      {b.icon}
+                    </div>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{b.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price framing */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.1)",
+                borderRadius: 12, padding: "10px 14px", marginBottom: 14,
+              }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>Investimento</p>
+                  <p style={{ fontSize: 15, fontWeight: 900, color: "#eab308", letterSpacing: "-0.01em" }}>
+                    Menos de R$1 por dia
+                  </p>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                    R$19,90/mês · R$149,90/ano (economize 37%)
+                  </p>
+                </div>
+                <div style={{ fontSize: 22 }}>💰</div>
+              </div>
+
+              {/* CTA button */}
+              <Link href="/upgrade">
+                <motion.button
+                  whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.01 }}
+                  style={{
+                    width: "100%", border: "none", cursor: "pointer",
+                    background: "linear-gradient(135deg, #eab308 0%, #d97706 100%)",
+                    borderRadius: 14, padding: "14px 20px",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    boxShadow: "0 4px 20px rgba(234,179,8,0.3)",
+                  }}
+                >
+                  <Lock size={15} color="#000" strokeWidth={2.8} />
+                  <span style={{ fontSize: 14, fontWeight: 900, color: "#000", letterSpacing: "-0.01em" }}>
+                    Desbloquear PRO agora
+                  </span>
+                  <ChevronRight size={15} color="rgba(0,0,0,0.6)" />
+                </motion.button>
+              </Link>
+
+              {/* Trust signals */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12 }}>
+                {["Cancele quando quiser", "Acesso imediato", "Feito para motoristas"].map((trustLabel) => (
+                  <div key={trustLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <Check size={10} color="rgba(234,179,8,0.55)" strokeWidth={2.5} />
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", fontWeight: 500 }}>{trustLabel}</span>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -1173,6 +1315,27 @@ export default function Home() {
       </motion.div>
 
       </div>{/* end desktop row 3 */}
+
+      {/* ── Retention / habit block ──────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <div style={{
+          borderRadius: 16,
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+          padding: "14px 16px",
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <div style={{ fontSize: 20, flexShrink: 0 }}>📅</div>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
+              Quanto mais você registra, mais você evolui.
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.4, marginTop: 3 }}>
+              Motoristas que registram diariamente tomam decisões melhores e ganham mais no longo prazo.
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* ── FAB (mobile only) ────────────────────────────────────────────────── */}
       {!isDesktop && (
