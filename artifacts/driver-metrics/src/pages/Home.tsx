@@ -331,6 +331,38 @@ export default function Home() {
     return null;
   })();
 
+  // ── Future projection — 30-day estimate (free users only) ──────────────────
+  const futureProjection: {
+    currentProfit: number;
+    optimizedProfit: number;
+    upliftAmt: number;
+    upliftPct: number;
+    barCurrentPct: number;
+  } | null = (() => {
+    if (!isFree || isLoading) return null;
+
+    // Base: use shock-of-reality daily average if available, else today's profit
+    const dailyAvg = gData.shockOfReality.dailyAvg > 0
+      ? gData.shockOfReality.dailyAvg
+      : profit > 0 ? profit : null;
+
+    if (!dailyAvg || dailyAvg <= 0) return null;
+
+    const currentProfit = Math.round(dailyAvg * 30);
+
+    // Realistic PRO uplift based on current efficiency
+    const upliftPct = marginPct > 0 && marginPct < 20 ? 32
+      : marginPct >= 20 && marginPct < 30 ? 24
+      : marginPct >= 30 && marginPct < 40 ? 18
+      : 14; // already well-optimized
+
+    const optimizedProfit = Math.round(currentProfit * (1 + upliftPct / 100));
+    const upliftAmt       = optimizedProfit - currentProfit;
+    const barCurrentPct   = Math.round((currentProfit / optimizedProfit) * 100);
+
+    return { currentProfit, optimizedProfit, upliftAmt, upliftPct, barCurrentPct };
+  })();
+
   // ── Profit color ───────────────────────────────────────────────────────────
   const pColor = profitPos ? "#00ff88" : "#ef4444";
 
@@ -1285,6 +1317,112 @@ export default function Home() {
               </div>
             </motion.div>
           </Link>
+        </motion.div>
+      )}
+
+      {/* ── Future projection (free users with avg data) ────────────────────── */}
+      {futureProjection && (
+        <motion.div variants={item}>
+          <div style={{
+            position: "relative", borderRadius: 20, overflow: "hidden",
+            background: "#080e0a",
+            border: "1px solid rgba(0,255,136,0.14)",
+          }}>
+            {/* Ambient glow */}
+            <div style={{ position: "absolute", top: -50, right: -30, width: 200, height: 180, background: "radial-gradient(ellipse, rgba(0,255,136,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+            <div style={{ position: "relative", zIndex: 1, padding: "18px 16px 16px" }}>
+
+              {/* Headline */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <span style={{ fontSize: 16 }}>📊</span>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#f9fafb", letterSpacing: "-0.01em" }}>
+                  Seus próximos 30 dias podem ser assim
+                </p>
+              </div>
+
+              {/* Bar: Current */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
+                    Ritmo atual
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.55)", fontVariantNumeric: "tabular-nums" }}>
+                    {formatBRL(futureProjection.currentProfit)}
+                  </span>
+                </div>
+                <div style={{ height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${futureProjection.barCurrentPct}%` }}
+                    transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+                    style={{ height: "100%", background: "rgba(255,255,255,0.18)", borderRadius: 999 }}
+                  />
+                </div>
+              </div>
+
+              {/* Bar: PRO optimized */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(0,255,136,0.7)", textTransform: "uppercase" }}>
+                      Com PRO
+                    </span>
+                    <div style={{ background: "rgba(0,255,136,0.1)", border: "1px solid rgba(0,255,136,0.2)", borderRadius: 999, padding: "1px 6px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#00ff88" }}>+{futureProjection.upliftPct}%</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: "#00ff88", fontVariantNumeric: "tabular-nums" }}>
+                    {formatBRL(futureProjection.optimizedProfit)}
+                  </span>
+                </div>
+                <div style={{ height: 10, background: "rgba(0,255,136,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+                    style={{ height: "100%", background: "linear-gradient(90deg, #00cc6a, #00ff88)", borderRadius: 999, boxShadow: "0 0 10px rgba(0,255,136,0.35)" }}
+                  />
+                </div>
+              </div>
+
+              {/* Uplift summary */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.1)",
+                borderRadius: 12, padding: "10px 12px", marginBottom: 14,
+              }}>
+                <span style={{ fontSize: 17, flexShrink: 0 }}>💰</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)", lineHeight: 1.35 }}>
+                    <span style={{ color: "#00ff88" }}>+{formatBRL(futureProjection.upliftAmt)} a mais</span>{" "}no mesmo período
+                  </p>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 2 }}>
+                    Estimativa baseada no seu ritmo atual com otimização PRO
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <Link href="/upgrade">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    width: "100%", border: "1px solid rgba(0,255,136,0.3)",
+                    background: "rgba(0,255,136,0.08)", borderRadius: 12,
+                    padding: "11px 16px", cursor: "pointer", fontFamily: "inherit",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#00ff88" }}>Aumentar meu lucro</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </motion.button>
+              </Link>
+
+            </div>
+          </div>
         </motion.div>
       )}
 
