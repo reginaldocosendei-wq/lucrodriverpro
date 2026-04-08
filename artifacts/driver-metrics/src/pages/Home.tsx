@@ -108,6 +108,32 @@ const item = {
   show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1], duration: 0.45 } },
 };
 
+// ─── GAMIFICATION FALLBACK (shown while API loads) ────────────────────────────
+const FALLBACK_GAMIFICATION: GamificationData = {
+  streak:   { current: 0, longest: 0, danger: false, fire: false },
+  level:    { level: 1, name: "Iniciante", icon: "🌱", xp: 0, xpInLevel: 0, xpNeeded: 7, pct: 0, isMax: false },
+  emotional:{ status: "idle", message: "Registre seu resultado ao final do turno.", color: "rgba(255,255,255,0.4)", icon: "🌅" },
+  alerts:   [],
+  missions: [
+    { key: "record_today", title: "Registrar o dia",    icon: "📸", description: "Importe o resultado de hoje",     progress: 0, target: 1,  pct: 0, done: false, xp: 5  },
+    { key: "set_goal",     title: "Definir meta diária", icon: "🎯", description: "Configure quanto quer ganhar/dia", progress: 0, target: 1,  pct: 0, done: false, xp: 5  },
+    { key: "efficiency",   title: "Eficiência > 30%",   icon: "💡", description: "Registre o dia para ver sua eficiência", progress: 0, target: 30, pct: 0, done: false, xp: 8  },
+  ],
+  weeklyComparison: {
+    thisWeekEarnings: 0, lastWeekEarnings: 0, delta: 0, deltaPct: null, maxDay: 1,
+    days: Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      return { date: d.toISOString().split("T")[0], earnings: 0, label: d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""), isToday: i === 6 };
+    }),
+  },
+  shockOfReality: {
+    dailyAvg: 0, projectedMonth: 0, projectedProfit: 0,
+    workedDaysThisMonth: 0, daysLeftInMonth: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate(),
+    effectiveHourlyRate: null, daysToHitMonthlyGoal: null,
+    monthEarnings: 0, goalMonthly: 0, goalMonthlyPct: null,
+  },
+};
+
 // ─── LOADING SKELETON ─────────────────────────────────────────────────────────
 function Skeleton({ h = 24, w = "100%", r = 8 }: { h?: number; w?: number | string; r?: number }) {
   return (
@@ -178,6 +204,9 @@ export default function Home() {
     staleTime: 3 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
+
+  // Always-available gamification data (fallback until API responds)
+  const gData: GamificationData = gamification ?? FALLBACK_GAMIFICATION;
 
   const { t } = useT();
 
@@ -389,11 +418,9 @@ export default function Home() {
       </motion.div>
 
       {/* ── Gamification bar — streak + level + XP + emotional status + alerts ── */}
-      {gamification && (
-        <motion.div variants={item}>
-          <GamificationBar data={gamification} />
-        </motion.div>
-      )}
+      <motion.div variants={item}>
+        <GamificationBar data={gData} />
+      </motion.div>
 
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1085,25 +1112,19 @@ export default function Home() {
 
 
       {/* ── Missions panel ──────────────────────────────────────────────────── */}
-      {gamification?.missions && (
-        <motion.div variants={item}>
-          <MissionsPanel missions={gamification.missions} />
-        </motion.div>
-      )}
+      <motion.div variants={item}>
+        <MissionsPanel missions={gData.missions} />
+      </motion.div>
 
       {/* ── Weekly chart ────────────────────────────────────────────────────── */}
-      {gamification?.weeklyComparison && (
-        <motion.div variants={item}>
-          <WeeklyChartPanel data={gamification.weeklyComparison} />
-        </motion.div>
-      )}
+      <motion.div variants={item}>
+        <WeeklyChartPanel data={gData.weeklyComparison} />
+      </motion.div>
 
       {/* ── Shock of reality ────────────────────────────────────────────────── */}
-      {gamification?.shockOfReality && (
-        <motion.div variants={item}>
-          <ShockRealityPanel data={gamification.shockOfReality} />
-        </motion.div>
-      )}
+      <motion.div variants={item}>
+        <ShockRealityPanel data={gData.shockOfReality} />
+      </motion.div>
 
       {/* ── Desktop row 3: PRO upsell | Import CTA ─────────────────────────── */}
       <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" } : { display: "contents" }}>

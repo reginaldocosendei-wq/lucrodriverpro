@@ -39,7 +39,33 @@ function StatLine({
 export function ShockRealityPanel({ data }: { data: ShockOfReality | undefined }) {
   const [open, setOpen] = useState(false);
 
-  if (!data || data.workedDaysThisMonth === 0) return null;
+  if (!data) return null;
+
+  // Empty state — no data yet
+  if (data.workedDaysThisMonth === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginBottom: 10 }}>
+          Realidade do mês
+        </p>
+        <div style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "20px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>
+            📊
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 3 }}>Projeção mensal</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
+              Registre pelo menos 1 dia para ver sua projeção do mês.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   const profitPositive = data.projectedProfit >= 0;
   const onTrack = data.goalMonthly > 0
