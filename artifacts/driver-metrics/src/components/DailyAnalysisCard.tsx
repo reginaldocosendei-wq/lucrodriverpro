@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { AlertTriangle, Lightbulb, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, XCircle, ArrowUp, ArrowDown } from "lucide-react";
 import type { DailyAnalysis, DayStatus } from "@/lib/dailyAnalysis";
 
@@ -229,29 +230,47 @@ export function DailyAnalysisCard({ analysis }: { analysis: DailyAnalysis }) {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 export function DailyAnalysisEmpty() {
+  const [, navigate] = useLocation();
   return (
     <div style={{
       background: "#0e0e0e",
-      border: "1px solid rgba(255,255,255,0.06)",
+      border: "1px solid rgba(239,68,68,0.12)",
+      borderLeft: "3px solid rgba(239,68,68,0.3)",
       borderRadius: 20,
       padding: "20px 18px",
-      display: "flex", alignItems: "center", gap: 12,
     }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 11, flexShrink: 0,
-        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <TrendingUp size={16} color="rgba(255,255,255,0.15)" strokeWidth={1.5} />
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+          background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 18,
+        }}>
+          ⚠️
+        </div>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)", marginBottom: 5, lineHeight: 1.4 }}>
+            Você ainda não registrou seu dia.
+          </p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+            Sem rastrear, você pode estar perdendo dinheiro sem perceber. Toque em "Analisar meu dia" para começar.
+          </p>
+        </div>
       </div>
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 2 }}>
-          Análise disponível após o primeiro registro
-        </p>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
-          Importe ou registre seu dia para ver o relatório.
-        </p>
-      </div>
+      <button
+        onClick={() => navigate("/import")}
+        style={{
+          width: "100%", height: 44, borderRadius: 14, border: "none",
+          background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
+          color: "#000", fontWeight: 800, fontSize: 14, letterSpacing: "-0.01em",
+          cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+          boxShadow: "0 4px 16px rgba(0,255,136,0.25)",
+        }}
+      >
+        <TrendingUp size={15} strokeWidth={2.5} />
+        Analisar meu dia
+      </button>
     </div>
   );
 }

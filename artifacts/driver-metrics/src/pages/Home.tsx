@@ -117,7 +117,7 @@ const FALLBACK_GAMIFICATION: GamificationData = {
   missions: [
     { key: "record_today", title: "Registrar o dia",    icon: "📸", description: "Importe o resultado de hoje",     progress: 0, target: 1,  pct: 0, done: false, xp: 5  },
     { key: "set_goal",     title: "Definir meta diária", icon: "🎯", description: "Configure quanto quer ganhar/dia", progress: 0, target: 1,  pct: 0, done: false, xp: 5  },
-    { key: "efficiency",   title: "Eficiência > 30%",   icon: "💡", description: "Registre o dia para ver sua eficiência", progress: 0, target: 30, pct: 0, done: false, xp: 8  },
+    { key: "efficiency",   title: "Meta: eficiência acima de 30%",   icon: "💡", description: "Registre o dia para ver sua eficiência", progress: 0, target: 30, pct: 0, done: false, xp: 8  },
   ],
   weeklyComparison: {
     thisWeekEarnings: 0, lastWeekEarnings: 0, delta: 0, deltaPct: null, maxDay: 1,
