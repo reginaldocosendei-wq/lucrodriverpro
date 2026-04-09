@@ -50,113 +50,145 @@ export function GamificationBar({ data }: { data: GamificationData | null | unde
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-      {/* ── Level info modal ─────────────────────────────────────────────── */}
+      {/* ── Level info modal — rendered as a full-screen overlay for reliable centering ── */}
       <AnimatePresence>
         {levelModalOpen && (
-          <>
-            {/* Backdrop */}
+          <motion.div
+            key="level-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setLevelModalOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 200,
+              background: "rgba(0,0,0,0.75)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "24px",
+            }}
+          >
+            {/* Modal card — stopPropagation so clicks inside don't close */}
             <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setLevelModalOpen(false)}
+              key="level-card"
+              initial={{ opacity: 0, scale: 0.93 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.93 }}
+              transition={{ type: "spring", damping: 24, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
               style={{
-                position: "fixed", inset: 0, zIndex: 200,
-                background: "rgba(0,0,0,0.72)",
-                backdropFilter: "blur(6px)",
-                WebkitBackdropFilter: "blur(6px)",
-              }}
-            />
-            {/* Modal card */}
-            <motion.div
-              key="modal"
-              initial={{ opacity: 0, scale: 0.92, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 24 }}
-              transition={{ type: "spring", damping: 22, stiffness: 300 }}
-              style={{
-                position: "fixed", left: "50%", top: "50%",
-                transform: "translate(-50%, -50%)",
-                zIndex: 201,
-                width: "calc(100% - 48px)", maxWidth: 360,
-                background: "#111", border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 24, padding: "28px 24px",
-                boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+                width: "100%", maxWidth: 400,
+                background: "#131313",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 24,
+                padding: "28px 22px 22px",
+                boxShadow: "0 32px 96px rgba(0,0,0,0.7)",
+                maxHeight: "calc(100dvh - 48px)",
+                overflowY: "auto",
+                position: "relative",
               }}
             >
+              {/* ✕ close button — top right */}
+              <button
+                onClick={() => setLevelModalOpen(false)}
+                style={{
+                  position: "absolute", top: 14, right: 14,
+                  width: 32, height: 32, borderRadius: "50%", border: "none",
+                  background: "rgba(255,255,255,0.07)",
+                  color: "rgba(255,255,255,0.5)", fontSize: 16, lineHeight: 1,
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                ✕
+              </button>
+
               {/* Icon + title */}
-              <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ textAlign: "center", marginBottom: 22 }}>
                 <div style={{
-                  width: 56, height: 56, borderRadius: 18,
+                  width: 60, height: 60, borderRadius: 20,
                   background: "rgba(129,140,248,0.12)",
                   border: "1px solid rgba(129,140,248,0.25)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 14px", fontSize: 26,
+                  margin: "0 auto 14px", fontSize: 28,
                 }}>
                   {level.icon}
                 </div>
-                <h2 style={{ fontSize: 18, fontWeight: 900, color: "#f9fafb", marginBottom: 4, letterSpacing: "-0.02em" }}>
+                <h2 style={{ fontSize: 19, fontWeight: 900, color: "#f9fafb", marginBottom: 5, letterSpacing: "-0.02em" }}>
                   Seu Nível
                 </h2>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
-                  Você está no nível <span style={{ color: "#c084fc", fontWeight: 800 }}>{level.name}</span>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
+                  Você está no nível{" "}
+                  <span style={{ color: "#c084fc", fontWeight: 800 }}>{level.name}</span>
                 </p>
               </div>
 
               {/* XP progress bar */}
               <div style={{ marginBottom: 22 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em", textTransform: "uppercase" }}>XP</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.07em", textTransform: "uppercase" }}>XP</span>
                   <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", fontVariantNumeric: "tabular-nums" }}>
                     {level.xpInLevel} / {level.xpNeeded}
                   </span>
                 </div>
-                <div style={{ height: 7, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${level.pct}%` }}
-                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-                    style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg, #818cf8, #c084fc)", boxShadow: "0 0 10px rgba(129,140,248,0.4)" }}
+                    transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+                    style={{
+                      height: "100%", borderRadius: 999,
+                      background: "linear-gradient(90deg, #818cf8, #c084fc)",
+                      boxShadow: "0 0 12px rgba(129,140,248,0.45)",
+                    }}
                   />
                 </div>
               </div>
 
               {/* How to level up */}
-              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.6)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 16, padding: "14px 16px", marginBottom: 18,
+              }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                   Complete missões para subir de nível:
                 </p>
                 {[
                   { icon: "📸", text: "Registre seus dias" },
                   { icon: "🎯", text: "Atinja suas metas diárias" },
                   { icon: "💡", text: "Melhore sua eficiência" },
-                ].map((item) => (
-                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 14 }}>{item.icon}</span>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{item.text}</p>
+                ].map((item, i) => (
+                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < 2 ? 10 : 0 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                      {item.icon}
+                    </div>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>{item.text}</p>
                   </div>
                 ))}
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.55, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                   Continue assim e suba de nível! 🚀
                 </p>
               </div>
 
-              {/* Close button */}
+              {/* Primary CTA */}
               <button
                 onClick={() => setLevelModalOpen(false)}
                 style={{
-                  width: "100%", height: 50, borderRadius: 16, border: "none",
-                  background: "linear-gradient(135deg, #818cf8, #c084fc)",
+                  width: "100%", height: 52, borderRadius: 16, border: "none",
+                  background: "linear-gradient(135deg, #818cf8 0%, #c084fc 100%)",
                   color: "#fff", fontWeight: 800, fontSize: 15, letterSpacing: "-0.01em",
                   cursor: "pointer", fontFamily: "inherit",
+                  boxShadow: "0 6px 24px rgba(129,140,248,0.3)",
                 }}
               >
                 Continuar
               </button>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 

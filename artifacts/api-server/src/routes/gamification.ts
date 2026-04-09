@@ -164,7 +164,7 @@ router.get("/", requireAuth, async (req, res) => {
           },
       {
         key: "efficiency",
-        title: "Eficiência > 30%",
+        title: "Meta: eficiência acima de 30%",
         icon: "💡",
         description: totalEarningsToday > 0
           ? marginPct >= 30 ? "Eficiência atingida!" : `Margem atual: ${marginPct}%`
