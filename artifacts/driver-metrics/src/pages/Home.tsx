@@ -224,7 +224,8 @@ export default function Home() {
   const earnings      = summary?.earningsToday ?? 0;
   const extras        = (summary as any)?.extraEarningsToday ?? 0;
   const totalEarnings = earnings + extras;
-  const costs         = summary?.costsToday ?? 0;
+  // totalCostsToday = variableCostsToday + dailyFixedCostQuota — matches profit formula exactly
+  const costs         = (summary as any)?.totalCostsToday ?? summary?.costsToday ?? 0;
   const trips         = summary?.ridesCountToday ?? 0;
   const rph           = summary?.earningsPerHourToday ?? null;
   const rpkm          = summary?.earningsPerKmToday ?? summary?.avgPerKm ?? null;
@@ -237,7 +238,7 @@ export default function Home() {
   // ── Fixed monthly costs ────────────────────────────────────────────────────
   const fixedMonthlyTotal   = Math.max(0, (summary as any)?.fixedMonthlyTotal   ?? 0);
   const dailyFixedCostQuota = Math.max(0, (summary as any)?.dailyFixedCostQuota ?? 0);
-  const variableCostsToday  = Math.max(0, (summary as any)?.variableCostsToday  ?? costs);
+  const variableCostsToday  = Math.max(0, (summary as any)?.variableCostsToday  ?? 0);
   // Monthly coverage: how many days into the month × daily quota
   const daysIntoMonth       = new Date().getDate();
   const fixedCoveredMonth   = Math.min(fixedMonthlyTotal, daysIntoMonth * dailyFixedCostQuota);

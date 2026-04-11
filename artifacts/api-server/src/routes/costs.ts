@@ -3,6 +3,13 @@ import { db, costsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { splitCosts } from "../lib/costSplit";
 
+/** Normalise a date value from the PG driver to a plain "YYYY-MM-DD" string. */
+function normDate(d: string | Date | unknown): string {
+  if (d instanceof Date) return d.toISOString().split("T")[0];
+  if (typeof d === "string") return d.split("T")[0];
+  return String(d).split("T")[0];
+}
+
 const router = Router();
 
 function requireAuth(req: any, res: any, next: any) {
@@ -43,17 +50,22 @@ router.get("/", requireAuth, async (req, res) => {
   const { variable, fixed: fixedMonthly } = splitCosts(costs);
 
   // Variable totals (date-filtered — one-off daily expenses)
+  // Use normDate() to safely coerce string-or-Date values from the PG driver.
   const safeSum = (arr: typeof variable) => arr.reduce((s, c) => s + (Number.isFinite(c.amount) ? c.amount : 0), 0);
-  const totalDay   = safeSum(variable.filter((c) => c.date >= today));
-  const totalWeek  = safeSum(variable.filter((c) => c.date >= weekAgo));
-  const totalMonth = safeSum(variable.filter((c) => c.date >= monthAgo));
+  const totalDay   = safeSum(variable.filter((c) => normDate(c.date) >= today));
+  const totalWeek  = safeSum(variable.filter((c) => normDate(c.date) >= weekAgo));
+  const totalMonth = safeSum(variable.filter((c) => normDate(c.date) >= monthAgo));
 
   // Fixed monthly totals — NOT date-filtered (recurring monthly amounts)
   const fixedMonthlyTotal   = safeSum(fixedMonthly);
   const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
 
   // Month-to-date variable costs (for coverage display)
-  const variableCostsThisMonth = safeSum(variable.filter((c) => c.date >= monthStart));
+  const variableCostsThisMonth = safeSum(variable.filter((c) => normDate(c.date) >= monthStart));
+
+  console.log("[costs] Costs loaded:", costs.length, "records");
+  console.log("[costs] Total Costs today (variable):", totalDay);
+  console.log("[costs] Fixed monthly total:", fixedMonthlyTotal, "| daily quota:", dailyFixedCostQuota.toFixed(2));
 
   res.json({
     costs,

@@ -96,6 +96,17 @@ router.get("/summary", requireAuth, async (req, res) => {
   const realProfitToday = (earningsToday + extraToday) - variableCostsToday - dailyFixedCostQuota;
   const realProfitMonth = (earningsMonth + extraMonth) - variableCostsMonth - fixedMonthlyTotal;
 
+  // Total costs for the day = variable costs + daily share of fixed monthly costs
+  const totalCostsToday = variableCostsToday + dailyFixedCostQuota;
+
+  // ── Debug logging ─────────────────────────────────────────────────────────
+  console.log("[dashboard] Costs loaded:", costs.length, "records");
+  console.log("[dashboard] Total Costs today (var + fixed quota):", totalCostsToday.toFixed(2));
+  console.log("[dashboard] Profit:", realProfitToday.toFixed(2),
+    "= earnings", (earningsToday + extraToday).toFixed(2),
+    "- varCosts", variableCostsToday.toFixed(2),
+    "- fixedQuota", dailyFixedCostQuota.toFixed(2));
+
   // ── New metrics from daily_summaries ──────────────────────────────────────
   const earningsPerTripToday = todayAgg.earningsPerTrip;
   const earningsPerKmToday = todayAgg.earningsPerKm;
@@ -169,6 +180,7 @@ router.get("/summary", requireAuth, async (req, res) => {
     bestPlatform,
     // Costs / profit
     costsToday,
+    totalCostsToday,          // variableCostsToday + dailyFixedCostQuota — for display
     realProfitToday,
     costsMonth,
     realProfitMonth,

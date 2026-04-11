@@ -16,14 +16,35 @@
  *      treated identically to records explicitly marked "variable".
  *   5. A runtime assertion verifies that variable.length + fixed.length === total,
  *      catching any future bug that might skip or duplicate records.
+ *
+ * DATE SAFETY NOTE
+ * ────────────────
+ * PostgreSQL `date` columns may be returned as a JavaScript `Date` object by the
+ * node-pg driver before drizzle-orm applies its parser.  To prevent silent failures
+ * from `Date >= string` comparisons (which evaluate to `NaN >= NaN = false`),
+ * `normDateStr()` always coerces the value to an ISO "YYYY-MM-DD" string.
  */
 
 export interface CostLike {
   id: number;
   costType?: string | null;
   amount: number;
-  date: string;
+  date: string | Date;       // accepts both — normalised internally
   [key: string]: unknown;
+}
+
+/**
+ * Safely normalise whatever the DB driver gives us for a `date` column to a
+ * plain "YYYY-MM-DD" string so lexicographic comparisons are always reliable.
+ */
+function normDateStr(d: string | Date | unknown): string {
+  if (d instanceof Date) return d.toISOString().split("T")[0];
+  if (typeof d === "string") {
+    // Already an ISO string — may include time part if the driver returns TIMESTAMP
+    return d.split("T")[0];
+  }
+  // Unexpected type — stringify and take the first 10 chars as a best-effort fallback
+  return String(d).split("T")[0];
 }
 
 /** Returns true only for records explicitly marked as fixed_monthly. */
@@ -98,10 +119,23 @@ export function computeCostMetrics<T extends CostLike>(
   const safeSum = (arr: T[]) =>
     arr.reduce((s, c) => s + (Number.isFinite(c.amount) ? c.amount : 0), 0);
 
-  const variableCostsToday  = safeSum(variable.filter((c) => c.date >= todayStr));
-  const variableCostsMonth  = safeSum(variable.filter((c) => c.date >= monthStartStr));
+  // Use normDateStr() on every record's date to handle both string and Date objects
+  // that the PG driver may return depending on the version of node-pg / drizzle-orm.
+  const variableCostsToday  = safeSum(variable.filter((c) => normDateStr(c.date) >= todayStr));
+  const variableCostsMonth  = safeSum(variable.filter((c) => normDateStr(c.date) >= monthStartStr));
   const fixedMonthlyTotal   = safeSum(fixed); // NOT date-filtered — recurring amount
   const dailyFixedCostQuota = fixedMonthlyTotal > 0 ? fixedMonthlyTotal / 30 : 0;
+
+  // ── Debug logging ─────────────────────────────────────────────────────────
+  console.log("[costSplit] Costs loaded:", costs.length, "records");
+  console.log("[costSplit]   variable:", variable.length, "| fixed:", fixed.length);
+  console.log("[costSplit]   todayStr:", todayStr, "| monthStart:", monthStartStr);
+  if (variable.length > 0) {
+    console.log("[costSplit]   variable dates (normalised):",
+      variable.map((c) => normDateStr(c.date)).join(", "));
+  }
+  console.log("[costSplit] Total Costs (variable today):", variableCostsToday);
+  console.log("[costSplit] Fixed monthly total:", fixedMonthlyTotal, "| daily quota:", dailyFixedCostQuota.toFixed(2));
 
   return { variableCostsToday, variableCostsMonth, fixedMonthlyTotal, dailyFixedCostQuota };
 }
