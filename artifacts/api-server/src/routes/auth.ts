@@ -34,13 +34,25 @@ function userResponse(user: typeof usersTable.$inferSelect) {
   };
 }
 
-// Wait for the session to be fully persisted in PostgreSQL BEFORE sending the
-// response. Without this, the browser fires GET /api/auth/me immediately after
-// the login 200, and that request can arrive at the server BEFORE the session
-// row is written — causing a spurious 401 and the login redirect loop.
-function saveSession(req: Parameters<Router>[0]): Promise<void> {
+// Regenerate the session ID and persist it before sending the response.
+//
+// Why regenerate (not just save)?
+//   express-session only sends Set-Cookie ONCE — when the session is first
+//   created (with rolling:false). If a browser has an old session cookie that
+//   was set before a SameSite attribute change (e.g. None → Lax), that cookie's
+//   attributes are never updated, so the browser may reject or ignore it.
+//   Calling regenerate() destroys the old session, creates a brand-new ID, and
+//   forces express-session to send a fresh Set-Cookie with current attributes
+//   (SameSite=Lax in production). This fixes "stuck" old-cookie browsers.
+//
+// Security bonus: prevents session fixation attacks.
+function regenerateAndSave(req: Parameters<Router>[0], userId: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    req.session.save((err) => (err ? reject(err) : resolve()));
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.userId = userId;
+      req.session.save((err2) => (err2 ? reject(err2) : resolve()));
+    });
   });
 }
 
@@ -83,9 +95,8 @@ router.post("/register", async (req, res) => {
       .returning();
 
     console.log(`[auth/register] user created — userId: ${user.id} email: ${email}`);
-    req.session.userId = user.id;
-    await saveSession(req);
-    console.log(`[auth/register] session saved — userId: ${user.id}`);
+    await regenerateAndSave(req, user.id);
+    console.log(`[auth/register] session regenerated — userId: ${user.id} newSessionId: ${req.sessionID}`);
     res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/register] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
@@ -147,9 +158,8 @@ router.post("/login", async (req, res) => {
 
     user = await syncStripeStatusForUser(user);
 
-    req.session.userId = user.id;
-    await saveSession(req);
-    console.log(`[auth/login] success — userId: ${user.id} sessionId: ${req.sessionID}`);
+    await regenerateAndSave(req, user.id);
+    console.log(`[auth/login] success — userId: ${user.id} newSessionId: ${req.sessionID}`);
     res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/login] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
@@ -249,9 +259,8 @@ router.post("/google", async (req, res) => {
     }
 
     user = await syncStripeStatusForUser(user);
-    req.session.userId = user.id;
-    await saveSession(req);
-    console.log(`[auth/google] session saved — userId=${user.id}`);
+    await regenerateAndSave(req, user.id);
+    console.log(`[auth/google] session regenerated — userId=${user.id} newSessionId=${req.sessionID}`);
     res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/google] ERROR:", err.message);

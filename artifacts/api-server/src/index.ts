@@ -82,6 +82,7 @@ app.use(
     }),
     secret: process.env.SESSION_SECRET || "lucro-driver-dev-secret",
     resave: false,
+    rolling: true,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
