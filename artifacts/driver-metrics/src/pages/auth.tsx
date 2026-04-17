@@ -46,8 +46,14 @@ function AuthForm({
       return res.json();
     },
     onSuccess: async () => {
+      // Confirm the session is readable before navigating.
+      // Then use a hard redirect (window.location) instead of client-side
+      // navigate() so the new page load starts with the session cookie already
+      // present in the browser — this eliminates any race between the auth
+      // guard and the Google onSuccess handler (which fires asynchronously
+      // after a redirect-mode Google flow).
       await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      onSuccess?.();
+      window.location.replace("/rides");
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));

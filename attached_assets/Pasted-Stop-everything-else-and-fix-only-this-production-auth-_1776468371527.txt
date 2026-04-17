@@ -1,0 +1,77 @@
+Stop everything else and fix only this production auth bug.
+
+Current behavior:
+- Preview works
+- Incognito works
+- Google OAuth window opens correctly
+- After choosing the Google account, production returns to the login page instead of staying authenticated
+
+This means OAuth callback is reached, but production session is not being persisted/read after login.
+
+Fix this precisely.
+
+TASKS:
+
+1. Inspect the full production auth flow end-to-end:
+   - /api/auth/google
+   - Google callback
+   - session creation
+   - cookie write
+   - redirect after callback
+   - frontend auth check after redirect
+
+2. Verify the production session cookie settings.
+The auth cookie must be valid for Replit production and browser login:
+   - httpOnly: true
+   - secure: true
+   - sameSite: "lax" or "none" (choose the correct one for this flow)
+   - path: "/"
+Do NOT leave incorrect production cookie settings.
+
+3. Ensure the callback route actually creates and persists the authenticated user session before redirecting.
+
+4. After successful Google login, redirect to:
+   /rides
+NOT "/"
+NOT login
+NOT landing page
+
+5. Inspect the frontend auth bootstrap logic.
+Find the code that checks whether the user is authenticated after page load.
+Fix it so production reads the current session correctly.
+
+6. For every frontend request that must carry session/cookie, ensure:
+   credentials: "include"
+Especially:
+   - current user fetch
+   - session check
+   - protected dashboard loads
+   - analysis endpoints
+
+7. Make sure production is not clearing auth state on initial render.
+If there is any race condition like:
+   "not loaded yet" -> "assume logged out" -> redirect to login
+fix it properly.
+
+8. Add temporary production debug logs for:
+   - callback hit
+   - session created
+   - cookie set
+   - authenticated user loaded
+   - auth check failed
+   - redirect target chosen
+
+9. Verify there is no mismatch between:
+   - lucrodriver-mobile.replit.app
+   - preview URLs
+   - old lucrodriverpro URLs
+Only production canonical auth flow must remain.
+
+10. Redeploy production after the fix.
+
+OUTPUT FORMAT:
+A. Exact root cause
+B. File(s) changed
+C. Cookie/session settings now used
+D. Why preview worked but Google production returned to login
+E. Final confirmation: Google login stays authenticated in production

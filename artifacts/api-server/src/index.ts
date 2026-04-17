@@ -57,14 +57,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Session ──────────────────────────────────────────────────────────────────
-// SameSite=None + Secure=true is required in two situations:
-//   1. Production: Capacitor WebViews send cookies cross-site to the API.
-//   2. Replit dev preview: the preview pane is a cross-site iframe on
-//      replit.com, so SameSite=Lax causes the browser to silently drop the
-//      session cookie on every fetch after the initial page load → 401.
-// Both situations are always HTTPS, so Secure=true is valid.
+// Cookie sameSite strategy:
+//   - Production (NODE_ENV=production): "lax" — same-origin web app.
+//     SameSite=None was causing cookie rejection in Chrome Privacy Sandbox
+//     and Safari ITP in top-level browsing contexts.
+//   - Replit dev preview (REPLIT_DEV_DOMAIN set, not production): "none" —
+//     the preview pane is a cross-site iframe on replit.com; SameSite=Lax
+//     silently drops the cookie → 401 on every protected request.
+//   - Local dev: "lax" — standard localhost behaviour.
 const isProd = process.env.NODE_ENV === "production";
-const isReplit = !!process.env["REPLIT_DEV_DOMAIN"] || isProd;
+const isReplitDev = !!process.env["REPLIT_DEV_DOMAIN"] && !isProd;
+const needsSecure = isProd || isReplitDev;
+const cookieSameSite: "lax" | "none" = isReplitDev ? "none" : "lax";
+
+console.log(`[startup] cookie config — sameSite=${cookieSameSite} secure=${needsSecure} isProd=${isProd} isReplitDev=${isReplitDev}`);
 
 const PgStore = ConnectPgSimple(session);
 app.use(
@@ -79,8 +85,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isReplit,
-      sameSite: isReplit ? "none" : "lax",
+      secure: needsSecure,
+      sameSite: cookieSameSite,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   }),
