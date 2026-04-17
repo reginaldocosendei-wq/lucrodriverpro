@@ -207,7 +207,7 @@ function HomeRoute() {
 // ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
 // Public route — accessible without auth.
 // Redirects to "/" if the user is already authenticated.
-// After successful login/register it navigates to "/".
+// After successful login/register it navigates to "/rides".
 // DEV: auth redirect temporarily disabled for desktop nav testing
 function LoginRoute() {
   const { data: user, isLoading } = useBootAuth();
@@ -216,13 +216,13 @@ function LoginRoute() {
   useEffect(() => {
     if (DEV_SKIP_ROUTE_GUARDS) return; // bypass: stay on /login to test auth freely
     if (!isLoading && user) {
-      navigate("/");
+      navigate("/rides");
     }
   }, [user, isLoading, navigate]);
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
-      <AuthScreen startWithForm onSuccess={() => navigate("/")} />
+      <AuthScreen startWithForm onSuccess={() => navigate("/rides")} />
     </div>
   );
 }

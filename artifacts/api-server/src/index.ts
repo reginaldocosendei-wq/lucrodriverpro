@@ -51,20 +51,6 @@ app.post("/api/stripe-webhook",  express.raw({ type: "application/json" }), hand
 // even though the server never received the request.
 app.use(cors({ origin: true, credentials: true }));
 
-// ─── Domain redirect (production only) ───────────────────────────────────────
-// Registered AFTER CORS (so preflights get headers) and AFTER the Stripe
-// webhook (so Stripe callbacks, which don't follow redirects, are not caught).
-const CUSTOM_DOMAIN = "lucrodriverpro.com";
-app.use((req, res, next) => {
-  if (process.env.REPLIT_DEPLOYMENT !== "1") return next();
-  // Skip redirect for CORS preflights — they must be answered in-place.
-  if (req.method === "OPTIONS") return next();
-  const host = (req.headers.host ?? "").toLowerCase();
-  if (!host || host === CUSTOM_DOMAIN || host.endsWith(`.${CUSTOM_DOMAIN}`)) {
-    return next();
-  }
-  return res.redirect(301, `https://${CUSTOM_DOMAIN}${req.url}`);
-});
 
 // ─── JSON body parser ─────────────────────────────────────────────────────────
 app.use(express.json());
@@ -99,6 +85,16 @@ app.use(
     },
   }),
 );
+
+// ─── Session debug middleware ──────────────────────────────────────────────────
+app.use((req, _res, next) => {
+  const sid = req.sessionID ?? "(none)";
+  const uid = (req.session as any)?.userId ?? null;
+  if (req.path.startsWith("/api/auth")) {
+    console.log(`[session] ${req.method} ${req.path} — sessionId=${sid} userId=${uid ?? "none"}`);
+  }
+  next();
+});
 
 // ─── All API routes (lazily loaded) ──────────────────────────────────────────
 // The router is imported on the first request so the server can bind to PORT
