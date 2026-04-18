@@ -22,6 +22,7 @@ import preferencesRouter from "./preferences";
 import extraEarningsRouter from "./extraEarnings";
 import createCheckoutRouter from "./createCheckout";
 import gamificationRouter from "./gamification";
+import assistantRouter from "./assistant";
 
 const router: IRouter = Router();
 
@@ -53,6 +54,7 @@ router.use("/preferences", preferencesRouter);
 router.use("/extra-earnings", extraEarningsRouter);
 router.use("/create-checkout", createCheckoutRouter);
 router.use("/gamification", gamificationRouter);
+router.use("/assistant", assistantRouter);
 
 // Dev-only utilities — the router itself refuses all requests in production
 router.use("/dev", devAdminRouter);

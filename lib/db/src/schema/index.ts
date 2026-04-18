@@ -5,3 +5,4 @@ export * from "./goals";
 export * from "./dailySummaries";
 export * from "./pixPayments";
 export * from "./extraEarnings";
+export * from "./offerCaptures";

@@ -24,6 +24,7 @@ import PixAuto from "@/pages/pix-auto";
 import AdminPix from "@/pages/admin-pix";
 import AdminUsers from "@/pages/admin-users";
 import Settings from "@/pages/settings";
+import Assistant from "@/pages/assistant";
 import AuthScreen from "@/pages/auth";
 import AuthSuccess from "@/pages/auth-success";
 import NotFound from "@/pages/not-found";
@@ -313,6 +314,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         <PrivateGuard><Settings /></PrivateGuard>
+      </Route>
+      <Route path="/assistant">
+        <PrivateGuard><Assistant /></PrivateGuard>
       </Route>
 
       <Route component={NotFound} />

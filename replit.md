@@ -39,7 +39,7 @@ artifacts-monorepo/
 
 ## Lucro Driver App
 
-A full-featured ride-share driver earnings tracker (Lucro Driver). Features:
+A full-featured ride-share driver earnings tracker AND real-time ride companion (Lucro Driver). Features:
 - Email/password auth with sessions (bcryptjs)
 - Ride registration with per-km, net value, commission calculations
 - Cost tracking (fuel, food, maintenance, rental, other)
@@ -104,6 +104,16 @@ pnpm run cap:open
 - `storage.ts` — DB layer: getUser, updateUserStripeInfo, listProductsWithPrices, getActiveSubscriptionForCustomer
 - `services/` — `metricsService.ts` (aggregateMetrics, calculateDailyMetrics), `importService.ts` (parseExtracted, todayDateStr)
 - `lib/` — logger.ts
+
+### Real-Time Ride Companion (Assistente Ao Vivo)
+- **Page**: `/assistant` — real-time ride offer analyzer
+- **Flow**: driver taps "Capturar" → takes photo of ride offer screen → GPT-4o OCR extracts price, distanceKm, estimatedMinutes, pickup, destination, platform → backend calculates profitPerKm, profitPerHour, netProfit
+- **Traffic light verdict**: GREEN (≥R$1.80/km), YELLOW (R$1.00–1.80/km), RED (<R$1.00/km)
+- **Voice alert**: Web Speech API reads verdict aloud in pt-BR ("Corrida boa!" / "Atenção" / "Corrida ruim")
+- **Cost profile**: stored in `localStorage` (costPerKm + fixedCostPerHour), editable via settings modal
+- **Offer history**: `offer_captures` table (id, user_id, price, distance_km, estimated_minutes, pickup, destination, platform, profit_per_km, profit_per_hour, net_profit, verdict, decision, captured_at)
+- **API routes**: `POST /api/assistant/analyze` (multipart, costPerKm param), `POST /api/assistant/save`, `PATCH /api/assistant/save/:id`, `GET /api/assistant/history`
+- **Nav**: "Ao Vivo" tab (⚡ icon) replaces Goals in main bottom nav; Goals still accessible at `/goals`
 
 ### Daily Summary Metrics System
 - New `daily_summaries` table replaces per-ride imports: date, earnings, trips, kmDriven, hoursWorked, rating, platform
