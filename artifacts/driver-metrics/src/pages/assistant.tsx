@@ -322,6 +322,129 @@ function DotDot() {
   );
 }
 
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+// The target R$/km that we consider "ideal" driving economics.
+// Green threshold is R$1.80/km; this is the aspirational reference we show.
+const IDEAL_KM = 1.8;
+
+// ─── INSIGHT ENGINE ───────────────────────────────────────────────────────────
+// Generates contextual, emotionally-weighted commentary based on verdict.
+
+function buildInsights(result: OfferAnalysis) {
+  const pkm = result.profitPerKm;
+  const net = result.netProfit;
+  const mins = result.estimatedMinutes;
+  const diff = pkm !== null ? pkm - IDEAL_KM : null;
+
+  const timeMsg =
+    mins !== null && net !== null
+      ? `Você vai trabalhar ${mins} min para ganhar ${fmtBRL(net)} líquido`
+      : null;
+
+  if (result.verdict === "red") {
+    return {
+      headline: pkm !== null
+        ? `Você está ganhando apenas R$${fmt(pkm)}/km — abaixo do custo real`
+        : "Rentabilidade abaixo do custo real",
+      sub: net !== null && net < 0
+        ? "Essa corrida GERA PREJUÍZO. Você sairá no negativo."
+        : "Seus custos superam o que essa corrida paga.",
+      timeMsg,
+      diff,
+      tagColor: "#ef4444",
+      tagBg: "rgba(239,68,68,0.10)",
+      tagBorder: "rgba(239,68,68,0.22)",
+    };
+  }
+
+  if (result.verdict === "yellow") {
+    const abaixo = diff !== null ? Math.abs(diff) : null;
+    return {
+      headline: pkm !== null
+        ? `R$${fmt(pkm)}/km — ${abaixo !== null ? `R$${fmt(abaixo)} abaixo do ideal` : "abaixo do ideal"}`
+        : "Rentabilidade abaixo do ideal",
+      sub: "A corrida paga suas despesas, mas a margem é pequena.",
+      timeMsg,
+      diff,
+      tagColor: "#f59e0b",
+      tagBg: "rgba(245,158,11,0.09)",
+      tagBorder: "rgba(245,158,11,0.22)",
+    };
+  }
+
+  // green
+  const acima = diff !== null ? diff : null;
+  return {
+    headline: pkm !== null
+      ? `R$${fmt(pkm)}/km — ${acima !== null && acima > 0 ? `R$${fmt(acima)} acima da meta!` : "dentro da meta!"}`
+      : "Rentabilidade excelente!",
+    sub: "Essa corrida compensa bem. Lucro acima do mínimo ideal.",
+    timeMsg,
+    diff,
+    tagColor: "#00ff88",
+    tagBg: "rgba(0,255,136,0.08)",
+    tagBorder: "rgba(0,255,136,0.20)",
+  };
+}
+
+// ─── TARGET BAR ───────────────────────────────────────────────────────────────
+// Visual bar comparing actual R$/km vs IDEAL target.
+
+function TargetBar({ profitPerKm, accent }: { profitPerKm: number | null; accent: string }) {
+  if (profitPerKm === null) return null;
+
+  // Map to a 0–100% bar where 100% = IDEAL_KM * 1.4 (so green can overflow slightly)
+  const maxBar = IDEAL_KM * 1.4;
+  const actualPct = Math.min((profitPerKm / maxBar) * 100, 100);
+  const idealPct = (IDEAL_KM / maxBar) * 100; // ~71%
+
+  const barColor =
+    profitPerKm >= IDEAL_KM ? "#00ff88"
+    : profitPerKm >= 1.0 ? "#f59e0b"
+    : "#ef4444";
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.07em" }}>
+          COMPARATIVO DE META
+        </span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+          Meta: <strong style={{ color: "#00ff88" }}>R${fmt(IDEAL_KM)}/km</strong>
+        </span>
+      </div>
+
+      {/* Bar track */}
+      <div style={{ position: "relative", height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 6, overflow: "visible" }}>
+        {/* Filled portion */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${actualPct}%` }}
+          transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+          style={{ position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 6, background: barColor, boxShadow: `0 0 8px ${barColor}60` }}
+        />
+        {/* Ideal marker */}
+        <div style={{ position: "absolute", left: `${idealPct}%`, top: -3, bottom: -3, width: 2, background: "#00ff88", borderRadius: 2, boxShadow: "0 0 6px rgba(0,255,136,0.7)" }} />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 7 }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: barColor }}>
+          R${fmt(profitPerKm)}/km (você)
+        </span>
+        {profitPerKm < IDEAL_KM && (
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+            faltam <strong style={{ color: "#f59e0b" }}>R${fmt(IDEAL_KM - profitPerKm)}</strong>
+          </span>
+        )}
+        {profitPerKm >= IDEAL_KM && (
+          <span style={{ fontSize: 11, color: "#00ff88" }}>✓ meta atingida</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── RESULT SCREEN ────────────────────────────────────────────────────────────
 
 function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect }: {
@@ -334,6 +457,7 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
   const cfg = V[result.verdict];
   const { Icon } = cfg;
   const [saving, setSaving] = useState<"accepted" | "ignored" | null>(null);
+  const insights = buildInsights(result);
 
   const handleDecision = async (d: "accepted" | "ignored") => {
     if (saving) return;
@@ -346,69 +470,106 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
     <motion.div
       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       transition={{ type: "spring", damping: 28, stiffness: 340 }}
-      style={{ display: "flex", flexDirection: "column", minHeight: "calc(100dvh - 130px)" }}
+      style={{ display: "flex", flexDirection: "column" }}
     >
 
-      {/* ── VERDICT HERO ── */}
+      {/* ── 1. VERDICT HERO — impossible to miss ── */}
       <motion.div
         animate={{ boxShadow: cfg.glow }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 28, padding: "32px 20px 28px", marginBottom: 16, textAlign: "center", flexShrink: 0 }}
+        style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 28, padding: "28px 20px 24px", marginBottom: 12, textAlign: "center" }}
       >
         <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 3 }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 12 }}
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.5 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 10 }}
         >
-          <Icon size={44} color={cfg.accent} strokeWidth={2.5}
-            style={{ filter: `drop-shadow(0 0 12px ${cfg.accent}90)` }} />
-          <span style={{ fontSize: 38, fontWeight: 900, color: cfg.accent, letterSpacing: "-0.03em", textShadow: `0 0 32px ${cfg.accent}60` }}>
+          <Icon size={46} color={cfg.accent} strokeWidth={2.5}
+            style={{ filter: `drop-shadow(0 0 14px ${cfg.accent}A0)` }} />
+          <span style={{ fontSize: 40, fontWeight: 900, color: cfg.accent, letterSpacing: "-0.03em", textShadow: `0 0 40px ${cfg.accent}70`, lineHeight: 1 }}>
             {cfg.label}
           </span>
         </motion.div>
-        <p style={{ fontSize: 14, color: cfg.accent, opacity: 0.65, fontWeight: 600, marginBottom: 0 }}>{cfg.sub}</p>
+        <p style={{ fontSize: 15, color: cfg.accent, opacity: 0.7, fontWeight: 700 }}>{cfg.sub}</p>
 
         {result.confidence === "low" && (
-          <div style={{ marginTop: 14, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "8px 14px", display: "inline-block" }}>
+          <div style={{ marginTop: 12, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "7px 14px", display: "inline-block" }}>
             <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ Dados com baixa confiança — verifique abaixo</span>
           </div>
         )}
       </motion.div>
 
-      {/* ── PROFIT METRICS ── */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 24, padding: "22px 20px", marginBottom: 14, flexShrink: 0 }}>
-        {/* Net profit — largest */}
+      {/* ── 2. INSIGHT PANEL — emotional + rational context ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+        style={{ background: insights.tagBg, border: `1.5px solid ${insights.tagBorder}`, borderRadius: 20, padding: "18px 18px 16px", marginBottom: 12 }}
+      >
+        {/* Main insight line */}
+        <p style={{ fontSize: 14, fontWeight: 800, color: insights.tagColor, lineHeight: 1.4, marginBottom: 6 }}>
+          {insights.headline}
+        </p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, marginBottom: 0 }}>
+          {insights.sub}
+        </p>
+
+        {/* Time impact */}
+        {insights.timeMsg && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${insights.tagBorder}`, display: "flex", alignItems: "center", gap: 10 }}>
+            <Clock size={15} color={insights.tagColor} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", lineHeight: 1.4 }}>
+              {insights.timeMsg}
+            </span>
+          </div>
+        )}
+
+        {/* Target comparison bar */}
+        {result.profitPerKm !== null && (
+          <TargetBar profitPerKm={result.profitPerKm} accent={insights.tagColor} />
+        )}
+      </motion.div>
+
+      {/* ── 3. CORE METRICS ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 22, padding: "20px 18px", marginBottom: 12 }}
+      >
+        {/* Net profit — dominant */}
         <div style={{ textAlign: "center", marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", marginBottom: 8 }}>LUCRO ESTIMADO</div>
-          <div style={{ fontSize: 52, fontWeight: 900, color: result.netProfit !== null ? cfg.accent : "rgba(255,255,255,0.3)", letterSpacing: "-0.04em", lineHeight: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.32)", letterSpacing: "0.09em", marginBottom: 8 }}>
+            LUCRO ESTIMADO
+          </div>
+          <div style={{ fontSize: 54, fontWeight: 900, color: result.netProfit !== null ? cfg.accent : "rgba(255,255,255,0.25)", letterSpacing: "-0.04em", lineHeight: 1 }}>
             {fmtBRL(result.netProfit)}
           </div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 6 }}>
-            Após combustível e custos variáveis
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginTop: 6 }}>
+            após combustível e custos variáveis
           </div>
         </div>
 
-        {/* R$/km and R$/hora side by side */}
+        {/* R$/km and R$/hora */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.07em", marginBottom: 6 }}>R$ / KM</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: result.profitPerKm !== null ? "#fff" : "rgba(255,255,255,0.25)", letterSpacing: "-0.03em" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.32)", letterSpacing: "0.08em", marginBottom: 6 }}>R$ / KM</div>
+            <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-0.03em", color: result.profitPerKm !== null ? (result.profitPerKm >= IDEAL_KM ? "#00ff88" : result.profitPerKm >= 1.0 ? "#f59e0b" : "#ef4444") : "rgba(255,255,255,0.22)" }}>
               {result.profitPerKm !== null ? `R$${fmt(result.profitPerKm)}` : "—"}
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>lucro por quilômetro</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginTop: 4 }}>lucro por km</div>
           </div>
           <div style={{ textAlign: "center", borderLeft: "1px solid rgba(255,255,255,0.06)", paddingLeft: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.07em", marginBottom: 6 }}>R$ / HORA</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: result.profitPerHour !== null ? "#fff" : "rgba(255,255,255,0.25)", letterSpacing: "-0.03em" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.32)", letterSpacing: "0.08em", marginBottom: 6 }}>R$ / HORA</div>
+            <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-0.03em", color: result.profitPerHour !== null ? "#fff" : "rgba(255,255,255,0.22)" }}>
               {result.profitPerHour !== null ? `R$${fmt(result.profitPerHour)}` : "—"}
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>lucro por hora</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginTop: 4 }}>lucro por hora</div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* ── RIDE DETAILS ── */}
-      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "16px 18px", marginBottom: 20, flexShrink: 0 }}>
+      {/* ── 4. RIDE DETAILS ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.27 }}
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 18 }}
+      >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <RideDetail icon={<DollarSign size={14} color="#00ff88" />} label="Valor" val={fmtBRL(result.price)} />
           <RideDetail icon={<Navigation size={14} color="rgba(255,255,255,0.4)" />} label="Distância" val={result.distanceKm !== null ? `${fmt(result.distanceKm, 1)} km` : "—"} />
@@ -417,15 +578,49 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
         </div>
         {result.pickup && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <MapPin size={13} color="rgba(255,255,255,0.35)" style={{ marginTop: 2, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{result.pickup}</span>
-            {result.destination && <><span style={{ color: "rgba(255,255,255,0.2)" }}>→</span><span style={{ fontSize: 12, color: "#f59e0b" }}>{result.destination}</span></>}
+            <MapPin size={13} color="rgba(255,255,255,0.3)" style={{ marginTop: 2, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{result.pickup}</span>
+            {result.destination && (
+              <><span style={{ color: "rgba(255,255,255,0.18)" }}>→</span>
+              <span style={{ fontSize: 12, color: "#f59e0b" }}>{result.destination}</span></>
+            )}
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* ── DECISION BUTTONS ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, flexShrink: 0 }}>
+      {/* ── 5. FINAL VERDICT LINE — above buttons ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35 }}
+        style={{ textAlign: "center", marginBottom: 16, padding: "0 4px" }}
+      >
+        {result.verdict === "red" && (
+          <p style={{ fontSize: 15, fontWeight: 900, color: "#ef4444", lineHeight: 1.4 }}>
+            CORRIDA RUIM — prejuízo possível.<br />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(239,68,68,0.65)" }}>
+              Pense bem antes de aceitar.
+            </span>
+          </p>
+        )}
+        {result.verdict === "yellow" && (
+          <p style={{ fontSize: 15, fontWeight: 900, color: "#f59e0b", lineHeight: 1.4 }}>
+            ATENÇÃO — analise melhor.<br />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(245,158,11,0.65)" }}>
+              Só vale se o trânsito estiver tranquilo.
+            </span>
+          </p>
+        )}
+        {result.verdict === "green" && (
+          <p style={{ fontSize: 15, fontWeight: 900, color: "#00ff88", lineHeight: 1.4 }}>
+            CORRIDA BOA — vale a pena.<br />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(0,255,136,0.6)" }}>
+              Aceite com confiança.
+            </span>
+          </p>
+        )}
+      </motion.div>
+
+      {/* ── 6. DECISION BUTTONS ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => handleDecision("accepted")}
@@ -438,12 +633,12 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
             cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
             boxShadow: saving === "accepted" ? "none" : "0 8px 32px rgba(0,255,136,0.35)",
-            transition: "all 0.2s",
-            letterSpacing: "0.02em",
+            transition: "all 0.2s", letterSpacing: "0.02em",
           }}
         >
           {saving === "accepted"
-            ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} style={{ width: 24, height: 24, border: "2px solid rgba(0,255,136,0.3)", borderTop: "2px solid #00ff88", borderRadius: "50%" }} />
+            ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                style={{ width: 24, height: 24, border: "2px solid rgba(0,255,136,0.3)", borderTop: "2px solid #00ff88", borderRadius: "50%" }} />
             : <CheckCircle size={22} strokeWidth={2.5} />}
           {saving === "accepted" ? "Salvando..." : "✓  ACEITEI A CORRIDA"}
         </motion.button>
@@ -469,13 +664,13 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
       <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
         <motion.button
           whileTap={{ scale: 0.96 }} onClick={onCorrect}
-          style={{ flex: 1, background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 13, padding: "11px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
+          style={{ flex: 1, background: "none", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13, padding: "11px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.32)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
         >
           <Edit3 size={13} /> Corrigir dados
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.96 }} onClick={onNewCapture}
-          style={{ flex: 1, background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 13, padding: "11px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
+          style={{ flex: 1, background: "none", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13, padding: "11px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.32)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
         >
           <Camera size={13} /> Nova captura
         </motion.button>
