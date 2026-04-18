@@ -57,18 +57,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Session ──────────────────────────────────────────────────────────────────
-// Cookie sameSite strategy:
-//   - Production (NODE_ENV=production): "lax" — same-origin web app.
-//     SameSite=None was causing cookie rejection in Chrome Privacy Sandbox
-//     and Safari ITP in top-level browsing contexts.
-//   - Replit dev preview (REPLIT_DEV_DOMAIN set, not production): "none" —
-//     the preview pane is a cross-site iframe on replit.com; SameSite=Lax
-//     silently drops the cookie → 401 on every protected request.
-//   - Local dev: "lax" — standard localhost behaviour.
+// Cookie strategy: always SameSite=None + Secure=true when running on HTTPS.
+// This is required because Replit path-routes the frontend and API through a
+// reverse proxy, and some browsers treat requests to sub-paths of the same
+// domain as cross-origin when the cookie was issued by a proxied sub-service.
+// SameSite=None is the most permissive setting and works in all contexts as
+// long as Secure=true (HTTPS). Local dev without HTTPS gets Lax.
 const isProd = process.env.NODE_ENV === "production";
 const isReplitDev = !!process.env["REPLIT_DEV_DOMAIN"] && !isProd;
 const needsSecure = isProd || isReplitDev;
-const cookieSameSite: "lax" | "none" = isReplitDev ? "none" : "lax";
+const cookieSameSite: "lax" | "none" = needsSecure ? "none" : "lax";
 
 console.log(`[startup] cookie config — sameSite=${cookieSameSite} secure=${needsSecure} isProd=${isProd} isReplitDev=${isReplitDev}`);
 
@@ -88,17 +86,32 @@ app.use(
       httpOnly: true,
       secure: needsSecure,
       sameSite: cookieSameSite,
+      path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   }),
 );
 
 // ─── Session debug middleware ──────────────────────────────────────────────────
-app.use((req, _res, next) => {
+app.use((req, res, next) => {
   const sid = req.sessionID ?? "(none)";
   const uid = (req.session as any)?.userId ?? null;
+  const cookieHeader = req.headers.cookie ? "present" : "MISSING";
   if (req.path.startsWith("/api/auth")) {
-    console.log(`[session] ${req.method} ${req.path} — sessionId=${sid} userId=${uid ?? "none"}`);
+    console.log(`[session] ${req.method} ${req.path} — sessionId=${sid} userId=${uid ?? "none"} cookie=${cookieHeader}`);
+  }
+  // Log Set-Cookie header after response for auth endpoints
+  if (req.path.startsWith("/api/auth")) {
+    const origEnd = res.end.bind(res);
+    (res as any).end = function (...args: any[]) {
+      const setCookie = res.getHeader("set-cookie");
+      if (setCookie) {
+        console.log(`[session] SET-COOKIE sent for ${req.method} ${req.path}:`, Array.isArray(setCookie) ? setCookie[0]?.split(";")[0] + "..." : String(setCookie).split(";")[0] + "...");
+      } else {
+        console.log(`[session] no Set-Cookie header for ${req.method} ${req.path}`);
+      }
+      return origEnd(...args);
+    };
   }
   next();
 });

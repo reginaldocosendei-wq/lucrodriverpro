@@ -269,12 +269,16 @@ router.post("/google", async (req, res) => {
 });
 
 router.get("/me", async (req, res) => {
+  const sid = req.sessionID ?? "(none)";
+  const hasCookie = !!req.headers.cookie;
   if (!req.session.userId) {
+    console.log(`[auth/me] UNAUTHENTICATED — sessionId=${sid} cookie=${hasCookie ? "present" : "MISSING"} sessionUserId=none`);
     res.status(401).json({ error: "Não autenticado" });
     return;
   }
   let [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
   if (!user) {
+    console.log(`[auth/me] user not found in DB — sessionId=${sid} sessionUserId=${req.session.userId}`);
     res.status(401).json({ error: "Usuário não encontrado" });
     return;
   }
@@ -282,7 +286,7 @@ router.get("/me", async (req, res) => {
   user = await syncStripeStatusForUser(user);
 
   const effective = computeEffectivePlan(user);
-  console.log(`[auth/me] userId=${user.id} plan=${effective.plan} planSource=${effective.planSource} trialActive=${effective.trialActive}`);
+  console.log(`[auth/me] USER LOADED — userId=${user.id} sessionId=${sid} plan=${effective.plan} planSource=${effective.planSource} trialActive=${effective.trialActive}`);
 
   res.json(userResponse(user));
 });
