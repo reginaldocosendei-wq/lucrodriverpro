@@ -1,0 +1,189 @@
+STOP changing Google Cloud or OAuth settings.
+The Google account chooser already appears, so OAuth is working.
+The real bug is INSIDE the app after Google returns.
+
+You must now do a full forensic audit of the production auth flow and fix the loop permanently.
+
+GOAL:
+User clicks Google login -> returns to app -> token persists -> user stays logged in on /rides or dashboard after refresh.
+No redirect back to login page.
+
+==================================================
+PHASE 1 — FIND THE REAL BREAKPOINT
+==================================================
+
+Inspect the REAL code, not assumptions.
+
+You must search the project for ALL of these:
+
+1. localStorage keys related to auth/token/user/session
+   - search for: localStorage.setItem(
+   - search for: localStorage.getItem(
+   - search for: auth_token
+   - search for: token
+   - search for: jwt
+   - search for: session
+   - search for: user
+
+2. ALL redirects/navigation after login
+   - search for: navigate("/")
+   - search for: window.location.href = "/"
+   - search for: router.push("/")
+   - search for: redirect("/")
+   - search for: res.redirect(
+   - search for: /auth-success
+   - search for: google callback
+   - search for: login success
+
+3. ALL auth guards / bootstrap checks
+   - search for: if (!token)
+   - search for: if (!user)
+   - search for: isAuthenticated
+   - search for: requireAuth
+   - search for: ProtectedRoute
+   - search for: auth context
+   - search for: session bootstrap
+   - search for: me endpoint
+   - search for: /api/me
+   - search for: /api/user
+
+4. service worker / stale cache
+   - search for: serviceWorker
+   - search for: registerServiceWorker
+   - search for: navigator.serviceWorker
+   - search for: workbox
+   - search for: manifest
+   - search for: cache
+
+==================================================
+PHASE 2 — FIX EXACTLY THESE FAILURE MODES
+==================================================
+
+A. SINGLE TOKEN KEY
+There must be exactly ONE auth token key across the whole app:
+auth_token
+
+If any other key exists for login state, replace all of them with:
+localStorage.setItem("auth_token", token)
+localStorage.getItem("auth_token")
+
+B. AUTH SUCCESS PAGE
+The /auth-success page must:
+1. read token from query
+2. save localStorage auth_token
+3. NOT clear storage
+4. redirect ONLY to /rides
+
+Required logic:
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+if (token) {
+  localStorage.setItem("auth_token", token);
+  window.location.replace("/rides");
+} else {
+  window.location.replace("/");
+}
+
+Use replace(), not navigate().
+
+C. APP BOOTSTRAP
+On app startup, DO NOT redirect to login until token check is complete.
+
+If there is an auth context/provider/bootstrap:
+- first read localStorage auth_token
+- if token exists, mark authenticated immediately
+- only redirect to "/" if token is missing AND bootstrap completed
+
+This means:
+- add a loading/bootstrapping state
+- prevent premature redirect during initial render
+
+D. PROTECTED ROUTES
+All protected routes must use the SAME logic:
+- get auth_token from localStorage
+- if absent -> redirect to "/"
+- if present -> allow render
+- do not depend on cookies or req.session
+
+E. CUSTOM FETCH / API CLIENT
+All API calls must use the SAME token source:
+localStorage.getItem("auth_token")
+
+Every authenticated request must send:
+Authorization: Bearer <token>
+
+F. REMOVE TOKEN CLEARERS
+Find and delete any code that does any of the following after login:
+- localStorage.clear()
+- localStorage.removeItem("auth_token")
+- resetting auth state on mount
+- clearing session on 401 before first bootstrap completes
+
+G. 401 HANDLING
+If API returns 401:
+- only logout if the token is actually invalid
+- do NOT instantly redirect on first boot before /api/me or /api/user finishes
+- do NOT create a login loop
+
+H. SERVICE WORKER / CACHE
+If a service worker exists, disable it for now.
+Unregister any service worker registration.
+Remove stale cache logic.
+Add cache-busting to the production build if needed.
+
+==================================================
+PHASE 3 — ADD VISIBLE DEBUGGING
+==================================================
+
+Add temporary console logs in production-safe format:
+
+1. On /auth-success:
+console.log("[AUTH_SUCCESS] token in query:", !!token);
+
+2. After saving token:
+console.log("[AUTH_SUCCESS] saved auth_token:", !!localStorage.getItem("auth_token"));
+
+3. In auth bootstrap/provider:
+console.log("[AUTH_BOOT] token exists:", !!localStorage.getItem("auth_token"));
+
+4. In protected route:
+console.log("[PROTECTED_ROUTE] token exists:", !!localStorage.getItem("auth_token"));
+
+5. Before any redirect to login:
+console.log("[REDIRECT_TO_LOGIN] reason:", reason);
+
+6. In custom fetch:
+console.log("[API_AUTH_HEADER] bearer token exists:", !!token);
+
+==================================================
+PHASE 4 — HARD RULES
+==================================================
+
+- Do NOT tell me “it should work”
+- Do NOT summarize only
+- Do NOT make assumptions
+- Inspect real files and fix real code
+- Do NOT modify Google Cloud
+- Do NOT use cookies
+- Do NOT use req.session for auth
+- Do NOT leave multiple token keys
+- Do NOT keep any redirect to "/" after successful login except explicit logout
+
+==================================================
+PHASE 5 — REQUIRED OUTPUT
+==================================================
+
+After changes, reply with EXACTLY this structure:
+
+1. Files changed
+2. Old token keys found
+3. Final token key used
+4. Exact redirect path after Google callback
+5. Exact protected route logic now used
+6. Whether any service worker/cache code was removed
+7. Confirmation that no code still redirects to "/" after successful login
+8. Confirmation that refresh keeps the user logged in
+
+Then redeploy production.

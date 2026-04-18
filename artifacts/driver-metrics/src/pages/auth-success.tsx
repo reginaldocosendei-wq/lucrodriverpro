@@ -5,13 +5,15 @@ export default function AuthSuccess() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
 
+    console.log("[AUTH_SUCCESS] token in query:", !!token);
+
     if (token) {
       localStorage.setItem("auth_token", token);
-      console.log("[auth-success] token stored in localStorage — redirecting to /rides");
-      window.location.href = "/rides";
+      console.log("[AUTH_SUCCESS] saved auth_token:", !!localStorage.getItem("auth_token"));
+      window.location.replace("/rides");
     } else {
-      console.log("[auth-success] no token found — redirecting to /");
-      window.location.href = "/";
+      console.log("[AUTH_SUCCESS] no token — redirecting to /");
+      window.location.replace("/");
     }
   }, []);
 

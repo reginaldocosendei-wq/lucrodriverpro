@@ -69,6 +69,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// ─── AUTH BOOTSTRAP LOG ───────────────────────────────────────────────────────
+console.log("[AUTH_BOOT] token exists:", !!localStorage.getItem("auth_token"));
+
 // ─── AUTH BYPASS HOOK ──────────────────────────────────────────────────────────
 // Always calls useGetMe() (never conditional), but discards the result when
 // DEV_DISABLE_AUTH_FETCH is true, returning an instant settled-no-user response.
@@ -293,7 +296,11 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH || DEV_SKIP_ROUTE_GUARDS) return;
     const settled = (!isPending && !isLoading) || timedOut;
-    if (settled && !user) navigate("/login");
+    console.log("[PROTECTED_ROUTE] token exists:", !!localStorage.getItem("auth_token"), "| settled:", settled, "| user:", !!user);
+    if (settled && !user) {
+      console.log("[REDIRECT_TO_LOGIN] reason: settled=true, user=null, token=", !!localStorage.getItem("auth_token"));
+      navigate("/login");
+    }
   }, [user, isLoading, isPending, timedOut, navigate]);
 
   // Full auth bypass — skip all auth checks.

@@ -19,29 +19,26 @@ if (apiBaseOverride) {
   setBaseUrl(apiBaseOverride);
 }
 
-/* ── Service Worker — skip inside Capacitor native shell ──────────────────── */
+/* ── Service Worker — DISABLED: unregister all active workers ─────────────── */
+// SW disabled because stale-while-revalidate caching serves old JS bundles
+// after deploys, causing the new auth flow to never reach the user's browser.
 if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
-    navigator.serviceWorker
-      .register(swUrl, { scope: import.meta.env.BASE_URL })
-      .then((reg) => {
-        reg.addEventListener("updatefound", () => {
-          const worker = reg.installing;
-          if (worker) {
-            worker.addEventListener("statechange", () => {
-              if (
-                worker.state === "installed" &&
-                navigator.serviceWorker.controller
-              ) {
-                worker.postMessage({ type: "SKIP_WAITING" });
-              }
-            });
-          }
-        });
-      })
-      .catch(() => {});
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const reg of registrations) {
+      reg.unregister().then(() =>
+        console.log("[SW] unregistered:", reg.scope)
+      );
+    }
   });
+  // Also wipe all caches so stale JS/CSS bundles are evicted immediately.
+  if ("caches" in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((k) => {
+        caches.delete(k);
+        console.log("[SW] cache deleted:", k);
+      });
+    });
+  }
 }
 
 createRoot(document.getElementById("root")!).render(

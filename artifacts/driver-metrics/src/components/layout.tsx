@@ -245,7 +245,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     logout.mutate(undefined, {
-      onSuccess: () => { queryClient.setQueryData(["/api/auth/me"], null); queryClient.clear(); },
+      onSuccess: () => {
+        localStorage.removeItem("auth_token");
+        console.log("[LOGOUT] auth_token cleared from localStorage");
+        queryClient.setQueryData(["/api/auth/me"], null);
+        queryClient.clear();
+      },
     });
   };
 
