@@ -1,0 +1,188 @@
+Stop giving me “confirmed” summaries. The real behavior still fails on Android Chrome.
+
+REAL CURRENT BUG:
+- Google account chooser opens correctly
+- user selects account
+- app returns from Google
+- then it renders the public landing/login page again instead of staying authenticated
+
+So OAuth is NOT the current problem.
+The current problem is app state/bootstrap/render after Google return.
+
+I need a surgical fix, not another summary.
+
+==================================================
+MANDATORY GOAL
+==================================================
+
+After Google login succeeds:
+1. token must be stored
+2. /api/auth/me must succeed
+3. authenticated user must be written into app state
+4. app must render private app, never landing page
+5. refresh must keep the private app open
+
+==================================================
+PHASE 1 — ADD HARD DEBUG LOGS IN REAL CODE
+==================================================
+
+Add visible console logs in ALL these exact places:
+
+A. Google login click handler
+Log:
+[GOOGLE_LOGIN_CLICK]
+
+B. POST /api/auth/google frontend success response
+Log:
+[GOOGLE_AUTH_RESPONSE] token exists: true/false
+[GOOGLE_AUTH_RESPONSE] user exists: true/false
+
+C. /auth-success page
+Before saving:
+[AUTH_SUCCESS_PAGE] query token exists: true/false
+
+After saving:
+[AUTH_SUCCESS_PAGE] localStorage auth_token exists: true/false
+
+Before redirect:
+[AUTH_SUCCESS_PAGE] redirecting to /rides
+
+D. main auth bootstrap / App.tsx / auth provider
+On first load:
+[AUTH_BOOTSTRAP_START]
+[AUTH_BOOTSTRAP_TOKEN] token exists: true/false
+[AUTH_BOOTSTRAP_ME_START]
+[AUTH_BOOTSTRAP_ME_SUCCESS] user exists: true/false
+[AUTH_BOOTSTRAP_ME_ERROR] <real error>
+[AUTH_BOOTSTRAP_DONE]
+
+E. PrivateGuard / ProtectedRoute
+Log:
+[PRIVATE_GUARD_RENDER] token exists: true/false
+[PRIVATE_GUARD_RENDER] user exists: true/false
+[PRIVATE_GUARD_RENDER] isLoading: ...
+[PRIVATE_GUARD_RENDER] isPending: ...
+[PRIVATE_GUARD_REDIRECT] only when actually redirecting
+
+F. Public landing page / login page component
+On mount log:
+[PUBLIC_PAGE_RENDERED]
+Also log WHY it rendered:
+[PUBLIC_PAGE_REASON] no token / no user / bootstrap incomplete / explicit logout / unknown
+
+G. custom-fetch.ts
+For every authenticated request:
+[API_REQUEST] <method> <url>
+[API_AUTH_HEADER] bearer exists: true/false
+
+H. GET /api/auth/me frontend result
+[AUTH_ME_RESPONSE] status: ...
+[AUTH_ME_RESPONSE] user exists: true/false
+
+==================================================
+PHASE 2 — FIX THE ACTUAL FLOW
+==================================================
+
+Implement this exact behavior:
+
+1. GOOGLE SUCCESS HANDOFF
+After POST /api/auth/google returns { token, user }:
+- save token immediately:
+  localStorage.setItem("auth_token", token)
+- also save user immediately in memory/auth state
+- redirect using:
+  window.location.replace("/rides")
+NOT "/"
+NOT navigate("/")
+NOT landing page
+NOT delayed fallback
+
+2. AUTH-SUCCESS PAGE
+If /auth-success still exists, it must:
+- read token from query
+- save auth_token
+- immediately call window.location.replace("/rides")
+- no other branching except missing token -> "/login"
+
+3. AUTH BOOTSTRAP
+On app startup:
+- read localStorage auth_token first
+- if token exists, call GET /api/auth/me
+- while this is loading, show ONLY a full-screen loading state
+- do NOT render landing page during bootstrap
+- only render public page if:
+  bootstrap completed AND token missing
+  OR bootstrap completed AND /api/auth/me definitively failed with 401
+
+4. PRIVATE APP ENTRY
+At route /rides:
+- if token exists and /api/auth/me succeeds, render dashboard
+- do NOT depend on stale React Query cache only
+- do NOT require manual refresh
+- do NOT route through "/"
+
+5. PUBLIC PAGE BLOCK
+If auth_token exists in localStorage, the public landing/login page must NEVER render.
+Instead it must immediately try bootstrap or redirect to /rides.
+
+Required logic on public page mount:
+- if localStorage.getItem("auth_token") exists:
+    window.location.replace("/rides")
+  return null
+
+6. REMOVE ALL HOME FALLBACKS
+Search entire codebase and remove any auth-related fallback to:
+- "/"
+- landing page
+- marketing page
+
+After successful login there must be no route that returns user to public home.
+
+==================================================
+PHASE 3 — VERIFY SERVER CONTRACT
+==================================================
+
+Check backend route behavior for:
+POST /api/auth/google
+GET /api/auth/me
+
+You must verify:
+- JWT is returned correctly
+- JWT is accepted by /api/auth/me
+- Authorization Bearer header is parsed correctly
+- /api/auth/me returns the logged-in user, not null
+- there is no req.session dependency anywhere in auth validation
+
+If any route still depends on session/cookies, remove that dependency.
+Auth must work only with Bearer token.
+
+==================================================
+PHASE 4 — ANDROID CHROME SPECIFIC FIX
+==================================================
+
+Because the bug happens specifically in real Chrome:
+- keep service workers disabled
+- unregister all existing workers
+- clear caches on app boot
+- ensure no stale HTML shell can render old landing page
+- ensure login callback does not open into stale cached route tree
+
+==================================================
+PHASE 5 — DO NOT SUMMARIZE, PROVE IT
+==================================================
+
+After code changes, do NOT say “confirmed” unless you actually traced the code path.
+
+Your final answer must contain EXACTLY:
+
+1. Which component renders the public landing page
+2. Why it still rendered after Google login
+3. The exact file and line area where that logic was fixed
+4. The exact redirect path after Google success
+5. The exact condition now used before rendering public page
+6. The exact condition now used before redirecting to login
+7. The exact contract of GET /api/auth/me
+8. Any old fallback to "/" that was removed
+9. Confirmation that public page can no longer render if auth_token exists
+
+Then redeploy production.

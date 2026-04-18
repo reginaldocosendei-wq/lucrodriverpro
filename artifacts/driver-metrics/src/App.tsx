@@ -69,8 +69,9 @@ const queryClient = new QueryClient({
   },
 });
 
-// ─── AUTH BOOTSTRAP LOG ───────────────────────────────────────────────────────
-console.log("[AUTH_BOOT] token exists:", !!localStorage.getItem("auth_token"));
+// ─── AUTH BOOTSTRAP LOGS ──────────────────────────────────────────────────────
+console.log("[AUTH_BOOTSTRAP_START]");
+console.log("[AUTH_BOOTSTRAP_TOKEN] token exists:", !!localStorage.getItem("auth_token"));
 
 // ─── AUTH BYPASS HOOK ──────────────────────────────────────────────────────────
 // Always calls useGetMe() (never conditional), but discards the result when
@@ -83,9 +84,22 @@ function useBootAuth(): BootAuthResult {
   const real = useGetMe(
     DEV_DISABLE_AUTH_FETCH ? { query: { enabled: false } } : undefined
   );
+
+  // Log every state transition for /api/auth/me
+  useEffect(() => {
+    if (DEV_DISABLE_AUTH_FETCH) return;
+    if (real.isPending || real.isLoading) {
+      console.log("[AUTH_BOOTSTRAP_ME_START] fetching /api/auth/me...");
+    }
+    if (real.isSuccess) {
+      console.log("[AUTH_BOOTSTRAP_ME_SUCCESS] user exists:", !!real.data);
+    }
+    if (real.isError) {
+      console.log("[AUTH_BOOTSTRAP_ME_ERROR]", (real.error as any)?.message ?? String(real.error));
+    }
+  }, [real.isPending, real.isLoading, real.isSuccess, real.isError, real.data, real.error]);
+
   if (DEV_DISABLE_AUTH_FETCH) {
-    // Override the return to a fully settled no-user state with zero loading.
-    // isPending must be false so HomeRoute/PrivateGuard treat auth as resolved.
     return {
       ...real,
       data: undefined,
@@ -192,6 +206,18 @@ function LoadingSpinner() {
 function HomeRoute() {
   const { data: user, isLoading, isPending } = useBootAuth();
 
+  // HARD BLOCK: if auth_token exists in localStorage, the landing page must
+  // never render. Redirect to /rides immediately and wait for bootstrap.
+  // This prevents the flash of the public page after Google login.
+  if (!DEV_DISABLE_AUTH_FETCH && !DEV_SKIP_ROUTE_GUARDS) {
+    const hasToken = !!localStorage.getItem("auth_token");
+    if (hasToken && !user) {
+      console.log("[PUBLIC_PAGE_REASON] token exists — redirecting to /rides instead of showing landing");
+      window.location.replace("/rides");
+      return null;
+    }
+  }
+
   if (DEV_DISABLE_AUTH_FETCH) {
     return (
       <div style={appShellStyle}>
@@ -218,6 +244,10 @@ function HomeRoute() {
   // HomeRoute would briefly render the landing page causing a visual loop.
   if (isPending || isLoading) return <LoadingSpinner />;
 
+  if (!user) {
+    console.log("[PUBLIC_PAGE_RENDERED] reason: bootstrap settled, no user, no token");
+  }
+
   return (
     <AnimatePresence mode="wait" initial={false}>
       {user ? (
@@ -239,19 +269,32 @@ function HomeRoute() {
 
 // ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
 // Public route — accessible without auth.
-// Redirects to "/" if the user is already authenticated.
-// After successful login/register it navigates to "/rides".
-// DEV: auth redirect temporarily disabled for desktop nav testing
+// If auth_token exists in localStorage, redirect to /rides immediately.
+// Never renders <AuthScreen /> when a token is present.
 function LoginRoute() {
   const { data: user, isLoading } = useBootAuth();
   const [, navigate] = useLocation();
 
+  // HARD BLOCK: token in localStorage means the user is (or was) logged in.
+  // Do not render the login page — redirect to /rides to let PrivateGuard
+  // validate the token via /api/auth/me.
+  if (!DEV_DISABLE_AUTH_FETCH && !DEV_SKIP_ROUTE_GUARDS) {
+    const hasToken = !!localStorage.getItem("auth_token");
+    if (hasToken && !user) {
+      console.log("[PUBLIC_PAGE_REASON] /login: token exists — redirecting to /rides");
+      window.location.replace("/rides");
+      return null;
+    }
+  }
+
   useEffect(() => {
-    if (DEV_SKIP_ROUTE_GUARDS) return; // bypass: stay on /login to test auth freely
+    if (DEV_SKIP_ROUTE_GUARDS) return;
     if (!isLoading && user) {
       navigate("/rides");
     }
   }, [user, isLoading, navigate]);
+
+  console.log("[PUBLIC_PAGE_RENDERED] /login rendered — no token, no user");
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
@@ -274,34 +317,58 @@ function ImportRoute() {
 }
 
 // ─── PRIVATE GUARD ────────────────────────────────────────────────────────────
-// Wraps private routes. Redirects to "/login" if not authenticated.
-// DEV_DISABLE_AUTH_FETCH: renders children directly — no redirect, no spinner.
+// Wraps private routes. Redirects to "/login" ONLY when:
+//   - bootstrap has fully settled (not loading/pending)
+//   - AND user is null (no authenticated user)
+//   - AND NO auth_token in localStorage
+// If a token EXISTS but /api/auth/me is still loading, we WAIT — never kick
+// a user with a valid token out to the login page on a slow connection.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading, isPending } = useBootAuth();
+  const { data: user, isLoading, isPending, isError, error } = useBootAuth();
   const [, navigate] = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
-  // Timeout safety valve: if auth has not settled within 8s, treat as
-  // unauthenticated so the user is not stuck on a spinner forever.
+  // Timeout safety valve: only fires if there is NO token in localStorage.
+  // With a token present we keep showing the spinner indefinitely until the
+  // network responds — the user is logged in and must not be bounced.
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH || DEV_SKIP_ROUTE_GUARDS) return;
+    const hasToken = !!localStorage.getItem("auth_token");
+    if (hasToken) return; // never time out a token-holder
     const t = setTimeout(() => setTimedOut(true), 8000);
     return () => clearTimeout(t);
   }, []);
 
-  // Redirect to /login only once auth has fully settled AND user is absent.
-  // "settled" means: not loading, not pending (data is no longer in-flight),
-  // OR the safety timeout fired. This prevents kicking the user out while the
-  // /api/auth/me refetch is still in progress after login.
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH || DEV_SKIP_ROUTE_GUARDS) return;
+    const hasToken = !!localStorage.getItem("auth_token");
     const settled = (!isPending && !isLoading) || timedOut;
-    console.log("[PROTECTED_ROUTE] token exists:", !!localStorage.getItem("auth_token"), "| settled:", settled, "| user:", !!user);
+
+    console.log("[PRIVATE_GUARD_RENDER] token exists:", hasToken, "| user exists:", !!user, "| isLoading:", isLoading, "| isPending:", isPending, "| settled:", settled);
+
     if (settled && !user) {
-      console.log("[REDIRECT_TO_LOGIN] reason: settled=true, user=null, token=", !!localStorage.getItem("auth_token"));
-      navigate("/login");
+      if (hasToken && isError) {
+        // Token exists but /api/auth/me returned an error.
+        // Log the error but DO NOT redirect — could be a transient network error.
+        // Only a hard 401 (which clears the token below) should cause redirect.
+        const status = (error as any)?.status ?? (error as any)?.response?.status;
+        console.log("[PRIVATE_GUARD_RENDER] /api/auth/me error status:", status);
+        if (status === 401) {
+          // Server explicitly rejected the token — it's invalid. Clear it and redirect.
+          console.log("[PRIVATE_GUARD_REDIRECT] 401 from /api/auth/me — token invalid, clearing and redirecting to /login");
+          localStorage.removeItem("auth_token");
+          navigate("/login");
+        }
+        // For other errors (network, 500) keep the spinner — do not kick user out.
+        return;
+      }
+      if (!hasToken) {
+        // No token and no user — definitely not logged in.
+        console.log("[PRIVATE_GUARD_REDIRECT] no token, no user — redirecting to /login");
+        navigate("/login");
+      }
     }
-  }, [user, isLoading, isPending, timedOut, navigate]);
+  }, [user, isLoading, isPending, timedOut, isError, error, navigate]);
 
   // Full auth bypass — skip all auth checks.
   if (DEV_DISABLE_AUTH_FETCH) {
@@ -313,7 +380,6 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Route-guard bypass — auth query still fires; no redirect is issued.
-  // Debug panel will show live isAuthenticated state (confirms session works).
   if (DEV_SKIP_ROUTE_GUARDS) {
     return (
       <div style={appShellStyle}>
@@ -322,10 +388,14 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Show spinner while auth is settling (covers isPending idle gap too).
-  if ((isPending || isLoading) && !timedOut && !user) return <LoadingSpinner />;
+  // Show spinner while auth is settling.
+  const hasToken = !!localStorage.getItem("auth_token");
+  if ((isPending || isLoading) && !user) return <LoadingSpinner />;
+  // Token exists but /api/auth/me errored with non-401 — keep spinner, retry in background.
+  if (!user && hasToken && isError) return <LoadingSpinner />;
   if (!user) return null;
 
+  console.log("[AUTH_BOOTSTRAP_DONE] user authenticated:", !!user);
   return (
     <div style={appShellStyle}>
       <Layout>{children}</Layout>

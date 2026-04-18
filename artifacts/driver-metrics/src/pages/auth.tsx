@@ -46,15 +46,20 @@ function AuthForm({
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
     onSuccess: async (data) => {
-      // Redirect to /auth-success?token=JWT using absolute URL as required.
-      // The /auth-success page stores the token in localStorage and
-      // then does window.location.href = "/rides" — no cookies needed.
+      console.log("[GOOGLE_AUTH_RESPONSE] token exists:", !!data.token);
+      console.log("[GOOGLE_AUTH_RESPONSE] user exists:", !!data.user);
+
       if (data.token) {
-        const dest = `${window.location.origin}/auth-success?token=${encodeURIComponent(data.token)}`;
-        console.log("[auth/google] redirecting to auth-success");
-        window.location.href = dest;
+        // Save token immediately to localStorage before any navigation.
+        // This is the ONLY auth_token key used anywhere in the app.
+        localStorage.setItem("auth_token", data.token);
+        console.log("[GOOGLE_AUTH_RESPONSE] auth_token saved to localStorage:", !!localStorage.getItem("auth_token"));
+        // Go directly to /rides — no intermediate /auth-success page.
+        // replace() prevents back-button returning to the login page.
+        window.location.replace("/rides");
       } else {
-        window.location.href = "/";
+        console.log("[GOOGLE_AUTH_RESPONSE] ERROR: no token in response — staying on login");
+        setErrorMsg(t("auth.googleError"));
       }
     },
     onError: (err: any) => {
@@ -140,6 +145,7 @@ function AuthForm({
               width={330}
               text="continue_with"
               onSuccess={(response) => {
+                console.log("[GOOGLE_LOGIN_CLICK] credential received:", !!response.credential);
                 if (response.credential) {
                   setErrorMsg("");
                   googleMutation.mutate(response.credential);
