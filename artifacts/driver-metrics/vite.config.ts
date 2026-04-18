@@ -92,6 +92,14 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      // Forward /download to the Express API server so it works in the dev preview.
+      // In production the Express server handles all routes, so no proxy is needed.
+      "/download": {
+        target: "http://localhost:8080",
+        changeOrigin: false,
+      },
+    },
   },
   preview: {
     port,

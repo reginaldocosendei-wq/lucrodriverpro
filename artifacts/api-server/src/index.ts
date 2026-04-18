@@ -2,10 +2,8 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
-import { exec } from "child_process";
 import path from "path";
-import fs from "fs";
-import os from "os";
+import archiver from "archiver";
 
 const app = express();
 
@@ -20,45 +18,44 @@ app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
 // ─── PROJECT DOWNLOAD ─────────────────────────────────────────────────────────
 // GET /download  →  streams the entire workspace as app.zip
 // No auth required — intended for the project owner to grab the source.
-// Excludes: node_modules, .git, .cache, .local, dist, *.zip, *.map
+// Streams directly to the browser; no temp file is written to disk.
+// Excludes: node_modules, .git, .cache, .local, dist, build, *.map files
 app.get("/download", (_req, res) => {
   const workspaceRoot = path.resolve("/home/runner/workspace");
-  const tmpFile = path.join(os.tmpdir(), `lucro-driver-${Date.now()}.zip`);
 
-  const excludes = [
-    "*/node_modules/*",
-    "*/.git/*",
-    "*/.cache/*",
-    "*/.local/*",
-    "*/dist/*",
-    "*.zip",
-    "*.map",
-    "*/.pnpm-store/*",
-  ].map((p) => `-x "${p}"`).join(" ");
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
 
-  const cmd = `cd "${workspaceRoot}" && zip -r "${tmpFile}" . ${excludes}`;
+  const archive = archiver("zip", { zlib: { level: 6 } });
 
-  exec(cmd, { maxBuffer: 512 * 1024 * 1024 }, (err) => {
-    if (err) {
-      console.error("[download] zip failed:", err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to create archive", detail: err.message });
-      }
-      fs.unlink(tmpFile, () => {});
-      return;
+  archive.on("error", (err) => {
+    console.error("[download] archiver error:", err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Archive failed", detail: err.message });
     }
-
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
-
-    const stream = fs.createReadStream(tmpFile);
-    stream.pipe(res);
-    stream.on("end", () => fs.unlink(tmpFile, () => {}));
-    stream.on("error", (streamErr) => {
-      console.error("[download] stream error:", streamErr.message);
-      fs.unlink(tmpFile, () => {});
-    });
   });
+
+  // Pipe the zip stream directly to the HTTP response
+  archive.pipe(res);
+
+  archive.glob("**/*", {
+    cwd: workspaceRoot,
+    dot: true,
+    ignore: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.cache/**",
+      "**/.local/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.pnpm-store/**",
+      "**/*.map",
+      "**/*.zip",
+    ],
+  });
+
+  archive.finalize();
+  console.log("[download] streaming app.zip");
 });
 
 // ─── Stripe webhook — MUST be before express.json() ──────────────────────────
