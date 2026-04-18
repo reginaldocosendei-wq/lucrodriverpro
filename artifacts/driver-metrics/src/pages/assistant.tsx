@@ -6,7 +6,7 @@ import {
   MapPin, DollarSign, Edit3, Fuel, ArrowLeft, ImageIcon,
   Radio, Activity, TrendingUp, TrendingDown, Minus, Lock, Smartphone,
 } from "lucide-react";
-import { REAL_PROVIDER } from "@/services/rideProvider";
+import { REAL_PROVIDER, ACTIVE_PROVIDER } from "@/services/rideProvider";
 import { useLocation } from "wouter";
 import { getApiBase, authFetch } from "@/lib/api";
 import { getCameraService, getGalleryService, type CaptureResult } from "@/services/offerCaptureService";
@@ -245,6 +245,38 @@ function generateMockRide(costs: DriverCosts): FeedItem {
     fixedCostPerHour: costs.fixedCostPerHour,
   };
 
+  return { uid: nextUid(), ride, decision: null, detectedAt: new Date() };
+}
+
+/**
+ * fetchNextFeedItem — Provider bridge
+ *
+ * Routes through ACTIVE_PROVIDER (mock or real).  Reuses the local calcProfit
+ * business logic so there is no duplication.  Returns null when the real
+ * provider has no data yet (e.g. browser mode), which callers handle by
+ * simply rescheduling the next check.
+ */
+async function fetchNextFeedItem(costs: DriverCosts): Promise<FeedItem | null> {
+  const raw = await ACTIVE_PROVIDER.nextRide(costs);
+  if (!raw) return null;
+  const { profitPerKm, profitPerHour, netProfit, verdict } = calcProfit(
+    raw.price, raw.distanceKm, raw.estimatedMinutes, costs
+  );
+  const ride: OfferAnalysis = {
+    price: raw.price,
+    distanceKm: raw.distanceKm,
+    estimatedMinutes: raw.estimatedMinutes,
+    pickup: raw.pickup ?? null,
+    destination: raw.destination ?? null,
+    platform: raw.platform as OfferAnalysis["platform"],
+    confidence: "high",
+    profitPerKm,
+    profitPerHour,
+    netProfit,
+    verdict,
+    costPerKm: costs.costPerKm,
+    fixedCostPerHour: costs.fixedCostPerHour,
+  };
   return { uid: nextUid(), ride, decision: null, detectedAt: new Date() };
 }
 
@@ -1098,10 +1130,12 @@ export default function AssistantPage() {
 
     const scheduleNext = () => {
       const delay = 8000 + Math.random() * 7000; // 8–15 seconds
-      autoTimerRef.current = setTimeout(() => {
+      autoTimerRef.current = setTimeout(async () => {
         // Only fire if no ride is currently showing and not in manual analyze flow
         if (state.kind === "idle") {
-          const newItem = generateMockRide(costs);
+          const newItem = await fetchNextFeedItem(costs);
+          // Real provider returns null when bridge isn't active yet — retry later
+          if (!newItem) { scheduleNext(); return; }
           setIncomingRide(newItem);
           setCountdown(AUTO_DISMISS_SECS);
 
@@ -1153,9 +1187,10 @@ export default function AssistantPage() {
     setCountdown(AUTO_DISMISS_SECS);
     // Schedule next ride
     const delay = 8000 + Math.random() * 7000;
-    autoTimerRef.current = setTimeout(() => {
+    autoTimerRef.current = setTimeout(async () => {
       if (state.kind === "idle") {
-        const newItem = generateMockRide(costs);
+        const newItem = await fetchNextFeedItem(costs);
+        if (!newItem) return;
         setIncomingRide(newItem);
         setCountdown(AUTO_DISMISS_SECS);
         if (voiceOn) {

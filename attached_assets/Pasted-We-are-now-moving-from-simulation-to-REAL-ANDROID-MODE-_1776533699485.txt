@@ -1,0 +1,164 @@
+We are now moving from simulation to REAL ANDROID MODE.
+
+CRITICAL RULES:
+1. DO NOT touch or break the existing simulation flow.
+2. KEEP the current UI, current visual decision card, current accept/ignore flow, current sound logic, and current history behavior.
+3. DO NOT remove mock mode.
+4. ADD real Android mode as a parallel architecture, behind a provider abstraction.
+5. DO NOT fake completion of native Android automatic capture inside browser/PWA.
+6. Build the codebase so the current web app still runs immediately, while preparing the Android APK bridge cleanly.
+7. No destructive refactors. No regressions. No replacing validated UI with a new design.
+
+GOAL:
+Prepare this project to support REAL automatic ride detection on Android using Accessibility Service + Capacitor bridge, while keeping the current mock simulation fully working today.
+
+DELIVER THIS IN 4 LAYERS:
+
+LAYER 1 — PROVIDER ARCHITECTURE
+Create a clean provider system so the app can receive rides from either:
+- MOCK provider (existing simulation)
+- REAL provider (future Android bridge)
+
+Implement:
+- src/services/rideProvider.ts
+
+Inside it define:
+- type RawRideData = {
+    price: number;
+    distanceKm: number;
+    estimatedMinutes: number;
+    platform: 'Uber' | '99' | 'InDrive' | 'Cabify' | 'Other';
+    pickup?: string;
+    destination?: string;
+  };
+
+- interface RideProvider {
+    mode: 'mock' | 'real';
+    isAvailable: boolean;
+    nextRide(costs: any): Promise<RawRideData | null>;
+  }
+
+- function rawRideToOfferInput(raw: RawRideData, costs: any): any
+  This converts raw detected ride data into the same input shape already used by the current offer analysis engine.
+  IMPORTANT: reuse existing analysis logic. Do not duplicate business logic.
+
+Implement:
+- MockRideProvider
+  Wrap the current simulation generator so current behavior remains intact.
+
+- RealRideProvider
+  Placeholder provider for Android bridge.
+  For now:
+  - mode = 'real'
+  - isAvailable = false unless native bridge exists
+  - nextRide() returns null in browser mode
+  - include clear TODOs for native bridge connection
+
+Export:
+- ACTIVE_PROVIDER defaulting to MockRideProvider
+- REAL_PROVIDER instance too, so UI can inspect availability
+
+LAYER 2 — ANDROID NATIVE SCAFFOLD
+Create native scaffold files only. Do not claim browser can do native automatic detection.
+
+Create:
+- android/AccessibilityRideService.kt
+
+This file must be a REAL Android AccessibilityService scaffold with:
+- observed package names for Uber, 99, InDrive, Cabify
+- onServiceConnected()
+- onAccessibilityEvent()
+- app-specific extractor stubs:
+  - extractUber(...)
+  - extract99(...)
+  - extractInDrive(...)
+  - extractCabify(...)
+- helper parsers:
+  - parsePrice(...)
+  - parseDistance(...)
+  - parseMinutes(...)
+- emitToBridge(rawRideData)
+
+IMPORTANT:
+- put strong comments saying this service is for the Capacitor Android build only
+- add TODO markers where actual view IDs / text matching will be finalized
+- use Brazilian number parsing examples like:
+  "R$ 12,50"
+  "4,2 km"
+  "1h 18min"
+- keep file serious and production-oriented, not pseudo-joke code
+
+Also create:
+- android/README_REAL_MODE.md
+
+Document clearly:
+1. Browser/PWA cannot automatically read Uber/99 screens
+2. Real automatic detection requires Android APK + Accessibility Service
+3. Current web project remains testable through mock provider
+4. This scaffold is the bridge point for future native APK build
+5. Exact files and connection points
+
+LAYER 3 — UI REAL MODE STATUS
+In the existing live assistant screen, keep everything working exactly as today, but add a locked REAL status.
+
+Requirements:
+- Keep AUTO toggle working for mock mode exactly as today
+- Add a small muted “REAL” button in the header area
+- It must look disabled/locked, elegant, premium
+- Tapping it opens a bottom sheet / panel explaining:
+
+Title:
+"Modo automático real em breve (Android)"
+
+Body:
+"Detectará corridas automaticamente pelo Accessibility Service do Android, sem captura manual. Disponível na versão APK."
+
+Status line:
+"Provider: aguardando bridge Android"
+
+IMPORTANT:
+- This status must read from REAL_PROVIDER.isAvailable
+- If in browser, it shows unavailable/awaiting bridge
+- Do not make fake promises that it already works on web
+
+LAYER 4 — SAFE INTEGRATION
+Integrate provider architecture into the current live assistant flow with minimal risk.
+
+Requirements:
+- current mock AUTO mode must keep functioning
+- current card appearance must remain unchanged
+- current sound logic must remain unchanged
+- current history saving must remain unchanged
+- current accept/ignore actions must remain unchanged
+
+Implementation rule:
+Where the app currently generates simulated ride data directly, replace that with provider usage:
+- if ACTIVE_PROVIDER is mock -> same current experience
+- if future ACTIVE_PROVIDER becomes real -> same pipeline, same UI, same decision logic
+
+That means:
+raw ride data -> existing analysis engine -> existing UI -> existing history
+
+DO NOT:
+- redesign the screen
+- remove history
+- remove sounds
+- remove verdict colors
+- break mobile layout
+- break current accepted/ignored metrics
+- break current “ruins evitadas” / “prejuízo evitado” counters
+
+FINAL DELIVERABLES:
+1. provider architecture implemented
+2. Android AccessibilityService scaffold file created
+3. Android README created
+4. REAL locked button + info panel added
+5. current simulation still fully functional
+6. concise final report with:
+   - files created
+   - files changed
+   - what works now
+   - what is prepared for APK phase
+   - what still needs real Android wiring
+
+Work carefully, step by step, with zero regression mindset.
