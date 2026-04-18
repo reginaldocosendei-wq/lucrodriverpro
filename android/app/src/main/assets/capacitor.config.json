@@ -1,0 +1,5 @@
+{
+	"appId": "com.lucrodriver.app",
+	"appName": "lucrodriver",
+	"webDir": "artifacts/driver-metrics/dist/public"
+}

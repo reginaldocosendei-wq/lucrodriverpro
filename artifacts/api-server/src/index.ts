@@ -2,6 +2,10 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
+import { exec } from "child_process";
+import path from "path";
+import fs from "fs";
+import os from "os";
 
 const app = express();
 
@@ -12,6 +16,50 @@ app.set("trust proxy", 1);
 app.get("/", (_req, res) => res.status(200).send("OK"));
 app.get("/api/healthz", (_req, res) => res.json({ status: "ok" }));
 app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
+
+// ─── PROJECT DOWNLOAD ─────────────────────────────────────────────────────────
+// GET /download  →  streams the entire workspace as app.zip
+// No auth required — intended for the project owner to grab the source.
+// Excludes: node_modules, .git, .cache, .local, dist, *.zip, *.map
+app.get("/download", (_req, res) => {
+  const workspaceRoot = path.resolve("/home/runner/workspace");
+  const tmpFile = path.join(os.tmpdir(), `lucro-driver-${Date.now()}.zip`);
+
+  const excludes = [
+    "*/node_modules/*",
+    "*/.git/*",
+    "*/.cache/*",
+    "*/.local/*",
+    "*/dist/*",
+    "*.zip",
+    "*.map",
+    "*/.pnpm-store/*",
+  ].map((p) => `-x "${p}"`).join(" ");
+
+  const cmd = `cd "${workspaceRoot}" && zip -r "${tmpFile}" . ${excludes}`;
+
+  exec(cmd, { maxBuffer: 512 * 1024 * 1024 }, (err) => {
+    if (err) {
+      console.error("[download] zip failed:", err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to create archive", detail: err.message });
+      }
+      fs.unlink(tmpFile, () => {});
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
+
+    const stream = fs.createReadStream(tmpFile);
+    stream.pipe(res);
+    stream.on("end", () => fs.unlink(tmpFile, () => {}));
+    stream.on("error", (streamErr) => {
+      console.error("[download] stream error:", streamErr.message);
+      fs.unlink(tmpFile, () => {});
+    });
+  });
+});
 
 // ─── Stripe webhook — MUST be before express.json() ──────────────────────────
 // Stripe sends a raw Buffer; if express.json() runs first it consumes the body
