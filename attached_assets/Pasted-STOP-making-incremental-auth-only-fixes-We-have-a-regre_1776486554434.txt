@@ -1,0 +1,69 @@
+STOP making incremental auth-only fixes.
+
+We have a regression. The app now logs in, but we lost previously working product behavior and consistency. I need a PRODUCT STABILIZATION RECOVERY, not another superficial auth patch.
+
+GOAL:
+Restore the previously working Lucro Driver production behavior and keep only the minimum login fixes required. Do NOT redesign anything. Do NOT change UI unnecessarily. Do NOT create new flows. Do NOT change business logic unless required to restore the previous working state.
+
+What happened:
+- Google login was failing before.
+- Now login partially works.
+- But the app behavior regressed compared to the version that was already being tested by users and ads.
+- We now have signs of mixed states between old web app, new mobile app, new routes, and new auth flow.
+- We must recover the last stable functional product behavior.
+
+YOUR TASK:
+1. Identify the LAST STABLE WORKING VERSION in this project history / checkpoints / deployment state.
+2. Compare it against the current state.
+3. Produce a precise diff of what changed in:
+   - auth flow
+   - routing
+   - protected routes
+   - data loading
+   - reports/history/costs/goals pages
+   - OCR/import/analyze flow
+   - subscription/pro logic
+   - session persistence
+4. Revert ONLY the changes that caused regression.
+5. Keep ONLY the fixes strictly necessary for Google login to work.
+6. Make current production behave like the last stable product version, not like an experimental remix.
+
+MANDATORY RULES:
+- Do not continue stacking patches.
+- Do not assume.
+- Do not say “should work”.
+- Inspect the actual code, routes, environment variables, and published artifacts.
+- If current mobile app was built from the wrong base, say it explicitly.
+- If the wrong artifact is published, say it explicitly.
+- If current published build is not the same product tree as the previously working app, say it explicitly.
+- If necessary, restore from the last stable checkpoint and then re-apply only the Google login fix cleanly.
+
+DELIVERABLES:
+A) State exactly:
+- which checkpoint/commit/deployment is the last stable product state
+- what exact files introduced regression
+- whether the current published mobile build is from the wrong source tree
+- whether the current DB/session/auth state is mismatched
+
+B) Then execute the recovery:
+- restore last stable product behavior
+- preserve working Google login
+- preserve existing user data
+- preserve PRO/subscription logic
+
+C) After that, provide a FINAL REPORT in this exact format:
+
+1. LAST STABLE BASE USED:
+2. REGRESSION CAUSE:
+3. FILES REVERTED OR FIXED:
+4. CURRENT LOGIN FLOW:
+5. CURRENT POST-LOGIN ROUTE:
+6. CURRENT ANALYZE/OCR FLOW STATUS:
+7. CURRENT REPORTS/HISTORY/COSTS/GOALS STATUS:
+8. CURRENT PRO STATUS:
+9. EXACT PRODUCTION URL TO TEST:
+10. EXACT TEST STEPS I SHOULD RUN:
+
+IMPORTANT:
+Do not give me another partial patch.
+Do a recovery to the last stable product state first.

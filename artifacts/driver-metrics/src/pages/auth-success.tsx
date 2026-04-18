@@ -6,7 +6,7 @@ export default function AuthSuccess() {
     if (token) {
       localStorage.setItem("auth_token", token);
       localStorage.setItem("user_logged", "true");
-      window.location.href = "/rides";
+      window.location.href = "/";
     } else {
       window.location.href = "/login";
     }

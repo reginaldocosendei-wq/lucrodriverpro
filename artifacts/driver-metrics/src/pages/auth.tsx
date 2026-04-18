@@ -51,7 +51,7 @@ function AuthForm({
         localStorage.setItem("auth_token", data.token);
         localStorage.setItem("user_logged", "true");
       }
-      window.location.href = "/rides";
+      window.location.href = "/";
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));
@@ -84,7 +84,7 @@ function AuthForm({
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
-        window.location.href = "/rides";
+        window.location.href = "/";
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
@@ -101,7 +101,7 @@ function AuthForm({
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
-        window.location.href = "/rides";
+        window.location.href = "/";
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.registerError");

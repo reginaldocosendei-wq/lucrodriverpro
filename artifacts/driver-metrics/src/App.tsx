@@ -157,18 +157,18 @@ function LoadingSpinner() {
 }
 
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
+// "/" shows the dashboard if authenticated, landing page if not.
 function HomeRoute() {
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    const isLogged = localStorage.getItem("user_logged");
-    if (token && isLogged) {
-      window.location.href = "/rides";
-    }
-  }, []);
-
   const token = localStorage.getItem("auth_token");
   const isLogged = localStorage.getItem("user_logged");
-  if (token && isLogged) return <LoadingSpinner />;
+
+  if (token && isLogged) {
+    return (
+      <div style={appShellStyle}>
+        <Layout><Home /></Layout>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
@@ -178,12 +178,13 @@ function HomeRoute() {
 }
 
 // ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
+// Public route — redirects to dashboard if already authenticated.
 function LoginRoute() {
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
     const isLogged = localStorage.getItem("user_logged");
     if (token && isLogged) {
-      window.location.href = "/rides";
+      window.location.href = "/";
     }
   }, []);
 
