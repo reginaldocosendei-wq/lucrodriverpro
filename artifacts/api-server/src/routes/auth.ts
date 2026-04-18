@@ -4,6 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { computeEffectivePlan, syncStripeStatusForUser, TRIAL_MS } from "../lib/planSync";
+import { signToken } from "../lib/jwt.js";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
@@ -96,8 +97,9 @@ router.post("/register", async (req, res) => {
 
     console.log(`[auth/register] user created — userId: ${user.id} email: ${email}`);
     await regenerateAndSave(req, user.id);
-    console.log(`[auth/register] session regenerated — userId: ${user.id} newSessionId: ${req.sessionID}`);
-    res.status(201).json({ user: userResponse(user), message: "Cadastro realizado com sucesso" });
+    const token = signToken(user.id);
+    console.log(`[auth/register] session regenerated — userId: ${user.id} newSessionId: ${req.sessionID} token=issued`);
+    res.status(201).json({ user: userResponse(user), token, message: "Cadastro realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/register] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
     res.status(500).json({ error: "Erro interno ao criar conta. Tente novamente." });
@@ -159,8 +161,9 @@ router.post("/login", async (req, res) => {
     user = await syncStripeStatusForUser(user);
 
     await regenerateAndSave(req, user.id);
-    console.log(`[auth/login] success — userId: ${user.id} newSessionId: ${req.sessionID}`);
-    res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
+    const token = signToken(user.id);
+    console.log(`[auth/login] success — userId: ${user.id} newSessionId: ${req.sessionID} token=issued`);
+    res.json({ user: userResponse(user), token, message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/login] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
     res.status(500).json({ error: "Erro interno ao fazer login. Tente novamente." });
@@ -260,8 +263,9 @@ router.post("/google", async (req, res) => {
 
     user = await syncStripeStatusForUser(user);
     await regenerateAndSave(req, user.id);
-    console.log(`[auth/google] session regenerated — userId=${user.id} newSessionId=${req.sessionID}`);
-    res.json({ user: userResponse(user), message: "Login realizado com sucesso" });
+    const token = signToken(user.id);
+    console.log(`[auth/google] session regenerated — userId=${user.id} newSessionId=${req.sessionID} token=issued`);
+    res.json({ user: userResponse(user), token, message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/google] ERROR:", err.message);
     res.status(401).json({ error: "Falha na verificação do token Google. Tente novamente." });

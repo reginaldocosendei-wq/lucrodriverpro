@@ -43,17 +43,19 @@ function AuthForm({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? t("auth.googleError"));
       }
-      return res.json();
+      return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
-    onSuccess: async () => {
-      // Confirm the session is readable before navigating.
-      // Then use a hard redirect (window.location) instead of client-side
-      // navigate() so the new page load starts with the session cookie already
-      // present in the browser — this eliminates any race between the auth
-      // guard and the Google onSuccess handler (which fires asynchronously
-      // after a redirect-mode Google flow).
-      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      window.location.replace("/rides");
+    onSuccess: async (data) => {
+      // Persist JWT immediately so it survives even if URL parsing were skipped.
+      if (data.token) {
+        localStorage.setItem("auth_token", data.token);
+        console.log("[auth/google] token stored in localStorage");
+      }
+      // Redirect to /rides?token=JWT so the App bootstrap can capture it from
+      // the URL on next page load (belt-and-suspenders on top of localStorage).
+      // App.tsx strips ?token= from the URL before the user sees it.
+      const dest = data.token ? `/rides?token=${encodeURIComponent(data.token)}` : "/rides";
+      window.location.replace(dest);
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));
@@ -81,11 +83,11 @@ function AuthForm({
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
     loginMutation.mutate({ data }, {
-      onSuccess: async () => {
-        // refetchQueries (not resetQueries) waits for the network round-trip
-        // to complete before resolving. That guarantees the user object is in
-        // the React Query cache BEFORE navigate("/") fires, so HomeRoute sees
-        // an authenticated user immediately and never flashes the landing page.
+      onSuccess: async (res) => {
+        if (res?.token) {
+          localStorage.setItem("auth_token", res.token);
+          console.log("[auth/login] token stored in localStorage");
+        }
         await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },
@@ -101,7 +103,11 @@ function AuthForm({
     setErrorMsg("");
     console.debug("[AuthForm] submitting register", { email: data.email });
     registerMutation.mutate({ data }, {
-      onSuccess: async () => {
+      onSuccess: async (res) => {
+        if (res?.token) {
+          localStorage.setItem("auth_token", res.token);
+          console.log("[auth/register] token stored in localStorage");
+        }
         await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
         onSuccess?.();
       },

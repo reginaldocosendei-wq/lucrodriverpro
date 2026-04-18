@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
+import { verifyToken } from "./lib/jwt.js";
 
 const app = express();
 
@@ -112,6 +113,28 @@ app.use((req, res, next) => {
       }
       return origEnd(...args);
     };
+  }
+  next();
+});
+
+// ─── JWT fallback middleware ──────────────────────────────────────────────────
+// Runs after express-session. If the browser sent a valid Bearer token but the
+// session cookie is missing/expired, we extract the userId from the token and
+// populate req.session.userId so ALL existing route handlers work unchanged.
+// Cookies are still tried first; JWT is purely additive.
+app.use((req, _res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return next();
+  const token = authHeader.slice(7);
+  const payload = verifyToken(token);
+  if (!payload) {
+    console.log(`[jwt] invalid/expired token — ${req.method} ${req.path}`);
+    return next();
+  }
+  if (!req.session.userId) {
+    // Cookie session missing — apply userId from JWT
+    req.session.userId = payload.userId;
+    console.log(`[jwt] session populated from token — userId=${payload.userId} path=${req.path}`);
   }
   next();
 });

@@ -4,7 +4,7 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
 import { DEV_DISABLE_AUTH_FETCH, DEV_SKIP_ROUTE_GUARDS } from "@/lib/dev-flags";
 import { AnimatePresence, motion } from "framer-motion";
 import { SplashScreen } from "@/components/SplashScreen";
@@ -28,6 +28,35 @@ import Settings from "@/pages/settings";
 import AuthScreen from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
+
+// ─── JWT TOKEN BOOTSTRAP ───────────────────────────────────────────────────────
+// Runs synchronously at module-load time, before any component renders or any
+// React Query fires. This guarantees the Bearer token is in localStorage by the
+// time GET /api/auth/me is called on first render.
+//
+// Two sources (in priority order):
+//   1. ?token=<jwt> URL param — set by Google OAuth redirect
+//      (/rides?token=JWT_TOKEN). Captured, stored, and stripped from URL.
+//   2. localStorage "auth_token" — already present from a previous login.
+{
+  const _params = new URLSearchParams(window.location.search);
+  const _urlToken = _params.get("token");
+  if (_urlToken) {
+    localStorage.setItem("auth_token", _urlToken);
+    console.log("[auth] token captured from URL → stored in localStorage");
+    _params.delete("token");
+    const _newSearch = _params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (_newSearch ? "?" + _newSearch : "") + window.location.hash,
+    );
+  }
+}
+
+// Wire JWT getter into customFetch — every API call will now include
+// Authorization: Bearer <token> automatically, regardless of cookie state.
+setAuthTokenGetter(() => localStorage.getItem("auth_token"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
