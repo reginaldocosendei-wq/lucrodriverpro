@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLogin, useRegister } from "@workspace/api-client-react";
+import { storeAuthUser } from "@/lib/api";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +52,7 @@ function AuthForm({
         localStorage.setItem("auth_token", data.token);
         localStorage.setItem("user_logged", "true");
       }
+      if (data.user) storeAuthUser(data.user as Record<string, unknown>);
       window.location.href = "/";
     },
     onError: (err: any) => {
@@ -84,6 +86,7 @@ function AuthForm({
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
+        if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
         window.location.href = "/";
       },
       onError: (err: any) => {
@@ -101,6 +104,7 @@ function AuthForm({
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
+        if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
         window.location.href = "/";
       },
       onError: (err: any) => {

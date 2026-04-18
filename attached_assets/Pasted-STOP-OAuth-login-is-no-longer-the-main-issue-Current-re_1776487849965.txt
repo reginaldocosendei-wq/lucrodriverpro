@@ -1,0 +1,78 @@
+STOP. OAuth login is no longer the main issue.
+
+Current real regression after login fix:
+
+Observed from production screenshots:
+1. User logs in successfully.
+2. App opens, but loads inconsistent/old state.
+3. Historical old records reappeared (example: 31/03/2026 with 53 rides / R$1.036,64).
+4. Goals changed back to old values.
+5. Costs and dashboard numbers are inconsistent.
+6. PRO state is contradictory:
+   - locked PRO screens are shown
+   - but UI also says “Você já tem uma assinatura PRO ativa.”
+7. Reports / costs / goals / history are not reading the same user/account state.
+
+THIS IS NOT AN OAUTH ISSUE NOW.
+THIS IS A DATA / ENTITLEMENT / USER-CONTEXT REGRESSION.
+
+YOUR TASK:
+Restore the app to the last stable product behavior for the authenticated user.
+
+MANDATORY ACTIONS:
+
+1. Identify the single authenticated user identity actually being used after login:
+   - user id
+   - email
+   - subscription status
+   - trial/pro status
+
+2. Audit all production data sources being read after login:
+   - dashboard
+   - history/rides
+   - costs
+   - goals
+   - reports/pro
+   Ensure every screen reads the SAME authenticated user context.
+
+3. Remove any fallback/demo/seed/default/mock data from production rendering.
+   Production must NEVER hydrate with seed records when a real user exists.
+
+4. Fix persisted state hydration:
+   - localStorage
+   - React Query cache
+   - any Zustand/store/context
+   - any cached API bootstrap response
+   Old March records must not appear unless they truly belong to this authenticated user.
+
+5. Fix subscription / entitlement logic:
+   - if user is PRO, PRO screens must unlock everywhere
+   - if user is not PRO, do not show “assinatura PRO ativa”
+   - no contradictory state allowed
+   - one single source of truth for entitlement
+
+6. Audit backend response for:
+   - /api/auth/me
+   - /api/subscription/status
+   - /api/reports*
+   - /api/costs*
+   - /api/goals*
+   - /api/rides* or history endpoints
+   Confirm all are scoped by the SAME authenticated user id.
+
+7. Remove any “old app” / legacy mapping still attached to current user state.
+   If old schema migration exists, run a safe migration instead of mixing old and new fields.
+
+8. Do NOT redesign UI.
+9. Do NOT change pricing.
+10. Do NOT give QA steps only.
+
+YOU MUST IMPLEMENT THE FIX.
+
+FINAL RESPONSE MUST INCLUDE:
+1. exact root cause found
+2. which files were changed
+3. which old fallback/demo logic was removed
+4. how entitlement/pro status was normalized
+5. how user data consistency was restored
+6. exact production URL to validate

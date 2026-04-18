@@ -3,6 +3,7 @@ import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTri
 import { AdminActivatePanel } from "./AdminActivatePanel";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { clearAuthUser } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useT, LANG_OPTIONS, type Lang } from "@/lib/i18n";
@@ -248,6 +249,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       onSuccess: () => {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user_logged");
+        clearAuthUser();
         queryClient.setQueryData(["/api/auth/me"], null);
         queryClient.clear();
         window.location.href = "/";

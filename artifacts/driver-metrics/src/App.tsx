@@ -4,7 +4,8 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, getGetMeQueryKey } from "@workspace/api-client-react";
+import { loadAuthUser, storeAuthUser, clearAuthUser } from "@/lib/api";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -65,6 +66,35 @@ const queryClient = new QueryClient({
       staleTime: 3 * 60 * 1000,
     },
   },
+});
+
+// ─── Pre-seed user cache from localStorage ─────────────────────────────────────
+// If the user is logged in and we have a previously stored user object (written
+// after each successful login / register / Google-auth), seed the React Query
+// cache so every useGetMe() call returns the correct plan immediately — even if
+// GET /api/auth/me is slow, cached by a browser, or temporarily unreachable.
+// The cache will be refreshed from the server after staleTime (3 min) and also
+// whenever the queryClient is invalidated (e.g. checkout-success page).
+{
+  const storedUser = loadAuthUser();
+  if (storedUser) {
+    queryClient.setQueryData(getGetMeQueryKey(), storedUser);
+    console.log("[AUTH_BOOTSTRAP] pre-seeded user cache from localStorage — plan:", (storedUser as any).plan);
+  }
+}
+
+// Keep localStorage in sync whenever /api/auth/me is freshly fetched from server.
+queryClient.getQueryCache().subscribe((event) => {
+  if (
+    event.type === "updated" &&
+    event.action?.type === "success" &&
+    Array.isArray(event.query.queryKey) &&
+    event.query.queryKey[0] === "/api/auth/me" &&
+    event.query.state.data
+  ) {
+    storeAuthUser(event.query.state.data as Record<string, unknown>);
+    console.log("[AUTH_CACHE] stored refreshed user to localStorage — plan:", (event.query.state.data as any).plan);
+  }
 });
 
 // ─── AUTH BOOTSTRAP LOGS ──────────────────────────────────────────────────────
@@ -291,6 +321,40 @@ function Router() {
   );
 }
 
+// ─── USER BOOTSTRAP ───────────────────────────────────────────────────────────
+// Runs once on mount. If the user is authenticated but their data is NOT yet
+// in localStorage (e.g. first load after deployment, before any new login),
+// this fetches /api/auth/me via authFetch (proven to reach the server) and
+// seeds both the queryClient cache and localStorage — so every useGetMe() call
+// in the app returns the correct plan without depending on customFetch.
+function UserBootstrap() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;                      // Not logged in
+    const already = loadAuthUser();
+    if (already) return;                     // Already seeded — skip
+
+    const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+      ? (import.meta.env.VITE_API_BASE_URL as string).replace(/\/+$/, "")
+      : import.meta.env.BASE_URL.replace(/\/+$/, "");
+
+    const headers = new Headers({ Authorization: `Bearer ${token}` });
+    fetch(`${base}/api/auth/me`, { credentials: "include", headers, cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((user: Record<string, unknown> | null) => {
+        if (!user) return;
+        storeAuthUser(user);
+        queryClient.setQueryData(getGetMeQueryKey(), user);
+        console.log("[USER_BOOTSTRAP] fetched and stored user — plan:", (user as any).plan);
+      })
+      .catch(() => {/* silent fallback — stale localStorage or pre-seeded cache will cover */});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
+
 // ─── NATIVE EVENT LISTENERS ───────────────────────────────────────────────────
 function NativeEventListeners() {
   const queryClient = useQueryClient();
@@ -329,6 +393,7 @@ function AppShell() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
+            <UserBootstrap />
             <NativeEventListeners />
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />

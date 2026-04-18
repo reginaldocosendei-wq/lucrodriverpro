@@ -26,3 +26,30 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
   }
   return fetch(input, { credentials: "include", ...init, headers });
 }
+
+// ─── Cached user object ────────────────────────────────────────────────────────
+// Stored in localStorage so plan checks survive page reloads even if
+// GET /api/auth/me is slow, cached by a browser/CDN, or temporarily unreachable.
+
+const USER_STORAGE_KEY = "auth_user";
+
+export function storeAuthUser(user: Record<string, unknown>): void {
+  try {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  } catch {
+    // Ignore storage errors (private mode, storage full, etc.)
+  }
+}
+
+export function loadAuthUser(): Record<string, unknown> | null {
+  try {
+    const s = localStorage.getItem(USER_STORAGE_KEY);
+    return s ? (JSON.parse(s) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAuthUser(): void {
+  localStorage.removeItem(USER_STORAGE_KEY);
+}

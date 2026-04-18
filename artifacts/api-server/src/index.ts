@@ -119,6 +119,23 @@ app.use((req, res, next) => {
 // JWT header is now validated per-route by the requireAuth middleware in
 // routes/middleware/requireAuth.ts. No global session pollution needed here.
 
+// ─── Prevent browser / CDN caching of API responses ──────────────────────────
+// Without this header, browsers can serve a stale GET /api/auth/me response
+// (e.g. plan:"free") from their HTTP cache even after the user subscribes.
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  next();
+});
+
+// ─── Log every request to /api/auth/me so we can confirm it reaches us ───────
+app.use((req, _res, next) => {
+  if (req.path === "/api/auth/me") {
+    const auth = req.headers.authorization ? "Bearer present" : "NO AUTH HEADER";
+    console.log(`[ME_REQUEST] ${req.method} /api/auth/me — ${auth}`);
+  }
+  next();
+});
+
 // ─── All API routes (lazily loaded) ──────────────────────────────────────────
 // The router is imported on the first request so the server can bind to PORT
 // immediately at startup without waiting for @workspace/db or any other import.
