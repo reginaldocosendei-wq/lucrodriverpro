@@ -4,21 +4,13 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const userId = req.userId!;
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1);
   res.json({ daily: goal?.daily ?? 0, weekly: goal?.weekly ?? 0, monthly: goal?.monthly ?? 0 });
 });
 
-router.put("/", requireAuth, async (req, res) => {
+router.put("/", async (req, res) => {
   const userId = req.userId!;
   const { daily, weekly, monthly } = req.body;
 

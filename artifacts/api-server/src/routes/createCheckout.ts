@@ -27,15 +27,6 @@ const router = Router();
 // Production custom domain — used as fallback for success/cancel URLs.
 const PROD_DOMAIN = "https://lucrodriverpro.com";
 
-// ── Auth guard ────────────────────────────────────────────────────────────────
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    console.warn("[create-checkout] 401 — no session userId");
-    return res.status(401).json({ error: "Autenticação necessária" });
-  }
-  next();
-}
-
 // ── Resolve price ID per-request ───────────────────────────────────────────
 // Read from env on every request — never from module-level constants.
 // This ensures that updates to Replit Secrets are picked up immediately
@@ -58,7 +49,7 @@ function resolvePriceId(plan: string): { priceId: string | null; source: string 
 }
 
 // ── POST /api/create-checkout ─────────────────────────────────────────────────
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", async (req: any, res) => {
   const userId = req.userId as number;
 
   const {

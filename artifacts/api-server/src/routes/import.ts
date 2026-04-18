@@ -8,14 +8,6 @@ import { parseExtracted, parseBRLNumber, parseTrips, todayDateStr } from "../ser
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 const SYSTEM_PROMPT = `Você é um especialista em leitura de screenshots de aplicativos de transporte para motoristas parceiros no Brasil.
 
 Analise a imagem e extraia exatamente estes dados:
@@ -59,7 +51,7 @@ REGRAS ABSOLUTAS:
 FORMATO DE RESPOSTA (exatamente assim):
 {"earnings": <número ou null>, "trips": <número inteiro ou null>, "km": <número ou null>, "hours": <número decimal ou null>, "rating": <número 0-5 ou null>, "platform": "<string ou null>"}`;
 
-router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, res) => {
+router.post("/analyze", upload.single("screenshot"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "Nenhuma imagem enviada" });
     return;
@@ -118,8 +110,9 @@ router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, re
   }
 });
 
-router.post("/confirm", requireAuth, async (req, res) => {
+router.post("/confirm", async (req, res) => {
   const userId = req.userId!;
+  console.log(`[ANALYSIS_SAVE] POST /import/confirm — userId=${userId}`);
   // Accept both new (km/hours) and old (kmDriven/hoursWorked) field names for backwards compat
   const { earnings, trips, platform, km, hours, kmDriven, hoursWorked, rating, date } = req.body;
 

@@ -4,15 +4,7 @@ import { eq, desc, and, gte, lt } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const userId = req.userId!;
   const limit = parseInt(req.query.limit as string) || 200;
   const offset = parseInt(req.query.offset as string) || 0;
@@ -30,7 +22,7 @@ router.get("/", requireAuth, async (req, res) => {
   res.json({ rides, total: allRides.length });
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", async (req, res) => {
   const userId = req.userId!;
   const {
     value,
@@ -63,7 +55,7 @@ router.post("/", requireAuth, async (req, res) => {
   res.status(201).json(ride);
 });
 
-router.post("/daily", requireAuth, async (req, res) => {
+router.post("/daily", async (req, res) => {
   const userId = req.userId!;
   const {
     earnings,
@@ -110,7 +102,7 @@ router.post("/daily", requireAuth, async (req, res) => {
   });
 });
 
-router.delete("/day/:dateStr", requireAuth, async (req, res) => {
+router.delete("/day/:dateStr", async (req, res) => {
   const userId = req.userId!;
   const { dateStr } = req.params;
 
@@ -138,7 +130,7 @@ router.delete("/day/:dateStr", requireAuth, async (req, res) => {
   res.json({ message: "Registros do dia removidos" });
 });
 
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id);
 

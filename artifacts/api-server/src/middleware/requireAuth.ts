@@ -17,17 +17,18 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     const payload = verifyToken(token);
     if (payload) {
       req.userId = payload.userId;
-      console.log(`[requireAuth] JWT valid — userId=${payload.userId} path=${req.path}`);
+      console.log(`[AUTH_OK] JWT valid — userId=${payload.userId} path=${req.path}`);
       return next();
     }
-    console.log(`[requireAuth] JWT invalid/expired — path=${req.path}`);
+    console.log(`[AUTH_FAIL] JWT invalid/expired — path=${req.path}`);
   }
 
   if (req.session.userId) {
     req.userId = req.session.userId;
+    console.log(`[AUTH_OK] session valid — userId=${req.session.userId} path=${req.path}`);
     return next();
   }
 
-  console.log(`[requireAuth] REJECTED — no valid token or session — path=${req.method} ${req.path}`);
+  console.log(`[AUTH_FAIL] no valid token or session — ${req.method} ${req.path}`);
   res.status(401).json({ error: "Não autenticado" });
 }

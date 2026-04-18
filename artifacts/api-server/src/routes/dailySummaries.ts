@@ -4,16 +4,9 @@ import { eq, desc, and, sql } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const userId = req.userId!;
+  console.log(`[HISTORY_LOAD] GET /daily-summaries — userId=${userId}`);
   try {
     // 1. Fetch real daily summaries
     const summaries = await db
@@ -72,7 +65,7 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", async (req, res) => {
   const userId = req.userId!;
   const { date, earnings, trips, kmDriven, hoursWorked, rating, platform, notes } = req.body;
 
@@ -155,7 +148,7 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-router.put("/:id", requireAuth, async (req, res) => {
+router.put("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id);
   const { earnings, trips, kmDriven, hoursWorked, rating, platform, notes } = req.body;
@@ -199,7 +192,7 @@ router.put("/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id);
 

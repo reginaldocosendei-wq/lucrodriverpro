@@ -5,10 +5,6 @@ import { computeCostMetrics } from "../lib/costSplit";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) { res.status(401).json({ error: "Não autenticado" }); return; }
-  next();
-}
 
 function todayStr() { return new Date().toISOString().split("T")[0]; }
 
@@ -53,7 +49,7 @@ function computeLevel(activeDays: number) {
   };
 }
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const userId = req.userId!;
     const today  = todayStr();

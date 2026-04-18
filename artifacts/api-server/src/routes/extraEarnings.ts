@@ -19,14 +19,6 @@ const MAX_AMOUNT   = 50_000;  // R$ 50k sanity ceiling per entry
 const MAX_NOTE_LEN = 500;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 /** Returns true for a well-formed YYYY-MM-DD that is a real calendar date. */
 function isValidDate(s: unknown): s is string {
   if (typeof s !== "string") return false;
@@ -48,7 +40,7 @@ function sanitizeNote(raw: unknown): string {
 }
 
 // ── GET /api/extra-earnings?date=YYYY-MM-DD ──────────────────────────────────
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const userId = req.userId!;
   const { date } = req.query;
 
@@ -71,7 +63,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 // ── POST /api/extra-earnings ─────────────────────────────────────────────────
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", async (req, res) => {
   const userId = req.userId!;
   const { date, type, amount, note } = req.body;
 
@@ -116,7 +108,7 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 // ── PATCH /api/extra-earnings/:id ────────────────────────────────────────────
-router.patch("/:id", requireAuth, async (req, res) => {
+router.patch("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id, 10);
 
@@ -173,7 +165,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
 });
 
 // ── DELETE /api/extra-earnings/:id ───────────────────────────────────────────
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id, 10);
 

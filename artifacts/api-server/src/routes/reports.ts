@@ -5,14 +5,6 @@ import { splitCosts } from "../lib/costSplit";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 /** Normalise a cost record's date to a plain YYYY-MM-DD string. */
@@ -85,7 +77,7 @@ async function getMergedSummaries(userId: number): Promise<Array<{
   return [...summaryEntries, ...ridesEntries];
 }
 
-router.get("/earnings", requireAuth, async (req, res) => {
+router.get("/earnings", async (req, res) => {
   const userId = req.userId!;
 
   try {
@@ -242,7 +234,7 @@ router.get("/earnings", requireAuth, async (req, res) => {
 
 // ── Debug endpoint — returns raw merged data for the logged-in user ──────────
 // Useful for verifying that rides + summaries are both included.
-router.get("/debug", requireAuth, async (req, res) => {
+router.get("/debug", async (req, res) => {
   const userId = req.userId!;
   try {
     const [summaries, ridesAgg, extras] = await Promise.all([

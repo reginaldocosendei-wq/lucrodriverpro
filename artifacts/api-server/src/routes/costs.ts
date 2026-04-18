@@ -12,14 +12,6 @@ function normDate(d: string | Date | unknown): string {
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 function getDateString(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
@@ -31,7 +23,7 @@ function startOfMonth(): string {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
 }
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const userId = req.userId!;
 
   const costs = await db
@@ -78,7 +70,7 @@ router.get("/", requireAuth, async (req, res) => {
   });
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", async (req, res) => {
   const userId = req.userId!;
   const { category, amount, description, date, costType } = req.body;
 
@@ -104,7 +96,7 @@ router.post("/", requireAuth, async (req, res) => {
   res.status(201).json(cost);
 });
 
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const userId = req.userId!;
   const id = parseInt(req.params.id);
 

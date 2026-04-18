@@ -1,0 +1,94 @@
+The Google login flow is now working correctly and persists across logout/login cycles.
+
+Now do a strict production cleanup and validation pass.
+
+GOAL
+Keep the current auth behavior exactly as it is, and clean the app for production use.
+
+DO NOT change the login architecture anymore.
+DO NOT refactor auth flow unless required by a real bug.
+DO NOT touch Google OAuth configuration.
+DO NOT change redirect behavior if it is already working.
+
+TASKS
+
+1) REMOVE TEST / LEGACY DATA FROM THE APP UI
+- Find all seeded, mocked, demo, fallback, or hardcoded financial records.
+- Remove old history entries that are not real user-created data.
+- The app must not show old sample records like:
+  - historical rides
+  - fake totals
+  - fake monthly values
+  - old dashboard cards
+- If these values come from seed scripts, disable them in production.
+- If they come from fallback frontend mocks, remove them.
+- If they come from a shared development database, isolate production reads to real authenticated user data only.
+
+2) ENSURE EMPTY STATE IS CLEAN
+When a real user has no records, show proper empty states:
+- no fake totals
+- no demo history cards
+- no negative fake dashboard values
+- show clear CTAs like:
+  - “Importar resultado do dia”
+  - “Registrar custos”
+  - “Definir meta”
+
+3) VALIDATE AUTH ON ALL PROTECTED PAGES
+Audit all protected routes and API calls for:
+- /rides
+- /costs
+- /goals
+- /reports
+- dashboard/home
+- analysis/import flow
+All must use the authenticated user context consistently.
+No route may fall back to anonymous data.
+No page may show data from another environment or old session.
+
+4) VALIDATE ANALYSIS FLOW AFTER LOGIN
+Test and fix the full flow:
+- login with Google
+- open app
+- go to analyze/import
+- upload screenshot
+- process analysis
+- save result
+- reopen history/report pages
+The analysis must not fail with “Não autenticado”.
+Every API request must send the current bearer token correctly.
+
+5) ADD SAFE DEBUG LOGS ONLY WHERE NEEDED
+Add concise logs for:
+- auth bootstrap
+- protected route access
+- API auth header injection
+- analysis save request
+- history fetch request
+Prefix logs with:
+[AUTH_OK]
+[AUTH_FAIL]
+[ANALYSIS_SAVE]
+[HISTORY_LOAD]
+Keep logs minimal and useful.
+
+6) VERIFY NO OLD APP VERSION IS STILL WIRED
+Search for any references to:
+- old redirects
+- old app names
+- old route roots
+- previous mobile app codepaths
+- previous domains or fallback frontends
+If found, remove dead references only if they are not being used now.
+
+7) DO A FINAL REPORT
+At the end, report exactly:
+- which files were changed
+- what fake/test data source was removed
+- how protected routes are validated
+- how analysis/save/history now authenticate
+- what exact manual tests I should run on mobile
+
+IMPORTANT
+Preserve what is currently working.
+This is a cleanup + production hardening pass, not a new auth rewrite.

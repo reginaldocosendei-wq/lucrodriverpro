@@ -4,17 +4,9 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 // ── POST /api/pix/request ──────────────────────────────────────────────────────
 // Records a PIX payment intent. Accepts optional proofData (base64 data URL).
-router.post("/request", requireAuth, async (req, res) => {
+router.post("/request", async (req, res) => {
   const userId = req.userId!;
   const { proofData } = req.body ?? {};
 

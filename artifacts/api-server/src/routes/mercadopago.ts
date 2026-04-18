@@ -16,14 +16,6 @@ const router = Router();
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 function getMpToken(): string | null {
   return process.env.MERCADOPAGO_ACCESS_TOKEN ?? null;
 }
@@ -37,7 +29,7 @@ function getNotificationUrl(): string {
 }
 
 // ── POST /create ─────────────────────────────────────────────────────────────
-router.post("/create", requireAuth, async (req, res) => {
+router.post("/create", async (req, res) => {
   const userId = req.userId!;
 
   const accessToken = getMpToken();
@@ -140,7 +132,7 @@ router.post("/create", requireAuth, async (req, res) => {
 });
 
 // ── GET /status/:pixPaymentId ─────────────────────────────────────────────────
-router.get("/status/:pixPaymentId", requireAuth, async (req, res) => {
+router.get("/status/:pixPaymentId", async (req, res) => {
   const userId = req.userId!;
   const pixPaymentId = parseInt(req.params.pixPaymentId);
 

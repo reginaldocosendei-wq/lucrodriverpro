@@ -6,14 +6,6 @@ import { computeCostMetrics } from "../lib/costSplit";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 function getDateStr(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
@@ -32,7 +24,7 @@ function startOfMonth(): string {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
 }
 
-router.get("/summary", requireAuth, async (req, res) => {
+router.get("/summary", async (req, res) => {
   const userId = req.userId!;
 
   const [summaries, rides, costs, [goal], extraEarnings] = await Promise.all([

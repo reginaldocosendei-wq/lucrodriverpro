@@ -12,14 +12,6 @@ import { paymentService } from "../paymentService";
 
 const router = Router();
 
-// ── Auth guard ────────────────────────────────────────────────────────────────
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: "Autenticação necessária" });
-  }
-  next();
-}
-
 // ── Build a products+prices map from DB rows ──────────────────────────────────
 function buildProductsMapFromRows(rows: any[]) {
   const map = new Map<string, any>();
@@ -89,7 +81,7 @@ router.get("/products-with-prices", async (_req, res) => {
 
 // ── POST /checkout ────────────────────────────────────────────────────────────
 // Creates a Stripe Checkout session and returns the hosted payment URL.
-router.post("/checkout", requireAuth, async (req: any, res) => {
+router.post("/checkout", async (req: any, res) => {
   try {
     const { priceId, successUrl: clientSuccess, cancelUrl: clientCancel } = req.body;
     if (!priceId) return res.status(400).json({ error: "priceId é obrigatório" });
@@ -123,7 +115,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
 // Called by checkout-success.tsx after returning from Stripe.
 // Accepts optional { sessionId } in the body — used as a Layer 3 fallback
 // to retrieve the checkout session directly from Stripe when webhooks fail.
-router.post("/sync-plan", requireAuth, async (req: any, res) => {
+router.post("/sync-plan", async (req: any, res) => {
   try {
     const sessionId: string | undefined = req.body?.sessionId ?? undefined;
     const result = await paymentService.syncSubscriptionStatus(req.userId, sessionId);
@@ -137,7 +129,7 @@ router.post("/sync-plan", requireAuth, async (req: any, res) => {
 
 // ── POST /portal ──────────────────────────────────────────────────────────────
 // Opens the Stripe Customer Portal for subscription management / cancellation.
-router.post("/portal", requireAuth, async (req: any, res) => {
+router.post("/portal", async (req: any, res) => {
   try {
     const user = await storage.getUser(req.userId);
     if (!user?.stripeCustomerId) {
@@ -157,7 +149,7 @@ router.post("/portal", requireAuth, async (req: any, res) => {
 
 // ── GET /subscription ─────────────────────────────────────────────────────────
 // Returns the current Stripe subscription info for the logged-in user.
-router.get("/subscription", requireAuth, async (req: any, res) => {
+router.get("/subscription", async (req: any, res) => {
   try {
     const user = await storage.getUser(req.userId);
     if (!user?.stripeCustomerId) {

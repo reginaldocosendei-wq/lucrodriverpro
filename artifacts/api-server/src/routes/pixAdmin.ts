@@ -4,18 +4,9 @@ import { eq, desc, gte, and, ilike, or, sql } from "drizzle-orm";
 
 const router = Router();
 
-// ── requireAuth ────────────────────────────────────────────────────────────────
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  next();
-}
-
 // ── requireAdmin ───────────────────────────────────────────────────────────────
 async function requireAdmin(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
+  if (!req.userId) {
     res.status(401).json({ error: "Não autenticado" });
     return;
   }
@@ -33,7 +24,7 @@ async function requireAdmin(req: any, res: any, next: any) {
 }
 
 // ── GET /api/admin/pix ─────────────────────────────────────────────────────────
-router.get("/", requireAuth, requireAdmin, async (req, res) => {
+router.get("/", requireAdmin, async (req, res) => {
   try {
     const { filter = "all", search = "", page = "1" } = req.query as Record<string, string>;
     const limit  = 50;
@@ -108,7 +99,7 @@ router.get("/", requireAuth, requireAdmin, async (req, res) => {
 
 // ── POST /api/admin/pix/:id/confirm ───────────────────────────────────────────
 // Only confirms payment receipt — does NOT activate PRO.
-router.post("/:id/confirm", requireAuth, requireAdmin, async (req, res) => {
+router.post("/:id/confirm", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [payment] = await db
@@ -140,7 +131,7 @@ router.post("/:id/confirm", requireAuth, requireAdmin, async (req, res) => {
 
 // ── POST /api/admin/pix/:id/activate-pro ──────────────────────────────────────
 // Activates PRO for the user linked to this PIX payment.
-router.post("/:id/activate-pro", requireAuth, requireAdmin, async (req, res) => {
+router.post("/:id/activate-pro", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [payment] = await db
@@ -185,7 +176,7 @@ router.post("/:id/activate-pro", requireAuth, requireAdmin, async (req, res) => 
 });
 
 // ── POST /api/admin/pix/:id/reject ────────────────────────────────────────────
-router.post("/:id/reject", requireAuth, requireAdmin, async (req, res) => {
+router.post("/:id/reject", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [payment] = await db
@@ -212,7 +203,7 @@ router.post("/:id/reject", requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── DELETE /api/admin/pix/:id ─────────────────────────────────────────────────
-router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
+router.delete("/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(pixPaymentsTable).where(eq(pixPaymentsTable.id, id));
