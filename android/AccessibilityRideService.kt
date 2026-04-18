@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.lucrodriver.bridge.LucroDriverBridgePlugin
 import org.json.JSONObject
 
 /**
@@ -140,25 +141,27 @@ class AccessibilityRideService : AccessibilityService() {
     // ── Bridge emission ───────────────────────────────────────────────────────
 
     /**
-     * Sends extracted ride data to the React WebView via the Capacitor plugin.
+     * Sends extracted ride data to the React WebView via LucroDriverBridgePlugin.
      *
-     * TODO: Replace the log line with the real Capacitor bridge call:
-     *   LucroDriverBridgePlugin.getInstance()?.notifyListeners("rideDetected", data.toJSObject())
+     * The plugin converts [RawRideData] to a JSObject and fires it as the
+     * "rideDetected" Capacitor event, which RealRideProvider.nextRide() is
+     * waiting on in the WebView JS context.
      *
-     * On the JS side, RealRideProvider.nextRide() listens for this event:
-     *   Capacitor.addListener("rideDetected", (data) => resolve(data))
+     * If the plugin singleton is null (service started before Capacitor is ready,
+     * or running outside the APK) the call is safely ignored and a warning is logged.
      */
     private fun emitToBridge(data: RawRideData) {
-        val json = JSONObject().apply {
-            put("price", data.price)
-            put("distanceKm", data.distanceKm)
-            put("estimatedMinutes", data.estimatedMinutes)
-            put("platform", data.platform)
-            data.pickup?.let { put("pickup", it) }
-            data.destination?.let { put("destination", it) }
+        val plugin = LucroDriverBridgePlugin.getInstance()
+        if (plugin != null) {
+            // Real bridge call — sends data to the React WebView.
+            plugin.emitRide(data)
+            android.util.Log.d("LucroDriver", "emitRide → ${data.platform} R$${data.price} ${data.distanceKm}km")
+        } else {
+            // Plugin not yet initialised — log only. This can happen if the
+            // AccessibilityService fires before MainActivity.onCreate() completes.
+            // The next event from the same ride card will retry automatically.
+            android.util.Log.w("LucroDriver", "LucroDriverBridgePlugin not ready — ride event dropped. platform=${data.platform}")
         }
-        // TODO: LucroDriverBridgePlugin.getInstance()?.notifyListeners("rideDetected", JSObject(json.toString()))
-        android.util.Log.d("LucroDriver", "Ride detected: $json") // placeholder
     }
 
     // ── Parsing helpers ───────────────────────────────────────────────────────
