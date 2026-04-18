@@ -106,14 +106,28 @@ pnpm run cap:open
 - `lib/` — logger.ts
 
 ### Real-Time Ride Companion (Assistente Ao Vivo)
-- **Page**: `/assistant` — real-time ride offer analyzer
-- **Flow**: driver taps "Capturar" → takes photo of ride offer screen → GPT-4o OCR extracts price, distanceKm, estimatedMinutes, pickup, destination, platform → backend calculates profitPerKm, profitPerHour, netProfit
+- **Page**: `/assistant` — real-time ride offer analyzer (realistic MVP, structured for future Android native upgrade)
+- **4-step UI flow**: idle → previewing (image confirm/retake) → analyzing (step-by-step loading) → result (verdict + save)
+- **Correction mode**: if OCR extracted wrong values, driver can manually correct → recalculate via `/api/assistant/recalculate`
+- **Capture service abstraction**: `src/services/offerCaptureService.ts` defines `ICaptureService` interface
+  - MVP: `WebInputCapture` (camera/gallery via `<input type="file">`)
+  - Future: `CapacitorCapture` (native Android plugin) — swap with zero changes to the analysis pipeline
+- **OCR (GPT-4o)**: tuned prompt handles Uber, 99, InDrive, Cabify — includes `isRideOffer` guard (rejects non-offer screenshots) and `confidence` field
+- **Profit engine**: `price - (costPerKm × distance)` = netProfit; `(price - variableCosts - fixedHourlyCosts) / hours` = profitPerHour
 - **Traffic light verdict**: GREEN (≥R$1.80/km), YELLOW (R$1.00–1.80/km), RED (<R$1.00/km)
-- **Voice alert**: Web Speech API reads verdict aloud in pt-BR ("Corrida boa!" / "Atenção" / "Corrida ruim")
-- **Cost profile**: stored in `localStorage` (costPerKm + fixedCostPerHour), editable via settings modal
-- **Offer history**: `offer_captures` table (id, user_id, price, distance_km, estimated_minutes, pickup, destination, platform, profit_per_km, profit_per_hour, net_profit, verdict, decision, captured_at)
-- **API routes**: `POST /api/assistant/analyze` (multipart, costPerKm param), `POST /api/assistant/save`, `PATCH /api/assistant/save/:id`, `GET /api/assistant/history`
-- **Nav**: "Ao Vivo" tab (⚡ icon) replaces Goals in main bottom nav; Goals still accessible at `/goals`
+- **Voice alert**: Web Speech API pt-BR reads full verdict + R$/km aloud; toggle button in header
+- **Cost profile**: stored in `localStorage` key `assistant_driver_costs_v2` (costPerKm + fixedCostPerHour)
+- **Offer history**: `offer_captures` table with daily filter + summary stats (captures, accepted, net profit estimate)
+- **Today stats**: `GET /api/assistant/stats/today` — header shows live count of today's captures
+- **API routes**: `POST /analyze` (multipart+costParams), `POST /recalculate` (JSON correction), `POST /save`, `GET /history`, `GET /stats/today`
+- **Nav**: "Ao Vivo" tab (⚡ icon) replaces Goals in bottom nav; Goals still at `/goals`
+
+#### Android Native Upgrade Path
+When building the Android APK with Capacitor:
+1. Implement `CapacitorCapture` class in `offerCaptureService.ts` (scaffold provided as comment)
+2. Create native Capacitor plugin wrapping Android `MediaProjection` or `AccessibilityService`
+3. Register plugin in `CAPTURE_SERVICES` array — the rest of the pipeline (analyze → display → save) requires zero changes
+4. Add Android permissions: `FOREGROUND_SERVICE`, `SYSTEM_ALERT_WINDOW`, `MEDIA_PROJECTION`
 
 ### Daily Summary Metrics System
 - New `daily_summaries` table replaces per-ride imports: date, earnings, trips, kmDriven, hoursWorked, rating, platform
