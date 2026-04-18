@@ -4,8 +4,9 @@ import {
   Camera, Zap, History, Settings2, Volume2, VolumeX,
   CheckCircle, XCircle, AlertCircle, Clock, Navigation,
   MapPin, DollarSign, Edit3, Fuel, ArrowLeft, ImageIcon,
-  Radio, Activity, TrendingUp, TrendingDown, Minus,
+  Radio, Activity, TrendingUp, TrendingDown, Minus, Lock, Smartphone,
 } from "lucide-react";
+import { REAL_PROVIDER } from "@/services/rideProvider";
 import { useLocation } from "wouter";
 import { getApiBase, authFetch } from "@/lib/api";
 import { getCameraService, getGalleryService, type CaptureResult } from "@/services/offerCaptureService";
@@ -1066,6 +1067,16 @@ export default function AssistantPage() {
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Real Mode info banner state ──
+  const [showRealModeInfo, setShowRealModeInfo] = useState(false);
+  const realModeInfoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRealModeTap = () => {
+    setShowRealModeInfo(true);
+    if (realModeInfoTimerRef.current) clearTimeout(realModeInfoTimerRef.current);
+    realModeInfoTimerRef.current = setTimeout(() => setShowRealModeInfo(false), 4000);
+  };
+
   const refreshHistory = useCallback(async () => {
     try { const r = await authFetch(`${BASE}/api/assistant/history?limit=100`, { credentials: "include" }); if (r.ok) setHistory(await r.json()); } catch { /* */ }
   }, []);
@@ -1286,6 +1297,17 @@ export default function AssistantPage() {
           </div>
         </motion.button>
 
+        {/* REAL MODE — disabled until Android bridge is ready */}
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          onClick={handleRealModeTap}
+          title="Modo real via Android AccessibilityService (em breve)"
+          style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "7px 9px", cursor: "pointer", opacity: 0.55 }}
+        >
+          <Lock size={12} color="rgba(255,255,255,0.4)" />
+          <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.35)", letterSpacing: "0.05em" }}>REAL</span>
+        </motion.button>
+
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setVoiceOn((v) => !v)}
           style={{ width: 34, height: 34, borderRadius: 10, background: voiceOn ? "rgba(0,255,136,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${voiceOn ? "rgba(0,255,136,0.18)" : "rgba(255,255,255,0.07)"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           {voiceOn ? <Volume2 size={15} color="#00ff88" /> : <VolumeX size={15} color="rgba(255,255,255,0.4)" />}
@@ -1295,6 +1317,39 @@ export default function AssistantPage() {
           <Settings2 size={15} color="rgba(255,255,255,0.45)" />
         </motion.button>
       </div>
+
+      {/* ── Real Mode info banner ── */}
+      <AnimatePresence>
+        {showRealModeInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+            transition={{ type: "spring", damping: 28, stiffness: 360 }}
+            style={{ position: "fixed", bottom: 88, left: 16, right: 16, zIndex: 300, background: "#181818", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: "16px 18px", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Smartphone size={18} color="#818cf8" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#fff", marginBottom: 4 }}>
+                  Modo automático real em breve (Android)
+                </p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
+                  Detectará corridas automaticamente pelo Accessibility Service do Android — sem captura manual. Disponível na versão APK.
+                </p>
+              </div>
+              <button onClick={() => setShowRealModeInfo(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", fontSize: 18, lineHeight: 1, padding: "0 0 0 4px" }}>×</button>
+            </div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Lock size={11} color="rgba(99,102,241,0.6)" />
+              <span style={{ fontSize: 10, color: "rgba(99,102,241,0.7)", fontWeight: 700, letterSpacing: "0.04em" }}>
+                Provider: {REAL_PROVIDER.isAvailable ? "disponível" : "aguardando bridge Android"}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Tab bar ── */}
       {state.kind === "idle" && (
