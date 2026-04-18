@@ -73,33 +73,36 @@ const V = {
     label: "CORRIDA BOA",
     short: "BOA",
     sub: "Vale a pena aceitar",
+    decision: "ESSA CORRIDA PAGA SEU TEMPO — ACEITE",
     bg: "#001a0e",
     accent: "#00ff88",
     border: "rgba(0,255,136,0.25)",
     glow: "0 0 80px rgba(0,255,136,0.3)",
-    speech: "Corrida boa! Vale a pena.",
+    speech: "Corrida boa! Essa corrida paga seu tempo. Aceite!",
     Icon: CheckCircle,
   },
   yellow: {
     label: "ATENÇÃO",
     short: "ATENÇÃO",
     sub: "Avalie antes de aceitar",
+    decision: "SÓ ACEITE SE ESTIVER PARADO",
     bg: "#1a1200",
     accent: "#f59e0b",
     border: "rgba(245,158,11,0.25)",
     glow: "0 0 80px rgba(245,158,11,0.22)",
-    speech: "Atenção! Avalie bem a corrida.",
+    speech: "Atenção. Só aceite se estiver parado.",
     Icon: AlertCircle,
   },
   red: {
     label: "CORRIDA RUIM",
     short: "RUIM",
     sub: "Não compensa aceitar",
+    decision: "VOCÊ VAI PERDER DINHEIRO NESSA CORRIDA",
     bg: "#1a0003",
     accent: "#ef4444",
     border: "rgba(239,68,68,0.25)",
     glow: "0 0 80px rgba(239,68,68,0.22)",
-    speech: "Corrida ruim. Não vale a pena.",
+    speech: "Cuidado! Você vai perder dinheiro nessa corrida.",
     Icon: XCircle,
   },
 } as const;
@@ -152,8 +155,10 @@ function playTone(verdict: "green" | "yellow" | "red") {
     };
 
     if (verdict === "green") {
-      makeBeep(660, 0, 0.12, 0.28, 880);
-      makeBeep(880, 0.15, 0.18, 0.22);
+      // Triple ascending ding — celebratory reward signal
+      makeBeep(660, 0,    0.11, 0.25, 740);
+      makeBeep(800, 0.14, 0.11, 0.28, 920);
+      makeBeep(980, 0.29, 0.22, 0.32);
     } else if (verdict === "yellow") {
       makeBeep(520, 0, 0.1, 0.2);
       makeBeep(520, 0.18, 0.1, 0.16);
@@ -366,27 +371,63 @@ function MonitoringScreen({ feed, onToggleOff }: {
 }) {
   const last3 = feed.slice(-3).reverse();
 
+  // Daily counter: rides avoided = red/yellow rides that were ignored
+  const todayStr = new Date().toDateString();
+  const todayFeed = feed.filter((f) => f.detectedAt.toDateString() === todayStr);
+  const ruinsEvitadas = todayFeed.filter(
+    (f) => (f.ride.verdict === "red" || f.ride.verdict === "yellow") && f.decision === "ignored"
+  );
+  const prejuizoEvitado = ruinsEvitadas.reduce((sum, f) => {
+    // Loss avoided = absolute loss for red rides, or deficit vs ideal for yellow
+    const lossPerKm = f.ride.profitPerKm !== null ? Math.max(0, IDEAL_KM - f.ride.profitPerKm) : 0;
+    const dist = f.ride.distanceKm ?? 0;
+    return sum + lossPerKm * dist;
+  }, 0);
+
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 
       {/* Status card */}
-      <div style={{ background: "rgba(0,255,136,0.05)", border: "1.5px solid rgba(0,255,136,0.18)", borderRadius: 24, padding: "24px 20px", marginBottom: 20, textAlign: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 10 }}>
+      <div style={{ background: "rgba(0,255,136,0.05)", border: "1.5px solid rgba(0,255,136,0.18)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 16, textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 8 }}>
           <motion.div
-            animate={{ scale: [1, 1.25, 1], opacity: [1, 0.5, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            style={{ width: 12, height: 12, borderRadius: "50%", background: "#00ff88", boxShadow: "0 0 12px rgba(0,255,136,0.9)" }}
+            animate={{ scale: [1, 1.25, 1], opacity: [1, 0.4, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            style={{ width: 12, height: 12, borderRadius: "50%", background: "#00ff88", boxShadow: "0 0 14px rgba(0,255,136,0.95)" }}
           />
-          <span style={{ fontSize: 16, fontWeight: 900, color: "#00ff88", letterSpacing: "0.03em" }}>
-            MODO AUTO ATIVO
+          <span style={{ fontSize: 15, fontWeight: 900, color: "#00ff88", letterSpacing: "0.05em" }}>
+            PROTEGENDO SEU LUCRO EM TEMPO REAL
           </span>
         </div>
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
-          Monitorando corridas em tempo real...
-        </p>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", marginTop: 6 }}>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 0 }}>
           Novas corridas serão analisadas automaticamente
         </p>
+      </div>
+
+      {/* Daily counter */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+        <div style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 16, padding: "14px 12px", textAlign: "center" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(239,68,68,0.7)", letterSpacing: "0.07em", marginBottom: 6 }}>RUINS EVITADAS HOJE</div>
+          <motion.div
+            key={ruinsEvitadas.length}
+            initial={{ scale: 1.25 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500 }}
+            style={{ fontSize: 34, fontWeight: 900, color: "#ef4444", lineHeight: 1 }}
+          >
+            {ruinsEvitadas.length}
+          </motion.div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>corridas</div>
+        </div>
+        <div style={{ background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.16)", borderRadius: 16, padding: "14px 12px", textAlign: "center" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.6)", letterSpacing: "0.07em", marginBottom: 6 }}>PREJUÍZO EVITADO</div>
+          <motion.div
+            key={Math.round(prejuizoEvitado * 100)}
+            initial={{ scale: 1.2 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500 }}
+            style={{ fontSize: 28, fontWeight: 900, color: "#00ff88", lineHeight: 1 }}
+          >
+            {prejuizoEvitado > 0 ? `R$${fmt(prejuizoEvitado, 0)}` : "R$ 0"}
+          </motion.div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>economizados</div>
+        </div>
       </div>
 
       {/* Last 3 rides feed */}
@@ -402,11 +443,8 @@ function MonitoringScreen({ feed, onToggleOff }: {
           </div>
         </div>
       ) : (
-        <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <motion.div
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ duration: 2.5, repeat: Infinity }}
-          >
+        <div style={{ textAlign: "center", padding: "36px 20px" }}>
+          <motion.div animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2.5, repeat: Infinity }}>
             <Radio size={36} color="rgba(0,255,136,0.3)" style={{ marginBottom: 14 }} />
           </motion.div>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>
@@ -540,13 +578,22 @@ function IncomingRideCard({ item, countdown, onDecision }: {
           style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 22, padding: "22px 18px 18px", marginBottom: 12, textAlign: "center" }}
         >
           <motion.div animate={{ scale: [1, 1.04, 1] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2.5 }}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 8 }}>
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 10 }}>
             <Icon size={40} color={cfg.accent} strokeWidth={2.5} style={{ filter: `drop-shadow(0 0 12px ${cfg.accent}90)` }} />
             <span style={{ fontSize: 34, fontWeight: 900, color: cfg.accent, letterSpacing: "-0.03em", textShadow: `0 0 32px ${cfg.accent}60`, lineHeight: 1 }}>
               {cfg.label}
             </span>
           </motion.div>
-          <p style={{ fontSize: 13, color: cfg.accent, opacity: 0.65, fontWeight: 700 }}>{cfg.sub}</p>
+          {/* Strong decision phrase */}
+          <p style={{ fontSize: 14, fontWeight: 900, color: cfg.accent, letterSpacing: "0.01em", lineHeight: 1.35, marginBottom: 6 }}>
+            {cfg.decision}
+          </p>
+          {/* Behavioral trigger for bad/borderline rides */}
+          {(ride.verdict === "red" || ride.verdict === "yellow") && (
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", fontStyle: "italic" }}>
+              Motoristas aceitam isso sem perceber.
+            </p>
+          )}
         </motion.div>
 
         {/* ── Insight ── */}
@@ -822,9 +869,31 @@ function ResultScreen({ result, previewUrl, onDecision, onNewCapture, onCorrect 
 
       <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35 }}
         style={{ textAlign: "center", marginBottom: 16, padding: "0 4px" }}>
-        {result.verdict === "red" && <p style={{ fontSize: 15, fontWeight: 900, color: "#ef4444", lineHeight: 1.4 }}>CORRIDA RUIM — prejuízo possível.<br /><span style={{ fontSize: 13, fontWeight: 600, color: "rgba(239,68,68,0.65)" }}>Pense bem antes de aceitar.</span></p>}
-        {result.verdict === "yellow" && <p style={{ fontSize: 15, fontWeight: 900, color: "#f59e0b", lineHeight: 1.4 }}>ATENÇÃO — analise melhor.<br /><span style={{ fontSize: 13, fontWeight: 600, color: "rgba(245,158,11,0.65)" }}>Só vale se o trânsito estiver tranquilo.</span></p>}
-        {result.verdict === "green" && <p style={{ fontSize: 15, fontWeight: 900, color: "#00ff88", lineHeight: 1.4 }}>CORRIDA BOA — vale a pena.<br /><span style={{ fontSize: 13, fontWeight: 600, color: "rgba(0,255,136,0.6)" }}>Aceite com confiança.</span></p>}
+        {result.verdict === "red" && (
+          <>
+            <p style={{ fontSize: 16, fontWeight: 900, color: "#ef4444", lineHeight: 1.3, marginBottom: 6, letterSpacing: "0.01em" }}>
+              VOCÊ VAI PERDER DINHEIRO NESSA CORRIDA
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
+              Motoristas aceitam isso sem perceber.
+            </p>
+          </>
+        )}
+        {result.verdict === "yellow" && (
+          <>
+            <p style={{ fontSize: 16, fontWeight: 900, color: "#f59e0b", lineHeight: 1.3, marginBottom: 6, letterSpacing: "0.01em" }}>
+              SÓ ACEITE SE ESTIVER PARADO
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
+              Motoristas aceitam isso sem perceber.
+            </p>
+          </>
+        )}
+        {result.verdict === "green" && (
+          <p style={{ fontSize: 16, fontWeight: 900, color: "#00ff88", lineHeight: 1.3, letterSpacing: "0.01em" }}>
+            ESSA CORRIDA PAGA SEU TEMPO — ACEITE
+          </p>
+        )}
       </motion.div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
