@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { ChevronLeft, Copy, Check, Clock, ImagePlus, X } from "lucide-react";
 import { useGetMe } from "@workspace/api-client-react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
@@ -126,7 +126,7 @@ export default function PixPaymentPage() {
   const handlePaid = () => {
     const email = (user as any)?.email ?? "";
 
-    fetch(`${BASE}/api/pix/request`, {
+    authFetch(`${BASE}/api/pix/request`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

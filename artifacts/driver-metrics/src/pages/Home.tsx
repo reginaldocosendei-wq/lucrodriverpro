@@ -15,6 +15,7 @@ import { GamificationBar, type GamificationData } from "@/components/Gamificatio
 import { MissionsPanel } from "@/components/MissionsPanel";
 import { WeeklyChartPanel } from "@/components/WeeklyChartPanel";
 import { ShockRealityPanel } from "@/components/ShockRealityPanel";
+import { authFetch } from "@/lib/api";
 
 // ─── ANIMATED COUNTER ────────────────────────────────────────────────────────
 function Counter({ value, decimals = 2 }: { value: number; decimals?: number }) {
@@ -179,7 +180,7 @@ export default function Home() {
     queryKey: ["daily-summaries-history"],
     enabled: !DEV_DISABLE_DASHBOARD_PRELOAD,
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/daily-summaries`, { credentials: "include" });
+      const res = await authFetch(`${import.meta.env.BASE_URL}api/daily-summaries`, { credentials: "include" });
       if (!res.ok) return [];
       const data = await res.json() as Array<{
         date: string; earnings: number; trips: number;
@@ -201,7 +202,7 @@ export default function Home() {
     queryKey: ["gamification"],
     enabled: !DEV_DISABLE_DASHBOARD_PRELOAD,
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/gamification`, { credentials: "include" });
+      const res = await authFetch(`${import.meta.env.BASE_URL}api/gamification`, { credentials: "include" });
       if (!res.ok) return null;
       return res.json();
     },

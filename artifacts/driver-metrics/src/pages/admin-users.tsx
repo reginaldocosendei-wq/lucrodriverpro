@@ -6,7 +6,7 @@ import {
   Zap, ZapOff, RotateCcw, Trash2, RefreshCw,
   CheckCircle, XCircle, AlertCircle, ChevronRight,
 } from "lucide-react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
@@ -87,7 +87,7 @@ export default function AdminUsers() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/admin/users/stats`, { credentials: "include" });
+      const r = await authFetch(`${BASE}/api/admin/users/stats`, { credentials: "include" });
       if (r.ok) setStats(await r.json());
     } catch { /* ignore */ }
   }, []);
@@ -96,7 +96,7 @@ export default function AdminUsers() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ filter, page: String(p), search });
-      const r = await fetch(`${BASE}/api/admin/users?${params}`, { credentials: "include" });
+      const r = await authFetch(`${BASE}/api/admin/users?${params}`, { credentials: "include" });
       if (r.status === 403) { setAccess("denied"); return; }
       if (!r.ok) { addToast("Erro ao carregar usuários", "err"); return; }
       const data = await r.json();
@@ -117,7 +117,7 @@ export default function AdminUsers() {
   async function action(userId: number, endpoint: string, label: string) {
     setActing((p) => ({ ...p, [userId]: endpoint }));
     try {
-      const r = await fetch(`${BASE}/api/admin/users/${userId}/${endpoint}`, {
+      const r = await authFetch(`${BASE}/api/admin/users/${userId}/${endpoint}`, {
         method: "POST", credentials: "include",
       });
       const d = await r.json();
@@ -132,7 +132,7 @@ export default function AdminUsers() {
     setActing((p) => ({ ...p, [u.id]: "delete" }));
     setConfirmDel(null);
     try {
-      const r = await fetch(`${BASE}/api/admin/users/${u.id}`, {
+      const r = await authFetch(`${BASE}/api/admin/users/${u.id}`, {
         method: "DELETE", credentials: "include",
       });
       const d = await r.json();

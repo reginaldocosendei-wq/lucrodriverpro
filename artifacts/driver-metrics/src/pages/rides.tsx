@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatBRL, formatDate } from "@/lib/utils";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import {
   useExtraEarnings, useAddExtraEarning, useUpdateExtraEarning, useDeleteExtraEarning,
@@ -367,7 +367,7 @@ function DevAdminPanel({ onPurged, showToast }: {
   const fetchCounts = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${BASE}/api/dev/test-data-summary`, { credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/dev/test-data-summary`, { credentials: "include" });
       setCounts(await res.json());
     } catch { setCounts(null); }
     finally  { setLoading(false); }
@@ -378,7 +378,7 @@ function DevAdminPanel({ onPurged, showToast }: {
   const handlePurge = async () => {
     setPurging(true);
     try {
-      const res  = await fetch(`${BASE}/api/dev/purge-test-data`, { method: "DELETE", credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/dev/purge-test-data`, { method: "DELETE", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
@@ -1242,7 +1242,7 @@ export default function RidesPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`${BASE}/api/daily-summaries`, { credentials: "include" });
+      const res = await authFetch(`${BASE}/api/daily-summaries`, { credentials: "include" });
       if (!res.ok) throw new Error("Erro ao carregar registros");
       setSummaries(await res.json());
     } catch (e: any) {
@@ -1360,8 +1360,8 @@ export default function RidesPage() {
     setIsDeleting(true);
     try {
       const res = confirmTarget.source === "rides"
-        ? await fetch(`${BASE}/api/rides/day/${confirmTarget.date}`, { method: "DELETE", credentials: "include" })
-        : await fetch(`${BASE}/api/daily-summaries/${confirmTarget.id}`, { method: "DELETE", credentials: "include" });
+        ? await authFetch(`${BASE}/api/rides/day/${confirmTarget.date}`, { method: "DELETE", credentials: "include" })
+        : await authFetch(`${BASE}/api/daily-summaries/${confirmTarget.id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error();
       setSummaries((prev) => prev?.filter((s) =>
         confirmTarget.source === "rides"
@@ -1386,14 +1386,14 @@ export default function RidesPage() {
       let res: Response;
       // Both source types use POST (upsert by date) so edits are safe regardless of source
       if (editTarget.source === "summary" && editTarget.id != null) {
-        res = await fetch(`${BASE}/api/daily-summaries/${editTarget.id}`, {
+        res = await authFetch(`${BASE}/api/daily-summaries/${editTarget.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(data),
         });
       } else {
-        res = await fetch(`${BASE}/api/daily-summaries`, {
+        res = await authFetch(`${BASE}/api/daily-summaries`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

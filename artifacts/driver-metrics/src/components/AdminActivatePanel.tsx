@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { Shield, X } from "lucide-react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE   = getApiBase();
 const SECRET = (import.meta.env.VITE_ADMIN_SECRET ?? "") as string;
@@ -38,7 +38,7 @@ function FloatingPanel() {
     setLoading(true);
     setStatus(null);
     try {
-      const res = await fetch(`${BASE}/api/admin/activate-pro`, {
+      const res = await authFetch(`${BASE}/api/admin/activate-pro`, {
         method:      "POST",
         credentials: "include",
         headers: {

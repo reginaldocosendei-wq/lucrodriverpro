@@ -5,7 +5,7 @@ import {
   ChevronLeft, Search, Check, X, Trash2, RefreshCw,
   Clock, CheckCircle, XCircle, Shield, AlertTriangle, ZoomIn,
 } from "lucide-react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
@@ -91,7 +91,7 @@ export default function AdminPixPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ filter, search });
-      const res = await fetch(`${BASE}/api/admin/pix?${params}`, { credentials: "include" });
+      const res = await authFetch(`${BASE}/api/admin/pix?${params}`, { credentials: "include" });
       if (res.status === 401) { navigate("/"); return; }
       if (res.status === 403) { setAccess("denied"); setLoading(false); return; }
       const data = await res.json();
@@ -112,7 +112,7 @@ export default function AdminPixPage() {
   const confirm = async (p: PixPayment) => {
     setConfirm(p.id, "loading");
     try {
-      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/confirm`, { method: "POST", credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/admin/pix/${p.id}/confirm`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setConfirm(p.id, "ok");
@@ -129,7 +129,7 @@ export default function AdminPixPage() {
   const activatePro = async (p: PixPayment) => {
     setActivate(p.id, "loading");
     try {
-      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/activate-pro`, { method: "POST", credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/admin/pix/${p.id}/activate-pro`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setActivate(p.id, "ok");
@@ -146,7 +146,7 @@ export default function AdminPixPage() {
   const reject = async (p: PixPayment) => {
     setConfirm(p.id, "loading");
     try {
-      const res  = await fetch(`${BASE}/api/admin/pix/${p.id}/reject`, { method: "POST", credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/admin/pix/${p.id}/reject`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setConfirm(p.id, "ok");
@@ -162,7 +162,7 @@ export default function AdminPixPage() {
   const remove = async (p: PixPayment) => {
     if (!window.confirm(`Excluir registro de ${p.email}?`)) return;
     try {
-      const res = await fetch(`${BASE}/api/admin/pix/${p.id}`, { method: "DELETE", credentials: "include" });
+      const res = await authFetch(`${BASE}/api/admin/pix/${p.id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error();
       addToast("Registro excluído.", "ok");
       fetchPayments();

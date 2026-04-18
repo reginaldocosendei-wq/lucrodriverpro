@@ -4,7 +4,7 @@ import { CheckCircle, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 const BASE = getApiBase();
 
 type SyncState = "syncing" | "success" | "partial";
@@ -13,7 +13,7 @@ async function attemptSync(sessionId: string | null): Promise<boolean> {
   const body: Record<string, string> = {};
   if (sessionId) body.sessionId = sessionId;
 
-  const res = await fetch(`${BASE}/api/stripe/sync-plan`, {
+  const res = await authFetch(`${BASE}/api/stripe/sync-plan`, {
     method:      "POST",
     credentials: "include",
     headers:     { "Content-Type": "application/json" },

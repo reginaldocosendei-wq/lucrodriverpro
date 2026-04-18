@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, Copy, Check, Clock, Loader, AlertTriangle, Sparkles,
 } from "lucide-react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 const POLL_INTERVAL_MS = 5_000;
@@ -75,7 +75,7 @@ export default function PixAutoPage() {
     setPollCount(0);
 
     try {
-      const res = await fetch(`${BASE}/api/pix/mp/create`, {
+      const res = await authFetch(`${BASE}/api/pix/mp/create`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +126,7 @@ export default function PixAutoPage() {
       });
 
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `${BASE}/api/pix/mp/status/${pixData.pixPaymentId}`,
           { credentials: "include" },
         );

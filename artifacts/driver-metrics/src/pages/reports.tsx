@@ -9,7 +9,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
@@ -102,7 +102,7 @@ export default function Reports() {
     setTrialLoading(true);
     setTrialError(null);
     try {
-      const res  = await fetch(`${BASE}/api/auth/trial/start`, { method: "POST", credentials: "include" });
+      const res  = await authFetch(`${BASE}/api/auth/trial/start`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!res.ok) { setTrialError(data.error || "Algo deu errado. Tente novamente."); return; }
       setTrialSuccess(true);

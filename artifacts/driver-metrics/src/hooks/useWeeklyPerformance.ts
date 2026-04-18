@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 export interface PerformanceDay {
   date: string;
@@ -30,7 +30,7 @@ export function useWeeklyPerformance() {
   return useQuery<WeeklyPerformance>({
     queryKey: ["/api/weekly-performance"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/weekly-performance`, {
+      const res = await authFetch(`${BASE}/api/weekly-performance`, {
         credentials: "include",
       });
       if (!res.ok) return { days: [], bestDay: null, worstDay: null, avgProfit: null, avgEarnings: null, totalProfit: null };

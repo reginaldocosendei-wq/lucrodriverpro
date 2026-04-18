@@ -3,19 +3,19 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RefreshCw, PlusSquare, Check, Info, Smartphone } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
 // ─── API HELPERS ──────────────────────────────────────────────────────────────
 async function fetchPreferences(): Promise<{ saveModeReplace: boolean }> {
-  const res = await fetch(`${BASE}/api/preferences`, { credentials: "include" });
+  const res = await authFetch(`${BASE}/api/preferences`, { credentials: "include" });
   if (!res.ok) throw new Error("Erro ao buscar preferências");
   return res.json();
 }
 
 async function patchPreferences(body: { saveModeReplace: boolean }) {
-  const res = await fetch(`${BASE}/api/preferences`, {
+  const res = await authFetch(`${BASE}/api/preferences`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },

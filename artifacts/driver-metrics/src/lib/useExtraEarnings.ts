@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getApiBase } from "./api";
+import { authFetch } from "@/lib/api";
 
 const BASE = getApiBase();
 
@@ -79,7 +80,7 @@ export function useExtraEarnings(date?: string) {
   return useQuery<ExtraEarning[]>({
     queryKey: extraEarningsQueryKey(date),
     queryFn: async () => {
-      const r = await fetch(url, { credentials: "include" });
+      const r = await authFetch(url, { credentials: "include" });
       if (!r.ok) throw new Error("Erro ao buscar ganhos extras");
       return r.json();
     },
@@ -95,7 +96,7 @@ export function useAddExtraEarning() {
       // Client-side guard — prevents obviously bad data from hitting the network
       validateEarningFields(body);
 
-      const r = await fetch(`${BASE}/api/extra-earnings`, {
+      const r = await authFetch(`${BASE}/api/extra-earnings`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +121,7 @@ export function useUpdateExtraEarning() {
       // Client-side guard
       validateEarningFields({ date: body.date, type: body.type, amount: body.amount, note: body.note });
 
-      const r = await fetch(`${BASE}/api/extra-earnings/${body.id}`, {
+      const r = await authFetch(`${BASE}/api/extra-earnings/${body.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -144,7 +145,7 @@ export function useDeleteExtraEarning() {
     mutationFn: async ({ id }: { id: number; date: string }) => {
       if (!Number.isInteger(id) || id <= 0) throw new Error("ID inválido");
 
-      const r = await fetch(`${BASE}/api/extra-earnings/${id}`, {
+      const r = await authFetch(`${BASE}/api/extra-earnings/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

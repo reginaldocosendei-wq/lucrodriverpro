@@ -9,7 +9,7 @@ import {
   Target, BarChart2, Brain, CalendarDays,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { DEV_SKIP_STRIPE_CHECKOUT } from "@/lib/dev-flags";
 
@@ -94,7 +94,7 @@ export default function Upgrade() {
       setIsLoading(true);
       setError(null);
       try {
-        const r = await fetch(`${BASE}/api/dev/simulate-upgrade`, { method: "POST", credentials: "include" });
+        const r = await authFetch(`${BASE}/api/dev/simulate-upgrade`, { method: "POST", credentials: "include" });
         if (!r.ok) throw new Error("simulate failed");
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         navigate("/?upgraded=1");
@@ -115,7 +115,7 @@ export default function Upgrade() {
     const cancelUrl  = `${origin}${basePath}/checkout/cancel`;
 
     try {
-      const res = await fetch(`${BASE}/api/create-checkout`, {
+      const res = await authFetch(`${BASE}/api/create-checkout`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

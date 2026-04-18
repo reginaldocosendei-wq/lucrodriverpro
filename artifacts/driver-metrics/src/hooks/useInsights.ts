@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, authFetch } from "@/lib/api";
 
 export type InsightStatus = "good" | "average" | "bad";
 
@@ -33,7 +33,7 @@ export function useInsights() {
   return useQuery<InsightsResponse>({
     queryKey: ["/api/insights"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/insights`, {
+      const res = await authFetch(`${BASE}/api/insights`, {
         credentials: "include",
       });
       if (!res.ok) return { decision: null, insights: [] };
