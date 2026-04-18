@@ -49,7 +49,7 @@ function sanitizeNote(raw: unknown): string {
 
 // ── GET /api/extra-earnings?date=YYYY-MM-DD ──────────────────────────────────
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { date } = req.query;
 
   if (date !== undefined && !isValidDate(date)) {
@@ -72,7 +72,7 @@ router.get("/", requireAuth, async (req, res) => {
 
 // ── POST /api/extra-earnings ─────────────────────────────────────────────────
 router.post("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { date, type, amount, note } = req.body;
 
   // Required fields present
@@ -117,7 +117,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 // ── PATCH /api/extra-earnings/:id ────────────────────────────────────────────
 router.patch("/:id", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const id = parseInt(req.params.id, 10);
 
   if (isNaN(id) || id <= 0) {
@@ -174,7 +174,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
 
 // ── DELETE /api/extra-earnings/:id ───────────────────────────────────────────
 router.delete("/:id", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const id = parseInt(req.params.id, 10);
 
   if (isNaN(id) || id <= 0) {

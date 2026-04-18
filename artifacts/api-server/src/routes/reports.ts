@@ -86,7 +86,7 @@ async function getMergedSummaries(userId: number): Promise<Array<{
 }
 
 router.get("/earnings", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   try {
     // ── Load all data sources in parallel ─────────────────────────────────────
@@ -243,7 +243,7 @@ router.get("/earnings", requireAuth, async (req, res) => {
 // ── Debug endpoint — returns raw merged data for the logged-in user ──────────
 // Useful for verifying that rides + summaries are both included.
 router.get("/debug", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   try {
     const [summaries, ridesAgg, extras] = await Promise.all([
       db.select().from(dailySummariesTable).where(eq(dailySummariesTable.userId, userId)),

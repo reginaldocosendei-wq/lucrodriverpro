@@ -55,7 +55,7 @@ function computeLevel(activeDays: number) {
 
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const userId = req.session.userId!;
+    const userId = req.userId!;
     const today  = todayStr();
     const monthStart = `${today.substring(0, 7)}-01`;
 

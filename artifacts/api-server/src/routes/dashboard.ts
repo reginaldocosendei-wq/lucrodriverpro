@@ -33,7 +33,7 @@ function startOfMonth(): string {
 }
 
 router.get("/summary", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   const [summaries, rides, costs, [goal], extraEarnings] = await Promise.all([
     db.select().from(dailySummariesTable).where(eq(dailySummariesTable.userId, userId)),

@@ -5,6 +5,7 @@ import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { computeEffectivePlan, syncStripeStatusForUser, TRIAL_MS } from "../lib/planSync";
 import { signToken } from "../lib/jwt.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
@@ -272,35 +273,26 @@ router.post("/google", async (req, res) => {
   }
 });
 
-router.get("/me", async (req, res) => {
-  const sid = req.sessionID ?? "(none)";
-  const hasCookie = !!req.headers.cookie;
-  if (!req.session.userId) {
-    console.log(`[auth/me] UNAUTHENTICATED — sessionId=${sid} cookie=${hasCookie ? "present" : "MISSING"} sessionUserId=none`);
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+router.get("/me", requireAuth, async (req, res) => {
+  const uid = req.userId!;
+  console.log(`[auth/me] loading user — userId=${uid}`);
+
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.id, uid)).limit(1);
   if (!user) {
-    console.log(`[auth/me] user not found in DB — sessionId=${sid} sessionUserId=${req.session.userId}`);
+    console.log(`[auth/me] user not found in DB — userId=${uid}`);
     res.status(401).json({ error: "Usuário não encontrado" });
     return;
   }
 
   user = await syncStripeStatusForUser(user);
-
   const effective = computeEffectivePlan(user);
-  console.log(`[auth/me] USER LOADED — userId=${user.id} sessionId=${sid} plan=${effective.plan} planSource=${effective.planSource} trialActive=${effective.trialActive}`);
+  console.log(`[auth/me] USER LOADED — userId=${user.id} plan=${effective.plan} planSource=${effective.planSource} trialActive=${effective.trialActive}`);
 
   res.json(userResponse(user));
 });
 
-router.post("/trial/start", async (req, res) => {
-  if (!req.session.userId) {
-    res.status(401).json({ error: "Não autenticado" });
-    return;
-  }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+router.post("/trial/start", requireAuth, async (req, res) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
   if (!user) {
     res.status(401).json({ error: "Usuário não encontrado" });
     return;

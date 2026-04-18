@@ -1,0 +1,119 @@
+You must implement EXACTLY this authentication flow. Do not improvise.
+
+GOAL:
+Fix Google login loop permanently. After login, user must stay authenticated.
+
+-------------------------
+BACKEND (Google callback)
+-------------------------
+
+1. After Google OAuth success:
+
+- Generate JWT token:
+
+const token = jwt.sign(
+  { userId: user.id },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+
+2. DO NOT use cookies for auth.
+
+3. Redirect EXACTLY to:
+
+https://lucrodriver-mobile.replit.app/auth-success?token=TOKEN_HERE
+
+Use absolute URL. Do NOT use relative paths.
+
+-------------------------
+FRONTEND (/auth-success)
+-------------------------
+
+Create a page /auth-success with EXACT behavior:
+
+- Read token from URL
+- Save in localStorage as "auth_token"
+- Redirect to /rides
+
+Code must do:
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+if (token) {
+  localStorage.setItem("auth_token", token);
+  window.location.href = "/rides";
+} else {
+  window.location.href = "/";
+}
+
+-------------------------
+FRONTEND (/rides)
+-------------------------
+
+- On load, check:
+
+const token = localStorage.getItem("auth_token");
+
+if (!token) {
+  window.location.href = "/";
+}
+
+-------------------------
+API REQUESTS
+-------------------------
+
+All requests must include:
+
+Authorization: Bearer <token>
+
+Example:
+
+fetch("/api/user", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
+
+-------------------------
+BACKEND PROTECTED ROUTES
+-------------------------
+
+- Validate JWT:
+
+const authHeader = req.headers.authorization;
+
+if (!authHeader) return res.status(401);
+
+const token = authHeader.split(" ")[1];
+
+try {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  req.user = decoded;
+} catch {
+  return res.status(401);
+}
+
+-------------------------
+IMPORTANT RULES
+-------------------------
+
+- Do NOT rely on cookies
+- Do NOT redirect to "/"
+- Do NOT use navigate("/")
+- Do NOT assume session exists
+- Use ONLY token-based auth
+
+-------------------------
+FINAL STEP
+-------------------------
+
+Redeploy production.
+
+-------------------------
+RETURN TO ME
+-------------------------
+
+- File where token is generated
+- File where /auth-success is created
+- Confirmation login works after refresh

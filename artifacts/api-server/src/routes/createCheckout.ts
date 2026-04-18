@@ -59,7 +59,7 @@ function resolvePriceId(plan: string): { priceId: string | null; source: string 
 
 // ── POST /api/create-checkout ─────────────────────────────────────────────────
 router.post("/", requireAuth, async (req: any, res) => {
-  const userId = req.session.userId as number;
+  const userId = req.userId as number;
 
   const {
     plan       = "monthly",

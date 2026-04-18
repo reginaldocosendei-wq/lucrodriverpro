@@ -25,7 +25,7 @@ function requireAuth(req: any, res: any, next: any) {
 // ── GET /api/dev/test-data-summary ────────────────────────────────────────────
 // Returns row counts for the logged-in user across both tables.
 router.get("/test-data-summary", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   try {
     const ridesCount = await db
       .select({ count: sql<number>`COUNT(*)::int` })
@@ -50,7 +50,7 @@ router.get("/test-data-summary", requireAuth, async (req, res) => {
 // ── DELETE /api/dev/purge-test-data ───────────────────────────────────────────
 // Deletes ALL rides + daily_summaries for the authenticated user only.
 router.delete("/purge-test-data", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   try {
     // Count before deleting so we can report back
     const [ridesRow] = await db
@@ -89,7 +89,7 @@ router.delete("/purge-test-data", requireAuth, async (req, res) => {
 // The router-level guard above already returns 404 in production — this handler
 // is only reachable in development / staging environments.
 router.post("/simulate-upgrade", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   try {
     await paymentService.activateProAccess(userId);
     console.log("[DEV] simulate-upgrade — userId=%d → PRO", userId);

@@ -46,16 +46,16 @@ function AuthForm({
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
     onSuccess: async (data) => {
-      // Persist JWT immediately so it survives even if URL parsing were skipped.
+      // Redirect to /auth-success?token=JWT using absolute URL as required.
+      // The /auth-success page stores the token in localStorage and
+      // then does window.location.href = "/rides" — no cookies needed.
       if (data.token) {
-        localStorage.setItem("auth_token", data.token);
-        console.log("[auth/google] token stored in localStorage");
+        const dest = `${window.location.origin}/auth-success?token=${encodeURIComponent(data.token)}`;
+        console.log("[auth/google] redirecting to auth-success");
+        window.location.href = dest;
+      } else {
+        window.location.href = "/";
       }
-      // Redirect to /rides?token=JWT so the App bootstrap can capture it from
-      // the URL on next page load (belt-and-suspenders on top of localStorage).
-      // App.tsx strips ?token= from the URL before the user sees it.
-      const dest = data.token ? `/rides?token=${encodeURIComponent(data.token)}` : "/rides";
-      window.location.replace(dest);
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));

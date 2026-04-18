@@ -32,7 +32,7 @@ function startOfMonth(): string {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   const costs = await db
     .select()
@@ -79,7 +79,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.post("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { category, amount, description, date, costType } = req.body;
 
   if (!category || !amount || !date) {
@@ -105,7 +105,7 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 router.delete("/:id", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const id = parseInt(req.params.id);
 
   const [cost] = await db.select().from(costsTable).where(eq(costsTable.id, id)).limit(1);

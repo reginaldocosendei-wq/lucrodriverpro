@@ -22,7 +22,7 @@ const PT_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PT_DAYS_FULL = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   try {
     const today = getDateStr(0);

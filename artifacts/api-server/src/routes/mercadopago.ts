@@ -38,7 +38,7 @@ function getNotificationUrl(): string {
 
 // ── POST /create ─────────────────────────────────────────────────────────────
 router.post("/create", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   const accessToken = getMpToken();
   if (!accessToken) {
@@ -141,7 +141,7 @@ router.post("/create", requireAuth, async (req, res) => {
 
 // ── GET /status/:pixPaymentId ─────────────────────────────────────────────────
 router.get("/status/:pixPaymentId", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const pixPaymentId = parseInt(req.params.pixPaymentId);
 
   if (isNaN(pixPaymentId)) {

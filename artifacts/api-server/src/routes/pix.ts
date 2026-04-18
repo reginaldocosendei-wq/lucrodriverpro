@@ -15,7 +15,7 @@ function requireAuth(req: any, res: any, next: any) {
 // ── POST /api/pix/request ──────────────────────────────────────────────────────
 // Records a PIX payment intent. Accepts optional proofData (base64 data URL).
 router.post("/request", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { proofData } = req.body ?? {};
 
   try {

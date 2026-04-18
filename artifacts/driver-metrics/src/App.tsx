@@ -26,6 +26,7 @@ import AdminPix from "@/pages/admin-pix";
 import AdminUsers from "@/pages/admin-users";
 import Settings from "@/pages/settings";
 import AuthScreen from "@/pages/auth";
+import AuthSuccess from "@/pages/auth-success";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
@@ -330,6 +331,9 @@ function Router() {
   return (
     <>
     <Switch>
+      {/* ── OAuth callback — captures token from URL, stores it, redirects ── */}
+      <Route path="/auth-success" component={AuthSuccess} />
+
       {/* ── Public: login / register ── */}
       <Route path="/login" component={LoginRoute} />
 

@@ -27,7 +27,7 @@ function startOfMonth(): string {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
 
   try {
     const [summaries, costs] = await Promise.all([

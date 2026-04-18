@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { requireAuth } from "../middleware/requireAuth.js";
 import healthRouter from "./health";
 import authRouter from "./auth";
 import ridesRouter from "./rides";
@@ -26,6 +27,12 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
+
+// All routes below this line require authentication.
+// requireAuth checks Authorization: Bearer JWT first, then falls back to
+// cookie session. Returns 401 immediately if neither is present/valid.
+router.use(requireAuth);
+
 router.use("/rides", ridesRouter);
 router.use("/costs", costsRouter);
 router.use("/goals", goalsRouter);

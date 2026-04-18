@@ -119,7 +119,7 @@ router.post("/analyze", requireAuth, upload.single("screenshot"), async (req, re
 });
 
 router.post("/confirm", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   // Accept both new (km/hours) and old (kmDriven/hoursWorked) field names for backwards compat
   const { earnings, trips, platform, km, hours, kmDriven, hoursWorked, rating, date } = req.body;
 

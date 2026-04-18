@@ -100,7 +100,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     const cancelUrl  = clientCancel  || `${baseUrl}/checkout/cancel`;
 
     const { url } = await paymentService.createCheckoutSession(
-      req.session.userId,
+      req.userId,
       priceId,
       successUrl,
       cancelUrl,
@@ -126,8 +126,8 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
 router.post("/sync-plan", requireAuth, async (req: any, res) => {
   try {
     const sessionId: string | undefined = req.body?.sessionId ?? undefined;
-    const result = await paymentService.syncSubscriptionStatus(req.session.userId, sessionId);
-    console.log(`[sync-plan] userId=${req.session.userId} sessionId=${sessionId ?? "none"} → plan=${result.plan}`);
+    const result = await paymentService.syncSubscriptionStatus(req.userId, sessionId);
+    console.log(`[sync-plan] userId=${req.userId} sessionId=${sessionId ?? "none"} → plan=${result.plan}`);
     res.json(result);
   } catch (err: any) {
     console.error("[sync-plan]", err?.message);
@@ -139,7 +139,7 @@ router.post("/sync-plan", requireAuth, async (req: any, res) => {
 // Opens the Stripe Customer Portal for subscription management / cancellation.
 router.post("/portal", requireAuth, async (req: any, res) => {
   try {
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(req.userId);
     if (!user?.stripeCustomerId) {
       return res.status(400).json({ error: "Nenhuma assinatura encontrada" });
     }
@@ -159,7 +159,7 @@ router.post("/portal", requireAuth, async (req: any, res) => {
 // Returns the current Stripe subscription info for the logged-in user.
 router.get("/subscription", requireAuth, async (req: any, res) => {
   try {
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(req.userId);
     if (!user?.stripeCustomerId) {
       return res.json({ subscription: null, plan: user?.plan ?? "free" });
     }

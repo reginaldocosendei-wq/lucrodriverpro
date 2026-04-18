@@ -13,7 +13,7 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   try {
     // 1. Fetch real daily summaries
     const summaries = await db
@@ -73,7 +73,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.post("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { date, earnings, trips, kmDriven, hoursWorked, rating, platform, notes } = req.body;
 
   if (!date || !earnings || !trips) {
@@ -156,7 +156,7 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 router.put("/:id", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const id = parseInt(req.params.id);
   const { earnings, trips, kmDriven, hoursWorked, rating, platform, notes } = req.body;
 
@@ -200,7 +200,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 });
 
 router.delete("/:id", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const id = parseInt(req.params.id);
 
   if (isNaN(id)) {

@@ -24,7 +24,7 @@ async function requireAdmin(req: any, res: any, next: any) {
     res.status(403).json({ error: "Acesso negado: ADMIN_EMAIL não configurado" });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId)).limit(1);
   if (!user || user.email.toLowerCase() !== adminEmail.toLowerCase()) {
     res.status(403).json({ error: "Acesso negado" });
     return;

@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
       .set({ plan: "pro", trialStartDate: null })
       .where(eq(usersTable.id, user.id));
 
-    console.log(`[AdminActivate] PRO activated for ${user.email} by session userId=${req.session.userId}`);
+    console.log(`[AdminActivate] PRO activated for ${user.email} by session userId=${req.userId}`);
 
     res.json({ success: true, message: `PRO ativado para ${user.email}` });
   } catch (err: any) {

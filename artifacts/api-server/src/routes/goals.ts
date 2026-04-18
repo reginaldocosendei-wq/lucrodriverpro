@@ -13,13 +13,13 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1);
   res.json({ daily: goal?.daily ?? 0, weekly: goal?.weekly ?? 0, monthly: goal?.monthly ?? 0 });
 });
 
 router.put("/", requireAuth, async (req, res) => {
-  const userId = req.session.userId!;
+  const userId = req.userId!;
   const { daily, weekly, monthly } = req.body;
 
   const existing = await db.select().from(goalsTable).where(eq(goalsTable.userId, userId)).limit(1);
