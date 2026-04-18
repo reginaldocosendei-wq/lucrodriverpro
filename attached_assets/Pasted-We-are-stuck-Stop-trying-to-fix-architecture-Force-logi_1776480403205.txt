@@ -1,0 +1,143 @@
+We are stuck. Stop trying to fix architecture.
+
+Force login to work in the simplest possible way.
+
+==================================================
+GOAL
+==================================================
+
+After Google login OR email login:
+
+User MUST go to /rides and STAY there.
+
+Even if /api/auth/me fails, user must still enter app.
+
+==================================================
+STEP 1 — FORCE TOKEN SAVE
+==================================================
+
+Wherever login succeeds (Google or email):
+
+DO THIS IMMEDIATELY:
+
+localStorage.setItem("auth_token", token)
+
+AND ALSO:
+
+localStorage.setItem("user_logged", "true")
+
+==================================================
+STEP 2 — BYPASS AUTH COMPLEXITY
+==================================================
+
+In your PrivateRoute / PrivateGuard:
+
+REPLACE ALL LOGIC WITH THIS:
+
+----------------------------------
+
+const token = localStorage.getItem("auth_token");
+const isLogged = localStorage.getItem("user_logged");
+
+if (!token || !isLogged) {
+  return <Navigate to="/login" />;
+}
+
+return children;
+
+----------------------------------
+
+NO API CALL
+NO /auth/me
+NO waiting
+NO loading state
+
+==================================================
+STEP 3 — FORCE REDIRECT AFTER LOGIN
+==================================================
+
+After Google login success:
+
+window.location.href = "/rides";
+
+After email login success:
+
+window.location.href = "/rides";
+
+NO navigate()
+NO replace()
+NO conditions
+
+==================================================
+STEP 4 — BLOCK LOGIN PAGE IF TOKEN EXISTS
+==================================================
+
+Inside Login Page component:
+
+ADD THIS ON TOP:
+
+----------------------------------
+
+useEffect(() => {
+  const token = localStorage.getItem("auth_token");
+  const isLogged = localStorage.getItem("user_logged");
+
+  if (token && isLogged) {
+    window.location.href = "/rides";
+  }
+}, []);
+
+----------------------------------
+
+==================================================
+STEP 5 — DISABLE /auth-success COMPLEX FLOW
+==================================================
+
+If /auth-success exists:
+
+Simplify to ONLY this:
+
+----------------------------------
+
+const token = new URLSearchParams(window.location.search).get("token");
+
+if (token) {
+  localStorage.setItem("auth_token", token);
+  localStorage.setItem("user_logged", "true");
+  window.location.href = "/rides";
+} else {
+  window.location.href = "/login";
+}
+
+----------------------------------
+
+==================================================
+STEP 6 — REMOVE ALL THESE THINGS
+==================================================
+
+REMOVE:
+- /api/auth/me dependency
+- React Query auth logic
+- any "isLoading" auth state
+- any redirect to "/"
+- any session/cookie usage
+
+==================================================
+FINAL EXPECTED RESULT
+==================================================
+
+Google login:
+→ select account
+→ goes to /rides
+→ stays there
+
+Refresh:
+→ still in /rides
+
+Open app again:
+→ still in /rides
+
+==================================================
+DO NOT EXPLAIN.
+JUST APPLY.
+==================================================

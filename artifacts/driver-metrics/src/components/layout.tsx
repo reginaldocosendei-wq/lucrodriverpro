@@ -247,9 +247,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     logout.mutate(undefined, {
       onSuccess: () => {
         localStorage.removeItem("auth_token");
-        console.log("[LOGOUT] auth_token cleared from localStorage");
+        localStorage.removeItem("user_logged");
         queryClient.setQueryData(["/api/auth/me"], null);
         queryClient.clear();
+        window.location.href = "/";
       },
     });
   };

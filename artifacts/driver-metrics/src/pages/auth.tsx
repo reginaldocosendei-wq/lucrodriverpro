@@ -45,22 +45,13 @@ function AuthForm({
       }
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       console.log("[GOOGLE_AUTH_RESPONSE] token exists:", !!data.token);
-      console.log("[GOOGLE_AUTH_RESPONSE] user exists:", !!data.user);
-
       if (data.token) {
-        // Save token immediately to localStorage before any navigation.
-        // This is the ONLY auth_token key used anywhere in the app.
         localStorage.setItem("auth_token", data.token);
-        console.log("[GOOGLE_AUTH_RESPONSE] auth_token saved to localStorage:", !!localStorage.getItem("auth_token"));
-        // Go directly to /rides — no intermediate /auth-success page.
-        // replace() prevents back-button returning to the login page.
-        window.location.replace("/rides");
-      } else {
-        console.log("[GOOGLE_AUTH_RESPONSE] ERROR: no token in response — staying on login");
-        setErrorMsg(t("auth.googleError"));
+        localStorage.setItem("user_logged", "true");
       }
+      window.location.href = "/rides";
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));
@@ -88,17 +79,15 @@ function AuthForm({
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
     loginMutation.mutate({ data }, {
-      onSuccess: async (res) => {
+      onSuccess: (res) => {
         if (res?.token) {
           localStorage.setItem("auth_token", res.token);
-          console.log("[auth/login] token stored in localStorage");
+          localStorage.setItem("user_logged", "true");
         }
-        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-        onSuccess?.();
+        window.location.href = "/rides";
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
-        console.debug("[AuthForm] login error:", msg);
         setErrorMsg(msg);
       },
     });
@@ -106,19 +95,16 @@ function AuthForm({
 
   const onRegister = registerForm.handleSubmit((data) => {
     setErrorMsg("");
-    console.debug("[AuthForm] submitting register", { email: data.email });
     registerMutation.mutate({ data }, {
-      onSuccess: async (res) => {
+      onSuccess: (res) => {
         if (res?.token) {
           localStorage.setItem("auth_token", res.token);
-          console.log("[auth/register] token stored in localStorage");
+          localStorage.setItem("user_logged", "true");
         }
-        await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-        onSuccess?.();
+        window.location.href = "/rides";
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.registerError");
-        console.debug("[AuthForm] register error:", msg);
         setErrorMsg(msg);
       },
     });
