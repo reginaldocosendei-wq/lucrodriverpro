@@ -26,6 +26,14 @@ import assistantRouter from "./assistant";
 
 const router: IRouter = Router();
 
+// ─── DOWNLOAD PROBE — must be first in router (mounted at /api) ───────────────
+// /api/download reaches here because index.ts does: app.use("/api", router)
+// Express strips the /api prefix before passing to this router, so the path
+// seen here is /download.
+router.get("/download", (_req, res) => {
+  res.send("BACKEND OK");
+});
+
 router.use(healthRouter);
 router.use("/auth", authRouter);
 
