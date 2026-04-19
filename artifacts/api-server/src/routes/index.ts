@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+import path from "path";
+import fs from "fs";import { Router, type IRouter } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import healthRouter from "./health";
 import authRouter from "./auth";
@@ -31,9 +32,14 @@ const router: IRouter = Router();
 // Express strips the /api prefix before passing to this router, so the path
 // seen here is /download.
 router.get("/download", (_req, res) => {
-  res.send("BACKEND OK");
-});
+  const filePath = path.join(process.cwd(), "app.zip");
 
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("app.zip não encontrado na raiz do projeto");
+  }
+
+  return res.download(filePath, "lucrodriverpro.zip");
+});
 router.use(healthRouter);
 router.use("/auth", authRouter);
 

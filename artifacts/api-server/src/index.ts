@@ -21,14 +21,45 @@ const FRONTEND_DIST   = path.resolve(_bundleDir, "../../driver-metrics/dist/publ
 console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
 console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 
-// ─── DOWNLOAD INTERCEPT — position zero, no path-to-regexp, manual check ──────
-// app.get() with path-to-regexp v8 silently fails to match in production.
-// app.use() with no path arg runs for EVERY request; we check req.path manually.
-// This fires before CORS, session, body parser, and all other middleware.
+// ─── ZIP GENERATION ───────────────────────────────────────────────────────────
+const ZIP_PATH = path.join(WORKSPACE_ROOT, "app.zip");
+
+function generateZip(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(ZIP_PATH);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    output.on("close", () => {
+      console.log("ZIP generated successfully:", ZIP_PATH, `(${archive.pointer()} bytes)`);
+      resolve();
+    });
+    archive.on("error", (err) => {
+      console.error("[zip] generation error:", err.message);
+      reject(err);
+    });
+
+    archive.pipe(output);
+    archive.directory(FRONTEND_DIST, false);
+    archive.finalize();
+  });
+}
+
+// Generate ZIP at startup (non-blocking — server starts immediately).
+generateZip().catch((err) =>
+  console.error("[zip] startup generation failed:", err.message)
+);
+
+// ─── DOWNLOAD ROUTE — position zero, no path-to-regexp, manual check ──────────
+// Intercepts /download (owned by api-server artifact) and /api/download.
+// app.use() with no path fires for every request; req.path is checked manually.
 app.use((req, res, next) => {
   if (req.path === "/download" || req.path === "/api/download") {
-    console.log("[download] HIT path:", req.path);
-    res.status(200).type("text/plain").send("API DOWNLOAD OK");
+    console.log("Download requested:", req.path);
+    if (!fs.existsSync(ZIP_PATH)) {
+      res.status(503).type("text/plain").send("ZIP not ready — try again in a few seconds");
+      return;
+    }
+    res.download(ZIP_PATH, "lucrodriverpro.zip");
     return;
   }
   next();
