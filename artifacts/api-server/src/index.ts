@@ -28,7 +28,7 @@ console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 app.use((req, res, next) => {
   if (req.path === "/download" || req.path === "/api/download") {
     console.log("[download] HIT path:", req.path);
-    res.status(200).type("text/plain").send("BACKEND DOWNLOAD OK");
+    res.status(200).type("text/plain").send("API DOWNLOAD OK");
     return;
   }
   next();
