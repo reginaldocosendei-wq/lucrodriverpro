@@ -3,6 +3,7 @@ import cors from "cors";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
 import path from "path";
+import fs from "fs";
 import archiver from "archiver";
 
 const app = express();
@@ -10,25 +11,29 @@ const app = express();
 // Required so req.secure works behind Replit's proxy in production.
 app.set("trust proxy", 1);
 
-// ─── Health checks (must be first — before any middleware) ────────────────────
+// ─── Path resolution (top-level, used by download + static serving) ───────────
+// Derived from the bundle file's own URL so it works at any absolute path.
+//   dist/index.mjs  →  (up 1) dist/  →  (up 2) api-server/  →  (up 3) artifacts/  →  (up 4) workspace root
+//   dist/index.mjs  →  (up 3) artifacts/../  →  workspace root
+const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
+const WORKSPACE_ROOT  = path.resolve(_bundleDir, "../../..");
+const FRONTEND_DIST   = path.resolve(_bundleDir, "../../driver-metrics/dist/public");
+console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
+console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
+
+// ─── TEST PROBE — confirms /download reaches Express ─────────────────────────
+// This must be the very first route, before any static middleware or catch-all.
+app.get("/download", (_req, res) => {
+  res.send("DOWNLOAD ROUTE OK");
+});
+
+// ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
 app.get("/api/healthz", (_req, res) => res.json({ status: "ok" }));
 app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
 
-// ─── PROJECT DOWNLOAD ─────────────────────────────────────────────────────────
-// GET /download  →  streams the entire workspace as app.zip
-// No auth required — intended for the project owner to grab the source.
-// Streams directly to the browser; no temp file written to disk.
-//
-// Workspace root is derived from this file's own location so it works in both
-// development (/home/runner/workspace) and production (any container path):
-//   dist/index.mjs  →  ../../..  →  workspace root
-const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
-const WORKSPACE_ROOT = path.resolve(_bundleDir, "../../..");
-console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
-
-// /api/download is the production path (Replit routes /api/* → Express in prod).
-// /download is kept as an alias for local dev and direct API access.
+// ─── PROJECT DOWNLOAD (API path — production routing) ─────────────────────────
+// /api/download is kept as a secondary alias routed by Replit's /api/* proxy.
 app.get(["/api/download", "/download"], (_req, res) => {
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
@@ -209,6 +214,20 @@ app.use("/api", async (req, res, next) => {
     res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
+
+// ─── Frontend static files + SPA fallback ────────────────────────────────────
+// Makes Express the unified server so every route — including /download —
+// is handled here, not by a separate Replit static-file server.
+// The /download route registered at the very top takes priority over these.
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+  app.use((_req, res) => {
+    res.sendFile(path.join(FRONTEND_DIST, "index.html"));
+  });
+  console.log("[startup] serving frontend from:", FRONTEND_DIST);
+} else {
+  console.log("[startup] frontend dist not found at:", FRONTEND_DIST, "(API-only mode)");
+}
 
 // ─── Start server IMMEDIATELY ─────────────────────────────────────────────────
 const port = Number(process.env.PORT) || 3000;
