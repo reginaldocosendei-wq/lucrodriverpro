@@ -18,15 +18,20 @@ app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
 // ─── PROJECT DOWNLOAD ─────────────────────────────────────────────────────────
 // GET /download  →  streams the entire workspace as app.zip
 // No auth required — intended for the project owner to grab the source.
-// Streams directly to the browser; no temp file is written to disk.
-// Excludes: node_modules, .git, .cache, .local, dist, build, *.map files
-app.get("/download", (_req, res) => {
-  const workspaceRoot = path.resolve("/home/runner/workspace");
+// Streams directly to the browser; no temp file written to disk.
+//
+// Workspace root is derived from this file's own location so it works in both
+// development (/home/runner/workspace) and production (any container path):
+//   dist/index.mjs  →  ../../..  →  workspace root
+const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
+const WORKSPACE_ROOT = path.resolve(_bundleDir, "../../..");
+console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
 
+app.get("/download", (_req, res) => {
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
 
-  const archive = archiver("zip", { zlib: { level: 6 } });
+  const archive = archiver("zip", { zlib: { level: 9 } });
 
   archive.on("error", (err) => {
     console.error("[download] archiver error:", err.message);
@@ -35,11 +40,10 @@ app.get("/download", (_req, res) => {
     }
   });
 
-  // Pipe the zip stream directly to the HTTP response
   archive.pipe(res);
 
   archive.glob("**/*", {
-    cwd: workspaceRoot,
+    cwd: WORKSPACE_ROOT,
     dot: true,
     ignore: [
       "**/node_modules/**",
@@ -55,7 +59,7 @@ app.get("/download", (_req, res) => {
   });
 
   archive.finalize();
-  console.log("[download] streaming app.zip");
+  console.log("[download] streaming app.zip from", WORKSPACE_ROOT);
 });
 
 // ─── Stripe webhook — MUST be before express.json() ──────────────────────────
