@@ -27,7 +27,9 @@ const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
 const WORKSPACE_ROOT = path.resolve(_bundleDir, "../../..");
 console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
 
-app.get("/download", (_req, res) => {
+// /api/download is the production path (Replit routes /api/* → Express in prod).
+// /download is kept as an alias for local dev and direct API access.
+app.get(["/api/download", "/download"], (_req, res) => {
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
 

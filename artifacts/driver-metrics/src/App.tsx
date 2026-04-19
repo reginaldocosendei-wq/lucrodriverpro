@@ -319,6 +319,11 @@ function Router() {
         <PrivateGuard><Assistant /></PrivateGuard>
       </Route>
 
+      {/* /download → immediate hard redirect to /api/download (served by Express in prod) */}
+      <Route path="/download">
+        {() => { window.location.replace("/api/download"); return null; }}
+      </Route>
+
       <Route component={NotFound} />
     </Switch>
     </>

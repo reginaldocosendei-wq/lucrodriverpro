@@ -93,8 +93,13 @@ export default defineConfig({
       deny: ["**/.*"],
     },
     proxy: {
-      // Forward /download to the Express API server so it works in the dev preview.
-      // In production the Express server handles all routes, so no proxy is needed.
+      // Forward download routes to Express in dev (Vite dev server only).
+      // In production Replit routes /api/* → Express, so /api/download works there.
+      // /download is kept as an alias for direct local access.
+      "/api/download": {
+        target: "http://localhost:8080",
+        changeOrigin: false,
+      },
       "/download": {
         target: "http://localhost:8080",
         changeOrigin: false,
