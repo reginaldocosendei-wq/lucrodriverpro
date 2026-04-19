@@ -21,53 +21,21 @@ const FRONTEND_DIST   = path.resolve(_bundleDir, "../../driver-metrics/dist/publ
 console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
 console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 
-// ─── TEST PROBE — confirms /download reaches Express ─────────────────────────
-// This must be the very first route, before any static middleware or catch-all.
+// ─── DOWNLOAD ROUTES — registered first, before ALL middleware and catch-alls ─
+// Two explicit routes (no arrays — avoids path-to-regexp v8 array issues).
+// /download    → served directly when Express handles /* (unified server mode)
+// /api/download → served when Replit routes /api/* to Express
 app.get("/download", (_req, res) => {
-  res.send("DOWNLOAD ROUTE OK");
+  res.send("OK DOWNLOAD BACKEND");
+});
+app.get("/api/download", (_req, res) => {
+  res.send("OK DOWNLOAD BACKEND");
 });
 
 // ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
 app.get("/api/healthz", (_req, res) => res.json({ status: "ok" }));
 app.get("/api/test", (_req, res) => res.json({ status: "API working" }));
-
-// ─── PROJECT DOWNLOAD (API path — production routing) ─────────────────────────
-// /api/download is kept as a secondary alias routed by Replit's /api/* proxy.
-app.get(["/api/download", "/download"], (_req, res) => {
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", 'attachment; filename="app.zip"');
-
-  const archive = archiver("zip", { zlib: { level: 9 } });
-
-  archive.on("error", (err) => {
-    console.error("[download] archiver error:", err.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Archive failed", detail: err.message });
-    }
-  });
-
-  archive.pipe(res);
-
-  archive.glob("**/*", {
-    cwd: WORKSPACE_ROOT,
-    dot: true,
-    ignore: [
-      "**/node_modules/**",
-      "**/.git/**",
-      "**/.cache/**",
-      "**/.local/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.pnpm-store/**",
-      "**/*.map",
-      "**/*.zip",
-    ],
-  });
-
-  archive.finalize();
-  console.log("[download] streaming app.zip from", WORKSPACE_ROOT);
-});
 
 // ─── Stripe webhook — MUST be before express.json() ──────────────────────────
 // Stripe sends a raw Buffer; if express.json() runs first it consumes the body
