@@ -27,6 +27,10 @@ from = "/download"
 to = "/api/download"
 
 [[services.production.rewrites]]
+from = "/api/*"
+to = "/api/*"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
