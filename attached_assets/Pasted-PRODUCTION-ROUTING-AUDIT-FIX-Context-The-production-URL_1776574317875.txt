@@ -1,0 +1,80 @@
+PRODUCTION ROUTING AUDIT + FIX
+
+Context:
+The production URL https://lucrodriverpro.com/download is returning the frontend 404 page, which means the backend route is not being served by the actual production process.
+
+Your job is to audit the REAL production entrypoint and fix it there.
+Do not guess. Do not create parallel servers. Do not edit random files.
+Work only on the file and process actually used by production.
+
+MANDATORY TASKS
+
+1) Identify the REAL production startup path
+- Inspect package.json scripts
+- Inspect replit config / deployment config / run command / build command
+- Inspect which server file is actually launched in production
+- Inspect whether deployment is frontend-only, backend-only, or fullstack
+- Inspect whether a reverse proxy or frontend fallback is intercepting unknown routes
+
+2) Report the exact production runtime facts before changing anything
+Return these items:
+- production start command
+- production build command
+- production entry file path
+- whether current deploy is frontend-only or fullstack
+- whether a catch-all frontend route exists
+- exact file path where the catch-all route is defined
+
+3) If deployment is frontend-only
+STOP and say exactly:
+PRODUCTION IS FRONTEND-ONLY
+and list the precise changes required to make it fullstack on Replit.
+Do not continue with fake fixes.
+
+4) If deployment is fullstack or backend exists
+Modify ONLY the real production backend entry file and add this route ABOVE any catch-all route / SPA fallback / 404 handler:
+
+app.get('/download', (req, res) => {
+  res.status(200).type('text/plain').send('BACKEND DOWNLOAD OK');
+});
+
+5) Routing priority requirement
+This route must be registered BEFORE any of the following:
+- app.get('*', ...)
+- app.use('*', ...)
+- SPA fallback
+- React/Vite frontend catch-all
+- custom 404 handler
+
+6) Save changes and restart the real server
+
+7) Republish production
+
+8) Validate after publish
+Test the actual production URL:
+https://lucrodriverpro.com/download
+
+9) Final response format
+Respond with ONLY these fields:
+
+PRODUCTION_START_COMMAND:
+PRODUCTION_BUILD_COMMAND:
+PRODUCTION_ENTRY_FILE:
+DEPLOY_TYPE:
+CATCH_ALL_FILE:
+CATCH_ALL_FOUND:
+DOWNLOAD_ROUTE_ADDED:
+REPUBLISHED:
+PRODUCTION_TEST_RESULT:
+PRODUCTION_RESPONSE_BODY:
+
+Success condition:
+PRODUCTION_RESPONSE_BODY must be exactly:
+BACKEND DOWNLOAD OK
+
+Important constraints:
+- Do not explain theory
+- Do not say “likely”
+- Do not modify unrelated files
+- Do not stop before identifying the actual production entrypoint
+- If multiple candidate servers exist, determine which one is truly used in production and say why

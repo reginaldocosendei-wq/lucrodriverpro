@@ -21,15 +21,17 @@ const FRONTEND_DIST   = path.resolve(_bundleDir, "../../driver-metrics/dist/publ
 console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
 console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 
-// ─── DOWNLOAD ROUTES — registered first, before ALL middleware and catch-alls ─
-// Two explicit routes (no arrays — avoids path-to-regexp v8 array issues).
-// /download    → served directly when Express handles /* (unified server mode)
-// /api/download → served when Replit routes /api/* to Express
-app.get("/download", (_req, res) => {
-  res.send("OK DOWNLOAD BACKEND");
-});
-app.get("/api/download", (_req, res) => {
-  res.send("OK DOWNLOAD BACKEND");
+// ─── DOWNLOAD INTERCEPT — position zero, no path-to-regexp, manual check ──────
+// app.get() with path-to-regexp v8 silently fails to match in production.
+// app.use() with no path arg runs for EVERY request; we check req.path manually.
+// This fires before CORS, session, body parser, and all other middleware.
+app.use((req, res, next) => {
+  if (req.path === "/download" || req.path === "/api/download") {
+    console.log("[download] HIT path:", req.path);
+    res.status(200).type("text/plain").send("BACKEND DOWNLOAD OK");
+    return;
+  }
+  next();
 });
 
 // ─── Health checks ────────────────────────────────────────────────────────────
