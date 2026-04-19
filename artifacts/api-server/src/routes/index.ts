@@ -1,5 +1,6 @@
 import path from "path";
-import fs from "fs";import { Router, type IRouter } from "express";
+import fs from "fs";
+import { Router, type IRouter } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import healthRouter from "./health";
 import authRouter from "./auth";

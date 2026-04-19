@@ -261,6 +261,12 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── DOWNLOAD REDIRECT ────────────────────────────────────────────────────────
+const DownloadRedirect = () => {
+  window.location.href = "/api/download";
+  return null;
+};
+
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 function Router() {
   return (
@@ -319,10 +325,7 @@ function Router() {
         <PrivateGuard><Assistant /></PrivateGuard>
       </Route>
 
-      {/* /download → immediate hard redirect to /api/download (served by Express in prod) */}
-      <Route path="/download">
-        {() => { window.location.replace("/api/download"); return null; }}
-      </Route>
+      <Route path="/download" component={DownloadRedirect} />
 
       <Route component={NotFound} />
     </Switch>
