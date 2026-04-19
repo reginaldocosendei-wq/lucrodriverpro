@@ -23,6 +23,10 @@ publicDir = "artifacts/driver-metrics/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
+from = "/download"
+to = "/api/download"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
