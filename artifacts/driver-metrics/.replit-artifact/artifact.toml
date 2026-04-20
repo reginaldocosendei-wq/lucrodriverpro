@@ -23,6 +23,10 @@ kind = "web"
   serve = "static"
 
   [[services.production.rewrites]]
+  from = "/download"
+  to = "/lucrodriverpro.zip"
+
+  [[services.production.rewrites]]
   from = "/api/*"
   to = "/api/*"
 

@@ -49,40 +49,24 @@ generateZip().catch((err) =>
   console.error("[zip] startup generation failed:", err.message)
 );
 
-// ─── DOWNLOAD ROUTE ───────────────────────────────────────────────────────────
-// Diagnostic middleware: log every request's raw path+url so we can see exactly
-// what Express receives from Replit's proxy in production.
-app.use((req, _res, next) => {
-  if (req.url.toLowerCase().includes("download")) {
-    console.log(`[download-intercept] method=${req.method} path=${JSON.stringify(req.path)} url=${JSON.stringify(req.url)}`);
+// ─── DOWNLOAD ROUTES — above all middleware ────────────────────────────────────
+// /download      — handled directly by Express (api-server owns this path)
+// /api/download  — canonical API path, same behaviour
+// ZIP_PATH is calculated from import.meta.url so it resolves correctly in both
+// dev and production regardless of the working directory.
+app.get("/download", (_req, res) => {
+  if (!fs.existsSync(ZIP_PATH)) {
+    return res.status(503).send("ZIP not ready — tente novamente em alguns segundos");
   }
-  next();
+  return res.download(ZIP_PATH, "lucrodriverpro.zip");
 });
 
-// Explicit GET route (same mechanism as /api/test which works in production).
-// Uses raw createReadStream instead of res.download() to avoid any edge-case issues.
-function serveZip(res: express.Response) {
-  console.log("[api-download] hit — ZIP_PATH:", ZIP_PATH);
+app.get("/api/download", (_req, res) => {
   if (!fs.existsSync(ZIP_PATH)) {
-    console.log("[api-download] app.zip NOT FOUND at", ZIP_PATH);
-    res.status(503).type("text/plain").send("ZIP not ready — tente novamente em alguns segundos");
-    return;
+    return res.status(503).send("ZIP not ready — tente novamente em alguns segundos");
   }
-  const stat = fs.statSync(ZIP_PATH);
-  console.log("[api-download] serving ZIP, size:", stat.size);
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", 'attachment; filename="lucrodriverpro.zip"');
-  res.setHeader("Content-Length", stat.size);
-  const stream = fs.createReadStream(ZIP_PATH);
-  stream.pipe(res);
-  stream.on("error", (err) => {
-    console.error("[api-download] stream error:", err.message);
-    if (!res.headersSent) res.status(500).send("Erro ao transmitir arquivo");
-  });
-}
-
-app.get("/api/download", (_req, res) => serveZip(res));
-app.get("/download",     (_req, res) => serveZip(res));
+  return res.download(ZIP_PATH, "lucrodriverpro.zip");
+});
 
 // ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
@@ -233,20 +217,6 @@ app.use("/api", async (req, res, next) => {
     console.error("[router] lazy load error:", err.message);
     res.status(500).json({ error: "Erro interno no servidor" });
   }
-});
-
-// ─── API 404 diagnostic — catches any /api/* that slipped through ─────────────
-// Returns visible JSON so production path can be confirmed without log access.
-app.use("/api", (req: express.Request, res: express.Response) => {
-  const info = {
-    notFound: true,
-    receivedPath: req.path,
-    receivedUrl: req.url,
-    originalUrl: req.originalUrl,
-    method: req.method,
-  };
-  console.log("[api-404]", JSON.stringify(info));
-  res.status(404).json(info);
 });
 
 // ─── Frontend static files + SPA fallback ────────────────────────────────────
