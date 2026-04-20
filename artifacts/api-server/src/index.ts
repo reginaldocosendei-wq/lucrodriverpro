@@ -49,21 +49,40 @@ generateZip().catch((err) =>
   console.error("[zip] startup generation failed:", err.message)
 );
 
-// ─── DOWNLOAD ROUTE — position zero, no path-to-regexp, manual check ──────────
-// Intercepts /download (owned by api-server artifact) and /api/download.
-// app.use() with no path fires for every request; req.path is checked manually.
-app.use((req, res, next) => {
-  if (req.path === "/download" || req.path === "/api/download") {
-    console.log("Download requested:", req.path);
-    if (!fs.existsSync(ZIP_PATH)) {
-      res.status(503).type("text/plain").send("ZIP not ready — try again in a few seconds");
-      return;
-    }
-    res.download(ZIP_PATH, "lucrodriverpro.zip");
-    return;
+// ─── DOWNLOAD ROUTE ───────────────────────────────────────────────────────────
+// Diagnostic middleware: log every request's raw path+url so we can see exactly
+// what Express receives from Replit's proxy in production.
+app.use((req, _res, next) => {
+  if (req.url.toLowerCase().includes("download")) {
+    console.log(`[download-intercept] method=${req.method} path=${JSON.stringify(req.path)} url=${JSON.stringify(req.url)}`);
   }
   next();
 });
+
+// Explicit GET route (same mechanism as /api/test which works in production).
+// Uses raw createReadStream instead of res.download() to avoid any edge-case issues.
+function serveZip(res: express.Response) {
+  console.log("[api-download] hit — ZIP_PATH:", ZIP_PATH);
+  if (!fs.existsSync(ZIP_PATH)) {
+    console.log("[api-download] app.zip NOT FOUND at", ZIP_PATH);
+    res.status(503).type("text/plain").send("ZIP not ready — tente novamente em alguns segundos");
+    return;
+  }
+  const stat = fs.statSync(ZIP_PATH);
+  console.log("[api-download] serving ZIP, size:", stat.size);
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", 'attachment; filename="lucrodriverpro.zip"');
+  res.setHeader("Content-Length", stat.size);
+  const stream = fs.createReadStream(ZIP_PATH);
+  stream.pipe(res);
+  stream.on("error", (err) => {
+    console.error("[api-download] stream error:", err.message);
+    if (!res.headersSent) res.status(500).send("Erro ao transmitir arquivo");
+  });
+}
+
+app.get("/api/download", (_req, res) => serveZip(res));
+app.get("/download",     (_req, res) => serveZip(res));
 
 // ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
