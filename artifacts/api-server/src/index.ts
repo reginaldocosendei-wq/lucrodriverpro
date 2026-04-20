@@ -235,6 +235,20 @@ app.use("/api", async (req, res, next) => {
   }
 });
 
+// ─── API 404 diagnostic — catches any /api/* that slipped through ─────────────
+// Returns visible JSON so production path can be confirmed without log access.
+app.use("/api", (req: express.Request, res: express.Response) => {
+  const info = {
+    notFound: true,
+    receivedPath: req.path,
+    receivedUrl: req.url,
+    originalUrl: req.originalUrl,
+    method: req.method,
+  };
+  console.log("[api-404]", JSON.stringify(info));
+  res.status(404).json(info);
+});
+
 // ─── Frontend static files + SPA fallback ────────────────────────────────────
 // Makes Express the unified server so every route — including /download —
 // is handled here, not by a separate Replit static-file server.
