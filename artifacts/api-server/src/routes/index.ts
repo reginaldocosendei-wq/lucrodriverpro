@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import healthRouter from "./health";
@@ -26,20 +27,24 @@ import createCheckoutRouter from "./createCheckout";
 import gamificationRouter from "./gamification";
 import assistantRouter from "./assistant";
 
+// Resolve ZIP_PATH from bundle location — identical logic to index.ts
+const _routerDir = path.dirname(fileURLToPath(import.meta.url));
+const _workspaceRoot = path.resolve(_routerDir, "../../../..");
+const ROUTER_ZIP_PATH = path.join(_workspaceRoot, "app.zip");
+
 const router: IRouter = Router();
 
 // ─── DOWNLOAD PROBE — must be first in router (mounted at /api) ───────────────
 // /api/download reaches here because index.ts does: app.use("/api", router)
 // Express strips the /api prefix before passing to this router, so the path
 // seen here is /download.
-router.get("/download", (_req, res) => {
-  const filePath = path.join(process.cwd(), "app.zip");
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("app.zip não encontrado na raiz do projeto");
+router.use("/download", (_req, res) => {
+  console.log("ZIP PATH:", ROUTER_ZIP_PATH);
+  if (!fs.existsSync(ROUTER_ZIP_PATH)) {
+    console.log("ZIP NOT FOUND:", ROUTER_ZIP_PATH);
+    return res.status(404).send("ZIP não encontrado");
   }
-
-  return res.download(filePath, "lucrodriverpro.zip");
+  return res.download(ROUTER_ZIP_PATH, "lucrodriverpro.zip");
 });
 router.use(healthRouter);
 router.use("/auth", authRouter);

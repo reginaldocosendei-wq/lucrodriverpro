@@ -1,5 +1,5 @@
-import { execSync } from "child_process";
-import { existsSync, rmSync } from "fs";
+import archiver from "archiver";
+import { createWriteStream, rmSync, existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -14,9 +14,20 @@ if (!existsSync(distDir)) {
 
 if (existsSync(zipPath)) rmSync(zipPath);
 
-execSync(`zip -r lucrodriverpro.zip . --exclude "lucrodriverpro.zip"`, {
-  cwd: distDir,
-  stdio: "inherit",
-});
+await new Promise((resolve, reject) => {
+  const output = createWriteStream(zipPath);
+  const archive = archiver("zip", { zlib: { level: 6 } });
 
-console.log(`[generate-zip] Created ${zipPath}`);
+  output.on("close", () => {
+    console.log(`[generate-zip] Created ${zipPath} (${archive.pointer()} bytes)`);
+    resolve();
+  });
+  archive.on("error", reject);
+
+  archive.pipe(output);
+  archive.glob("**/*", {
+    cwd: distDir,
+    ignore: ["lucrodriverpro.zip"],
+  });
+  archive.finalize();
+});

@@ -50,23 +50,20 @@ generateZip().catch((err) =>
 );
 
 // ─── DOWNLOAD ROUTES — above all middleware ────────────────────────────────────
-// /download      — handled directly by Express (api-server owns this path)
-// /api/download  — canonical API path, same behaviour
-// ZIP_PATH is calculated from import.meta.url so it resolves correctly in both
-// dev and production regardless of the working directory.
-app.get("/download", (_req, res) => {
+// Using app.use() (not app.get()) so route matching does NOT go through
+// path-to-regexp — this is the key fix for production where app.get("/api/download")
+// mysteriously returns 404 despite being registered.
+const _serveZip = (_req: express.Request, res: express.Response) => {
+  console.log("ZIP PATH:", ZIP_PATH);
   if (!fs.existsSync(ZIP_PATH)) {
-    return res.status(503).send("ZIP not ready — tente novamente em alguns segundos");
+    console.log("ZIP NOT FOUND:", ZIP_PATH);
+    return res.status(404).send("ZIP não encontrado");
   }
   return res.download(ZIP_PATH, "lucrodriverpro.zip");
-});
+};
 
-app.get("/api/download", (_req, res) => {
-  if (!fs.existsSync(ZIP_PATH)) {
-    return res.status(503).send("ZIP not ready — tente novamente em alguns segundos");
-  }
-  return res.download(ZIP_PATH, "lucrodriverpro.zip");
-});
+app.use("/download", _serveZip);
+app.use("/api/download", _serveZip);
 
 // ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
