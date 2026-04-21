@@ -4,90 +4,31 @@ import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
-import archiver from "archiver";
 
 const app = express();
 
 // Required so req.secure works behind Replit's proxy in production.
 app.set("trust proxy", 1);
 
-// ─── Download-path diagnostic logger ─────────────────────────────────────────
-// Only logs requests that look like download attempts so the log buffer doesn't
-// flood with every regular request in production.
-app.use((req, _res, next) => {
-  if (req.url.includes("download") || req.url.includes("zip")) {
-    console.log(`[req] ${req.method} url=${req.url} path=${req.path} orig=${req.originalUrl}`);
-  }
-  next();
-});
-
-// ─── Path resolution (top-level, used by download + static serving) ───────────
-// Derived from the bundle file's own URL so it works at any absolute path.
-//   dist/index.mjs  →  (up 1) dist/  →  (up 2) api-server/  →  (up 3) artifacts/  →  (up 4) workspace root
-//   dist/index.mjs  →  (up 3) artifacts/../  →  workspace root
+// ─── Path resolution ──────────────────────────────────────────────────────────
 const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
-const WORKSPACE_ROOT  = path.resolve(_bundleDir, "../../..");
-const FRONTEND_DIST   = path.resolve(_bundleDir, "../../driver-metrics/dist/public");
-console.log("[startup] WORKSPACE_ROOT:", WORKSPACE_ROOT);
+const FRONTEND_DIST = path.resolve(_bundleDir, "../../driver-metrics/dist/public");
 console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 
-// ─── ZIP GENERATION ───────────────────────────────────────────────────────────
-const ZIP_PATH = path.join(WORKSPACE_ROOT, "app.zip");
+// ─── APK DOWNLOAD — redirects to the latest GitHub Release APK ───────────────
+// GitHub Actions builds the APK on every push to main and publishes it under
+// the "latest-apk" release tag. Both /download and /api/download redirect there.
+// app.use() with no path + manual req.path check bypasses path-to-regexp
+// entirely (Express 5 / path-to-regexp v8 rejects bare "*" wildcards).
+const APK_RELEASE_URL =
+  "https://github.com/reginaldocosendei-wq/lucrodriverpro/releases/download/latest-apk/lucrodriverpro.apk";
 
-function generateZip(): Promise<void> {
-  console.log("[zip] starting generation. ZIP_PATH:", ZIP_PATH, "FRONTEND_DIST:", FRONTEND_DIST);
-  const frontendExists = fs.existsSync(FRONTEND_DIST);
-  console.log("[zip] FRONTEND_DIST exists:", frontendExists);
-  return new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(ZIP_PATH);
-    const archive = archiver("zip", { zlib: { level: 9 } });
-
-    output.on("close", () => {
-      console.log("ZIP generated successfully:", ZIP_PATH, `(${archive.pointer()} bytes)`);
-      resolve();
-    });
-    output.on("error", (err) => {
-      console.error("[zip] write stream error:", err.message);
-      reject(err);
-    });
-    archive.on("error", (err) => {
-      console.error("[zip] generation error:", err.message);
-      reject(err);
-    });
-    archive.on("warning", (err) => {
-      console.warn("[zip] warning:", err.message);
-    });
-
-    archive.pipe(output);
-    if (frontendExists) {
-      archive.directory(FRONTEND_DIST, false);
-    } else {
-      archive.append("placeholder", { name: "README.txt" });
-    }
-    archive.finalize();
-  });
-}
-
-// Generate ZIP at startup (non-blocking — server starts immediately).
-generateZip().catch((err) =>
-  console.error("[zip] startup generation failed:", err.message)
-);
-
-// ─── DOWNLOAD ROUTES — above all middleware ────────────────────────────────────
-// app.use() with NO path + manual req.path check: bypasses path-to-regexp
-// entirely (Express 5 rejects bare "*" in app.all).
-// Catches all forms the proxy might forward: /download, /api/download (with
-// or without trailing slash), or just /download if proxy strips /api prefix.
 app.use((req, res, next) => {
   const p = req.path;
   if (p === "/download" || p === "/api/download" ||
       p === "/download/" || p === "/api/download/") {
-    console.log("ZIP PATH:", ZIP_PATH);
-    if (!fs.existsSync(ZIP_PATH)) {
-      console.log("ZIP NOT FOUND:", ZIP_PATH);
-      return res.status(404).send("ZIP não encontrado");
-    }
-    return res.download(ZIP_PATH, "lucrodriverpro.zip");
+    console.log(`[download] ${req.method} ${p} → redirecting to GitHub Release APK`);
+    return res.redirect(302, APK_RELEASE_URL);
   }
   next();
 });
