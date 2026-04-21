@@ -23,6 +23,10 @@ kind = "web"
   serve = "static"
 
   [[services.production.rewrites]]
+  from = "/api/download"
+  to = "/lucrodriverpro.zip"
+
+  [[services.production.rewrites]]
   from = "/download"
   to = "/lucrodriverpro.zip"
 
@@ -37,4 +41,3 @@ kind = "web"
   [services.env]
   PORT = "19323"
   BASE_PATH = "/"
-  

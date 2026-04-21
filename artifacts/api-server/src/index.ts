@@ -11,6 +11,16 @@ const app = express();
 // Required so req.secure works behind Replit's proxy in production.
 app.set("trust proxy", 1);
 
+// ─── Download-path diagnostic logger ─────────────────────────────────────────
+// Only logs requests that look like download attempts so the log buffer doesn't
+// flood with every regular request in production.
+app.use((req, _res, next) => {
+  if (req.url.includes("download") || req.url.includes("zip")) {
+    console.log(`[req] ${req.method} url=${req.url} path=${req.path} orig=${req.originalUrl}`);
+  }
+  next();
+});
+
 // ─── Path resolution (top-level, used by download + static serving) ───────────
 // Derived from the bundle file's own URL so it works at any absolute path.
 //   dist/index.mjs  →  (up 1) dist/  →  (up 2) api-server/  →  (up 3) artifacts/  →  (up 4) workspace root
@@ -25,6 +35,9 @@ console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 const ZIP_PATH = path.join(WORKSPACE_ROOT, "app.zip");
 
 function generateZip(): Promise<void> {
+  console.log("[zip] starting generation. ZIP_PATH:", ZIP_PATH, "FRONTEND_DIST:", FRONTEND_DIST);
+  const frontendExists = fs.existsSync(FRONTEND_DIST);
+  console.log("[zip] FRONTEND_DIST exists:", frontendExists);
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(ZIP_PATH);
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -33,13 +46,24 @@ function generateZip(): Promise<void> {
       console.log("ZIP generated successfully:", ZIP_PATH, `(${archive.pointer()} bytes)`);
       resolve();
     });
+    output.on("error", (err) => {
+      console.error("[zip] write stream error:", err.message);
+      reject(err);
+    });
     archive.on("error", (err) => {
       console.error("[zip] generation error:", err.message);
       reject(err);
     });
+    archive.on("warning", (err) => {
+      console.warn("[zip] warning:", err.message);
+    });
 
     archive.pipe(output);
-    archive.directory(FRONTEND_DIST, false);
+    if (frontendExists) {
+      archive.directory(FRONTEND_DIST, false);
+    } else {
+      archive.append("placeholder", { name: "README.txt" });
+    }
     archive.finalize();
   });
 }
@@ -50,20 +74,23 @@ generateZip().catch((err) =>
 );
 
 // ─── DOWNLOAD ROUTES — above all middleware ────────────────────────────────────
-// Using app.use() (not app.get()) so route matching does NOT go through
-// path-to-regexp — this is the key fix for production where app.get("/api/download")
-// mysteriously returns 404 despite being registered.
-const _serveZip = (_req: express.Request, res: express.Response) => {
-  console.log("ZIP PATH:", ZIP_PATH);
-  if (!fs.existsSync(ZIP_PATH)) {
-    console.log("ZIP NOT FOUND:", ZIP_PATH);
-    return res.status(404).send("ZIP não encontrado");
+// app.use() with NO path + manual req.path check: bypasses path-to-regexp
+// entirely (Express 5 rejects bare "*" in app.all).
+// Catches all forms the proxy might forward: /download, /api/download (with
+// or without trailing slash), or just /download if proxy strips /api prefix.
+app.use((req, res, next) => {
+  const p = req.path;
+  if (p === "/download" || p === "/api/download" ||
+      p === "/download/" || p === "/api/download/") {
+    console.log("ZIP PATH:", ZIP_PATH);
+    if (!fs.existsSync(ZIP_PATH)) {
+      console.log("ZIP NOT FOUND:", ZIP_PATH);
+      return res.status(404).send("ZIP não encontrado");
+    }
+    return res.download(ZIP_PATH, "lucrodriverpro.zip");
   }
-  return res.download(ZIP_PATH, "lucrodriverpro.zip");
-};
-
-app.use("/download", _serveZip);
-app.use("/api/download", _serveZip);
+  next();
+});
 
 // ─── Health checks ────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => res.status(200).send("OK"));
