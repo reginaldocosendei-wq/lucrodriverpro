@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { I18nProvider } from "@/lib/i18n";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { setAuthTokenGetter, getGetMeQueryKey } from "@workspace/api-client-react";
-import { loadAuthUser, storeAuthUser, clearAuthUser } from "@/lib/api";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 
 import Home from "@/pages/Home";
 import Rides from "@/pages/rides";
@@ -30,20 +30,14 @@ import AuthSuccess from "@/pages/auth-success";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
-// ─── JWT TOKEN BOOTSTRAP ───────────────────────────────────────────────────────
-// Runs synchronously at module-load time, before any component renders or any
-// React Query fires. This guarantees the Bearer token is in localStorage by the
-// time GET /api/auth/me is called on first render.
-//
-// Two sources (in priority order):
-//   1. ?token=<jwt> URL param — set by Google OAuth redirect
-//      (/rides?token=JWT_TOKEN). Captured, stored, and stripped from URL.
-//   2. localStorage "auth_token" — already present from a previous login.
+// ─── JWT TOKEN BOOTSTRAP ──────────────────────────────────────────────────────
+// Capture ?token=<jwt> from URL (Google OAuth redirect) before anything renders.
 {
   const _params = new URLSearchParams(window.location.search);
   const _urlToken = _params.get("token");
   if (_urlToken) {
     localStorage.setItem("auth_token", _urlToken);
+    localStorage.setItem("user_logged", "true");
     console.log("[auth] token captured from URL → stored in localStorage");
     _params.delete("token");
     const _newSearch = _params.toString();
@@ -55,8 +49,7 @@ import { Layout } from "@/components/layout";
   }
 }
 
-// Wire JWT getter into customFetch — every API call will now include
-// Authorization: Bearer <token> automatically, regardless of cookie state.
+// Wire JWT getter into customFetch so every API call includes Bearer token.
 setAuthTokenGetter(() => localStorage.getItem("auth_token"));
 
 const queryClient = new QueryClient({
@@ -69,40 +62,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// ─── Pre-seed user cache from localStorage ─────────────────────────────────────
-// If the user is logged in and we have a previously stored user object (written
-// after each successful login / register / Google-auth), seed the React Query
-// cache so every useGetMe() call returns the correct plan immediately — even if
-// GET /api/auth/me is slow, cached by a browser, or temporarily unreachable.
-// The cache will be refreshed from the server after staleTime (3 min) and also
-// whenever the queryClient is invalidated (e.g. checkout-success page).
-{
-  const storedUser = loadAuthUser();
-  if (storedUser) {
-    queryClient.setQueryData(getGetMeQueryKey(), storedUser);
-    console.log("[AUTH_BOOTSTRAP] pre-seeded user cache from localStorage — plan:", (storedUser as any).plan);
-  }
-}
-
-// Keep localStorage in sync whenever /api/auth/me is freshly fetched from server.
-queryClient.getQueryCache().subscribe((event) => {
-  if (
-    event.type === "updated" &&
-    event.action?.type === "success" &&
-    Array.isArray(event.query.queryKey) &&
-    event.query.queryKey[0] === "/api/auth/me" &&
-    event.query.state.data
-  ) {
-    storeAuthUser(event.query.state.data as Record<string, unknown>);
-    console.log("[AUTH_CACHE] stored refreshed user to localStorage — plan:", (event.query.state.data as any).plan);
-  }
-});
-
-// ─── AUTH BOOTSTRAP LOGS ──────────────────────────────────────────────────────
-console.log("[AUTH_BOOTSTRAP_START]");
-console.log("[AUTH_BOOTSTRAP_TOKEN] token exists:", !!localStorage.getItem("auth_token"));
-
-
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; errorMsg: string }
@@ -163,14 +123,6 @@ class ErrorBoundary extends React.Component<
 }
 
 // ─── SHARED STYLES ────────────────────────────────────────────────────────────
-const fadeTransition = { duration: 0.2, ease: "easeInOut" };
-const fadeProps = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit:    { opacity: 0 },
-  transition: fadeTransition,
-};
-
 const appShellStyle: React.CSSProperties = {
   width: "100%",
   display: "flex",
@@ -178,32 +130,85 @@ const appShellStyle: React.CSSProperties = {
   height: "100dvh",
 };
 
-// ─── SHARED SPINNER ───────────────────────────────────────────────────────────
-function LoadingSpinner() {
+// ─── SHARED LOADING SCREEN ────────────────────────────────────────────────────
+function AuthLoadingScreen() {
   return (
-    <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-      <div className="w-12 h-12 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: "#080808",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,0.1)",
+          marginBottom: 8,
+        }}
+      >
+        <img
+          src={`${import.meta.env.BASE_URL}icon.svg`}
+          alt="Lucro Driver"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          draggable={false}
+        />
+      </div>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          border: "3px solid rgba(0,255,136,0.15)",
+          borderTopColor: "#00ff88",
+          borderRadius: "50%",
+          animation: "spin 0.8s linear infinite",
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
 // ─── HOME ROUTE ───────────────────────────────────────────────────────────────
-// "/" shows the dashboard if authenticated, landing page if not.
+// Shows dashboard if authenticated; landing/auth page if not.
+// Waits for auth to finish loading before deciding.
 function HomeRoute() {
-  const token = localStorage.getItem("auth_token");
-  const isLogged = localStorage.getItem("user_logged");
+  const { isAuthenticated, isLoading, login } = useAuth();
+  const [, navigate] = useLocation();
 
-  if (token && isLogged) {
+  if (isLoading) {
+    console.log("[HomeRoute] auth still loading — showing loading screen");
+    return <AuthLoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    console.log("[HomeRoute] authenticated — showing dashboard");
     return (
       <div style={appShellStyle}>
-        <Layout><Home /></Layout>
+        <Layout>
+          <Home />
+        </Layout>
       </div>
     );
   }
 
+  console.log("[HomeRoute] unauthenticated — showing landing page");
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
-      <AuthScreen />
+      <AuthScreen
+        onSuccess={(token, user) => {
+          console.log("[HomeRoute] onSuccess — logging in and navigating to /");
+          login(token, user);
+          navigate("/");
+        }}
+      />
     </div>
   );
 }
@@ -211,28 +216,35 @@ function HomeRoute() {
 // ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
 // Public route — redirects to dashboard if already authenticated.
 function LoginRoute() {
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    const isLogged = localStorage.getItem("user_logged");
-    if (token && isLogged) {
-      window.location.href = "/";
-    }
-  }, []);
+  const { isAuthenticated, isLoading, login } = useAuth();
+  const [, navigate] = useLocation();
 
-  const token = localStorage.getItem("auth_token");
-  const isLogged = localStorage.getItem("user_logged");
-  if (token && isLogged) return <LoadingSpinner />;
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      console.log("[LoginRoute] already authenticated — redirecting to /");
+      navigate("/");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) return <AuthLoadingScreen />;
+  if (isAuthenticated) return <AuthLoadingScreen />;
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
-      <AuthScreen startWithForm />
+      <AuthScreen
+        startWithForm
+        onSuccess={(token, user) => {
+          console.log("[LoginRoute] onSuccess — logging in and navigating to /");
+          login(token, user);
+          navigate("/");
+        }}
+      />
     </div>
   );
 }
 
 // ─── IMPORT ROUTE ─────────────────────────────────────────────────────────────
-// Semi-public route — accessible without auth.
-// The Import page handles its own locked/unlocked state internally.
+// Semi-public route — the Import page manages its own locked/unlocked state.
 function ImportRoute() {
   return (
     <div style={appShellStyle}>
@@ -244,16 +256,31 @@ function ImportRoute() {
 }
 
 // ─── PRIVATE GUARD ────────────────────────────────────────────────────────────
-// Simple localStorage-only check. No API call, no loading state.
+// Protects routes that require authentication.
+// Shows loading screen while auth is being checked.
+// Redirects to /login if unauthenticated.
 function PrivateGuard({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem("auth_token");
-  const isLogged = localStorage.getItem("user_logged");
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, navigate] = useLocation();
 
-  if (!token || !isLogged) {
-    window.location.href = "/login";
-    return <LoadingSpinner />;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      console.log("[PrivateGuard] not authenticated — redirecting to /login");
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    console.log("[PrivateGuard] auth loading — holding route");
+    return <AuthLoadingScreen />;
   }
 
+  if (!isAuthenticated) {
+    console.log("[PrivateGuard] unauthenticated — showing loading while redirect happens");
+    return <AuthLoadingScreen />;
+  }
+
+  console.log("[PrivateGuard] authenticated — rendering protected content");
   return (
     <div style={appShellStyle}>
       <Layout>{children}</Layout>
@@ -264,21 +291,20 @@ function PrivateGuard({ children }: { children: React.ReactNode }) {
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 function Router() {
   return (
-    <>
     <Switch>
-      {/* ── OAuth callback — captures token from URL, stores it, redirects ── */}
+      {/* OAuth callback — captures token from URL */}
       <Route path="/auth-success" component={AuthSuccess} />
 
-      {/* ── Public: login / register ── */}
+      {/* Public: login / register */}
       <Route path="/login" component={LoginRoute} />
 
-      {/* ── Semi-public: import (auth handled inside the page) ── */}
+      {/* Semi-public: import (auth handled inside the page) */}
       <Route path="/import" component={ImportRoute} />
 
-      {/* ── Home: landing if unauthed, dashboard if authed ── */}
+      {/* Home: landing if unauthed, dashboard if authed */}
       <Route path="/" component={HomeRoute} />
 
-      {/* ── Private routes: redirect to /login if not authenticated ── */}
+      {/* Private routes */}
       <Route path="/rides">
         <PrivateGuard><Rides /></PrivateGuard>
       </Route>
@@ -321,42 +347,7 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
-    </>
   );
-}
-
-// ─── USER BOOTSTRAP ───────────────────────────────────────────────────────────
-// Runs once on mount. If the user is authenticated but their data is NOT yet
-// in localStorage (e.g. first load after deployment, before any new login),
-// this fetches /api/auth/me via authFetch (proven to reach the server) and
-// seeds both the queryClient cache and localStorage — so every useGetMe() call
-// in the app returns the correct plan without depending on customFetch.
-function UserBootstrap() {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) return;                      // Not logged in
-    const already = loadAuthUser();
-    if (already) return;                     // Already seeded — skip
-
-    const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)
-      ? (import.meta.env.VITE_API_BASE_URL as string).replace(/\/+$/, "")
-      : import.meta.env.BASE_URL.replace(/\/+$/, "");
-
-    const headers = new Headers({ Authorization: `Bearer ${token}` });
-    fetch(`${base}/api/auth/me`, { credentials: "include", headers, cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((user: Record<string, unknown> | null) => {
-        if (!user) return;
-        storeAuthUser(user);
-        queryClient.setQueryData(getGetMeQueryKey(), user);
-        console.log("[USER_BOOTSTRAP] fetched and stored user — plan:", (user as any).plan);
-      })
-      .catch(() => {/* silent fallback — stale localStorage or pre-seeded cache will cover */});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return null;
 }
 
 // ─── NATIVE EVENT LISTENERS ───────────────────────────────────────────────────
@@ -369,6 +360,7 @@ function NativeEventListeners() {
     let handle: { remove: () => void } | null = null;
 
     CapApp.addListener("resume", () => {
+      console.log("[native] app resumed — refreshing user query");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     }).then((h) => {
       handle = h;
@@ -396,14 +388,15 @@ function AppShell() {
       <SplashScreen show={showSplash} />
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <UserBootstrap />
-            <NativeEventListeners />
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <NativeEventListeners />
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </I18nProvider>

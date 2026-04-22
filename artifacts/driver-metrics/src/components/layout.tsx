@@ -2,8 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Settings, Zap } from "lucide-react";
 import { AdminActivatePanel } from "./AdminActivatePanel";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { clearAuthUser } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useT, LANG_OPTIONS, type Lang } from "@/lib/i18n";
@@ -226,7 +225,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
   const { data: user }       = useGetMe();
   const logout               = useLogout();
-  const queryClient          = useQueryClient();
+  const { logoutLocal }      = useAuth();
   const { t }                = useT();
   const isDesktop            = useIsDesktop();
   const u = user as TrialUser | undefined;
@@ -247,12 +246,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user_logged");
-        clearAuthUser();
-        queryClient.setQueryData(["/api/auth/me"], null);
-        queryClient.clear();
-        window.location.href = "/";
+        console.log("[LOGOUT] server logout complete — clearing local state");
+        logoutLocal();
+        navigate("/");
+      },
+      onError: () => {
+        // Even if server logout fails, clear local state and go to landing
+        console.warn("[LOGOUT] server logout failed — clearing local state anyway");
+        logoutLocal();
+        navigate("/");
       },
     });
   };

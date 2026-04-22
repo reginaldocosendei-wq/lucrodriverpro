@@ -1,0 +1,72 @@
+Fix the mobile APK authentication flow completely.
+
+Current bug:
+- The APK installs and opens normally.
+- User logs in successfully, but after login the app goes back to the landing/opening page.
+- When clicking continue, it opens the screenshot import page instead of keeping the authenticated session and routing correctly.
+- This is a session persistence + protected route + post-login redirect bug.
+
+I want you to fix this at product level, not with patches.
+
+Do all of the following:
+
+1. Audit the full auth flow:
+- login
+- signup
+- session restore on app start
+- protected routes
+- logout
+- post-login redirect
+
+2. Make authentication persistence reliable on mobile/PWA/APK:
+- persist session/token in a stable storage layer
+- restore session before route rendering
+- do not flash landing page for authenticated users
+- prevent auth state from resetting on app reopen/navigation changes
+
+3. Fix route logic:
+- unauthenticated user -> landing/login/signup
+- authenticated user -> app dashboard/home
+- NEVER send authenticated users back to landing page
+- NEVER redirect authenticated users automatically to screenshot import unless explicitly chosen
+
+4. Add a proper auth boot/loading state:
+- while session is being checked, show a loading screen
+- only render routes after auth restoration is complete
+
+5. Review the route guards:
+- protected routes must wait for auth hydration
+- do not redirect while auth is still loading
+- if authenticated, go to the main dashboard/home screen
+
+6. Fix post-login redirect:
+- after successful login, redirect to the correct authenticated home/dashboard route
+- not to landing
+- not to import screenshot page
+
+7. Add console logging for:
+- login success
+- token/session saved
+- token/session restored on startup
+- redirect target chosen
+- protected route decisions
+
+8. Check for mobile-specific issues:
+- page refresh causing auth reset
+- storage differences in APK/webview
+- state loss after navigation
+
+9. Refactor if needed:
+- centralize auth state in one provider/store
+- remove duplicate auth checks across pages
+- remove conflicting redirects/useEffect hooks
+
+10. Deliver the final result with:
+- exact files changed
+- root cause found
+- what was fixed
+- final route map after login
+
+Important:
+I do NOT want superficial changes.
+I want the login flow fully stable in APK/mobile environment.

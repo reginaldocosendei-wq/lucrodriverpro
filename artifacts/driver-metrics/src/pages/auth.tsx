@@ -22,7 +22,7 @@ function AuthForm({
   onBack,
 }: {
   defaultMode: "login" | "register";
-  onSuccess?: () => void;
+  onSuccess?: (token: string, user: Record<string, unknown>) => void;
   onBack?: () => void;
 }) {
   const { t } = useT();
@@ -47,13 +47,19 @@ function AuthForm({
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
     onSuccess: (data) => {
-      console.log("[GOOGLE_AUTH_RESPONSE] token exists:", !!data.token);
+      console.log("[GOOGLE_AUTH_RESPONSE] token exists:", !!data.token, "user:", !!data.user);
       if (data.token) {
         localStorage.setItem("auth_token", data.token);
         localStorage.setItem("user_logged", "true");
       }
       if (data.user) storeAuthUser(data.user as Record<string, unknown>);
-      window.location.href = "/";
+      if (data.token && data.user && onSuccess) {
+        console.log("[GOOGLE_AUTH] calling onSuccess callback");
+        onSuccess(data.token, data.user as Record<string, unknown>);
+      } else {
+        console.warn("[GOOGLE_AUTH] missing token or user — fallback redirect");
+        window.location.href = "/";
+      }
     },
     onError: (err: any) => {
       setErrorMsg(err.message ?? t("auth.googleError"));
@@ -82,12 +88,19 @@ function AuthForm({
     setErrorMsg("");
     loginMutation.mutate({ data }, {
       onSuccess: (res) => {
+        console.log("[LOGIN_RESPONSE] token exists:", !!res?.token, "user:", !!res?.user);
         if (res?.token) {
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
         if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
-        window.location.href = "/";
+        if (res?.token && res?.user && onSuccess) {
+          console.log("[LOGIN] calling onSuccess callback — navigate to dashboard");
+          onSuccess(res.token, res.user as unknown as Record<string, unknown>);
+        } else {
+          console.warn("[LOGIN] missing token/user or no onSuccess — fallback redirect");
+          window.location.href = "/";
+        }
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
@@ -100,12 +113,19 @@ function AuthForm({
     setErrorMsg("");
     registerMutation.mutate({ data }, {
       onSuccess: (res) => {
+        console.log("[REGISTER_RESPONSE] token exists:", !!res?.token, "user:", !!res?.user);
         if (res?.token) {
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_logged", "true");
         }
         if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
-        window.location.href = "/";
+        if (res?.token && res?.user && onSuccess) {
+          console.log("[REGISTER] calling onSuccess callback — navigate to dashboard");
+          onSuccess(res.token, res.user as unknown as Record<string, unknown>);
+        } else {
+          console.warn("[REGISTER] missing token/user or no onSuccess — fallback redirect");
+          window.location.href = "/";
+        }
       },
       onError: (err: any) => {
         const msg = err?.data?.error || err?.response?.data?.error || t("auth.registerError");
@@ -314,7 +334,7 @@ export default function AuthScreen({
   onSuccess,
 }: {
   startWithForm?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (token: string, user: Record<string, unknown>) => void;
 }) {
   const { t } = useT();
   const [, navigate] = useLocation();
