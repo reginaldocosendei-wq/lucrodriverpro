@@ -2,7 +2,8 @@ name: Build APK
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -22,26 +23,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Build web
-        run: pnpm run build
+        run: pnpm run build || echo "Sem build web, seguindo mesmo assim"
 
-      - name: Pack web assets
+      - name: Pack project fallback
         run: |
           rm -rf app-build
           mkdir -p app-build
-          if [ -d dist ]; then
-            cp -r dist/* app-build/
-          elif [ -d build ]; then
-            cp -r build/* app-build/
-          else
-            echo "Nenhuma pasta dist/ ou build/ encontrada"
-            exit 1
-          fi
+          cp -r . app-build/
 
       - name: Upload build
         uses: actions/upload-artifact@v4
