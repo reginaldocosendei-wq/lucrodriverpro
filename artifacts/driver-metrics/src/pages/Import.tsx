@@ -72,7 +72,10 @@ export default function ImportPage() {
   const [, navigate] = useLocation();
   const { data: me, isPending: authPending } = useGetMe();
   const queryClient = useQueryClient();
-  const isPro = me?.plan === "pro";
+  // Guard: treat me as valid only when it's an object (not an HTML string
+  // that could result from the API client hitting the wrong URL on Android).
+  const isValidUser = me != null && typeof me === "object" && !Array.isArray(me);
+  const isPro = isValidUser && (me as any)?.plan === "pro";
   const isDesktop = useIsDesktop();
 
   const [step, setStep] = useState<Step>(
@@ -81,8 +84,8 @@ export default function ImportPage() {
   useEffect(() => {
     if (DEV_DISABLE_AUTH_FETCH) return;
     if (authPending) return;
-    if (me && step === "locked") setStep("upload");
-  }, [me, authPending, step]);
+    if (isValidUser && step === "locked") setStep("upload");
+  }, [isValidUser, authPending, step]);
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -252,7 +255,7 @@ export default function ImportPage() {
                 </div>
               ) : (
                 <LockedView
-                  isAuthed={!!me}
+                  isAuthed={isValidUser}
                   onUpgrade={() => navigate("/upgrade")}
                   onSignUp={() => navigate("/login")}
                 />
