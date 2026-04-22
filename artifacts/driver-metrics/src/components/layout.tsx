@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Settings, Zap } from "lucide-react";
+import { Home, Car, Wallet, Target, BarChart2, LogOut, Sparkles, Clock, AlertTriangle, Flame, X, Settings } from "lucide-react";
 import { AdminActivatePanel } from "./AdminActivatePanel";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
@@ -20,11 +20,11 @@ type TrialUser = {
 
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 const NAV_DEFS = [
-  { path: "/",           Icon: Home,     key: "nav.home" },
-  { path: "/rides",      Icon: Car,      key: "nav.rides" },
-  { path: "/assistant",  Icon: Zap,      key: "nav.assistant" },
-  { path: "/costs",      Icon: Wallet,   key: "nav.costs" },
-  { path: "/reports",    Icon: BarChart2, key: "nav.reports", isPro: true },
+  { path: "/",        Icon: Home,     key: "nav.home" },
+  { path: "/rides",   Icon: Car,      key: "nav.rides" },
+  { path: "/goals",   Icon: Target,   key: "nav.goals" },
+  { path: "/costs",   Icon: Wallet,   key: "nav.costs" },
+  { path: "/reports", Icon: BarChart2, key: "nav.reports", isPro: true },
 ];
 
 // ─── TRIAL BANNER ─────────────────────────────────────────────────────────────

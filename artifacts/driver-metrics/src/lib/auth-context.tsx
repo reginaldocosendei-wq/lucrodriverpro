@@ -136,29 +136,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     fetch(`${base}/api/auth/me`, { credentials: "include", headers, cache: "no-store" })
       .then((r) => {
-        if (!r.ok) throw new Error(`/api/auth/me returned ${r.status}`);
-        return r.json() as Promise<AuthUser>;
-      })
-      .then((u) => {
-        console.log("[AUTH_BOOT] server verified — plan:", (u as any).plan);
-        setToken(storedToken);
-        applyUser(u);
-      })
-      .catch((err) => {
-        console.warn("[AUTH_BOOT] server verification failed:", err.message);
-        if (cached) {
-          // Network error or server down — trust localStorage for offline use
-          console.log("[AUTH_BOOT] using cached user (offline/error)");
-          setToken(storedToken);
-          setUser(cached);
-        } else {
-          // Token invalid and no cached user — clear everything
-          console.log("[AUTH_BOOT] no cached user — forcing logout");
+        // 401 = token explicitly rejected by server → real logout needed
+        if (r.status === 401) {
+          console.log("[AUTH_BOOT] server returned 401 — token invalid, clearing auth");
           localStorage.removeItem("auth_token");
           localStorage.removeItem("user_logged");
           clearAuthUser();
           setToken(null);
           setUser(null);
+          return;
+        }
+        if (!r.ok) throw new Error(`network-error:${r.status}`);
+        return r.json() as Promise<AuthUser>;
+      })
+      .then((u) => {
+        if (!u) return; // already handled (401 path returns undefined)
+        console.log("[AUTH_BOOT] server verified — plan:", (u as any).plan);
+        setToken(storedToken);
+        applyUser(u);
+      })
+      .catch((err) => {
+        // Network error, timeout, CORS, server down — keep token, trust localStorage.
+        // Never force-logout on a network error: the token may still be valid.
+        console.warn("[AUTH_BOOT] network error during verification — keeping token:", err.message);
+        if (cached) {
+          console.log("[AUTH_BOOT] using cached user from localStorage");
+          setToken(storedToken);
+          setUser(cached);
+        } else {
+          // No cached user but token exists — keep authenticated with null user.
+          // UserBootstrap will re-fetch when the network recovers.
+          console.log("[AUTH_BOOT] no cached user but keeping token — will retry on next action");
+          setToken(storedToken);
         }
       })
       .finally(() => {

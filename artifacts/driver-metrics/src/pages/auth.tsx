@@ -450,7 +450,7 @@ export default function AuthScreen({
               </span>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/import")}
+                onClick={() => navigate("/login")}
                 style={{
                   height: 44, borderRadius: 14, border: "none", flexShrink: 0,
                   background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
@@ -548,7 +548,7 @@ export default function AuthScreen({
           >
             <motion.button
               whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }}
-              onClick={() => navigate("/import")}
+              onClick={() => navigate("/login")}
               animate={{ boxShadow: ["0 4px 20px rgba(0,255,136,0.32)", "0 8px 40px rgba(0,255,136,0.52)", "0 4px 20px rgba(0,255,136,0.32)"] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
               style={{
@@ -824,7 +824,7 @@ export default function AuthScreen({
             initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ duration: 0.45 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/import")}
+            onClick={() => navigate("/login")}
             style={{
               width: "100%", height: 58, borderRadius: 18, border: "none",
               background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",
@@ -993,7 +993,7 @@ export default function AuthScreen({
           >
             <motion.button
               whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }}
-              onClick={() => navigate("/import")}
+              onClick={() => navigate("/login")}
               style={{
                 width: "100%", height: 64, borderRadius: 22, border: "none",
                 background: "linear-gradient(135deg, #00ff88 0%, #00d974 100%)",

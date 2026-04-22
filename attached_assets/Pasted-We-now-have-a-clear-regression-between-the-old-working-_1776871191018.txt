@@ -1,0 +1,59 @@
+We now have a clear regression between the old working app and the new APK build.
+
+Current situation:
+
+OLD APP:
+- More stable
+- Navigation works
+- Does not constantly return to landing page
+- But the Goals/Targets page is missing
+- Live mode still shows "automatic mode coming soon"
+
+NEW APP:
+- New icon/build
+- When clicking "Ver meu lucro real agora", it incorrectly sends the user directly to the day screenshot/import screen
+- The screenshot/capture flow does not actually work
+- After almost any action, the app returns to the landing/opening page
+- This means the new flow has broken navigation and broken capture/import behavior
+
+I need a product-level rollback/fix strategy.
+
+Do all of the following:
+
+1. Compare old stable app flow vs new app flow.
+2. Keep the stable behavior from the old app:
+   - authenticated navigation must remain stable
+   - do not return to landing page after actions
+   - user must stay inside the app once logged in
+3. Restore the missing Goals/Targets page into the main product flow.
+4. Fix the landing CTA:
+   - "Ver meu lucro real agora" must not incorrectly send users into a broken capture route
+   - it should send users to the correct authenticated dashboard/home flow
+5. Fix screenshot/import/capture flow:
+   - if it is manual import, it must open gallery/file picker correctly
+   - if it is capture mode, it must actually work or stay hidden until ready
+   - do not route users to a dead-end screen
+6. Fix any global redirect/useEffect/router guard that sends users back to landing page.
+7. Make route behavior consistent:
+   - landing only for unauthenticated users
+   - dashboard/home for authenticated users
+   - no forced redirect to capture/import screen
+8. Restore the intended main navigation:
+   - Início
+   - Corridas
+   - Metas
+   - Custos
+   - Relatórios
+   - Live/Ao Vivo only if explicitly enabled and fully working
+9. Remove incomplete feature promotion:
+   - do not make Live the primary flow if it is not production ready
+10. Return:
+   - root cause of the redirect loop
+   - root cause of broken capture flow
+   - why the new build differs from the old one
+   - files changed
+   - final navigation map
+
+Important:
+Do not give me partial tweaks.
+I want the new app to behave with the stability of the old app, while restoring the Goals page and fixing the broken CTA/capture flow.
