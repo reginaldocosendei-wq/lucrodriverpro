@@ -1,3 +1,5 @@
+YAML
+
 name: Build APK
 
 on:
@@ -17,11 +19,14 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Build app
-        run: npm run build || echo "No build script"
+        run: pnpm run build || echo "No build script"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
