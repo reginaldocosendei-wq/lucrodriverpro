@@ -2,7 +2,8 @@ name: Build APK
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -24,10 +25,10 @@ jobs:
         run: pnpm install
 
       - name: Build web app
-        run: pnpm run build || echo "No build script"
+        run: pnpm run build || echo "No build step"
 
       - name: Install Capacitor
-        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
+        run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Init Capacitor
         run: npx cap init app com.lucrodriver.app --web-dir=dist || true
@@ -41,11 +42,11 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          chmod +x gradlew
+          chmod +x ./gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-apk
+          name: app-build
           path: android/app/build/outputs/apk/debug/app-debug.apk
