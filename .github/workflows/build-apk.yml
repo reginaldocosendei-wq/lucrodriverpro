@@ -32,9 +32,10 @@ jobs:
 
       - name: Pack project fallback
         run: |
-          rm -rf app-build
-          mkdir -p app-build
-          cp -r . app-build/
+          rm -rf /tmp/app-build
+          mkdir -p /tmp/app-build
+          rsync -av --exclude app-build --exclude .git --exclude node_modules ./ /tmp/app-build/
+          mv /tmp/app-build ./app-build
 
       - name: Upload build
         uses: actions/upload-artifact@v4
