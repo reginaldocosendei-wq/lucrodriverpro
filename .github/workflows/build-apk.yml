@@ -15,13 +15,19 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build web
-        run: npm run build || echo "No build script"
+        run: pnpm run build || echo "No build script"
 
       - name: Upload build
         uses: actions/upload-artifact@v4
