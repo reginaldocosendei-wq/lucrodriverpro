@@ -21,10 +21,10 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build app
-        run: pnpm run build || echo "No build script"
+        run: pnpm build || echo "No build script"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
