@@ -1,5 +1,3 @@
-YAML
-
 name: Build APK
 
 on:
