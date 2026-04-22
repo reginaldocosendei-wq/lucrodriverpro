@@ -26,8 +26,26 @@ jobs:
       - name: Build web app
         run: pnpm run build || echo "No build script"
 
+      - name: Install Capacitor
+        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Init Capacitor
+        run: npx cap init app com.lucrodriver.app --web-dir=dist || true
+
+      - name: Add Android
+        run: npx cap add android || true
+
+      - name: Copy build
+        run: npx cap copy
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-build
-          path: .
+          name: app-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
