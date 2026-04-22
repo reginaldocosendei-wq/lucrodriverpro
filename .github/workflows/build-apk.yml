@@ -16,20 +16,35 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Build web
-        run: pnpm run build || echo "No build script"
+        run: pnpm run build
+
+      - name: Pack web assets
+        run: |
+          rm -rf app-build
+          mkdir -p app-build
+          if [ -d dist ]; then
+            cp -r dist/* app-build/
+          elif [ -d build ]; then
+            cp -r build/* app-build/
+          else
+            echo "Nenhuma pasta dist/ ou build/ encontrada"
+            exit 1
+          fi
 
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: app-build
-          path: .
+          path: app-build
