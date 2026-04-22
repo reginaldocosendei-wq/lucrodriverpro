@@ -27,6 +27,9 @@ const config: CapacitorConfig = {
     Browser: {
       presentationStyle: "popover",
     },
+    Camera: {
+      presentationStyle: "fullscreen",
+    },
   },
 };
 

@@ -9,6 +9,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { storageSetSync, storageGetSync } from "@/lib/storage";
 
 import Home from "@/pages/Home";
 import Rides from "@/pages/rides";
@@ -31,14 +32,16 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
 // ─── JWT TOKEN BOOTSTRAP ──────────────────────────────────────────────────────
-// Capture ?token=<jwt> from URL (Google OAuth redirect) before anything renders.
+// Capture ?token=<jwt> from OAuth redirect before anything renders.
+// storageSetSync writes to in-memory cache + localStorage immediately, and
+// fires a background write to native Preferences (if on Android).
 {
   const _params = new URLSearchParams(window.location.search);
   const _urlToken = _params.get("token");
   if (_urlToken) {
-    localStorage.setItem("auth_token", _urlToken);
-    localStorage.setItem("user_logged", "true");
-    console.log("[auth] token captured from URL → stored in localStorage");
+    storageSetSync("auth_token",  _urlToken);
+    storageSetSync("user_logged", "true");
+    console.log("[auth] token captured from URL → stored in storage");
     _params.delete("token");
     const _newSearch = _params.toString();
     window.history.replaceState(
@@ -49,8 +52,9 @@ import { Layout } from "@/components/layout";
   }
 }
 
-// Wire JWT getter into customFetch so every API call includes Bearer token.
-setAuthTokenGetter(() => localStorage.getItem("auth_token"));
+// Wire JWT getter — uses in-memory cache so it's always synchronous.
+// storageInit() in AuthProvider populates the cache at boot.
+setAuthTokenGetter(() => storageGetSync("auth_token"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

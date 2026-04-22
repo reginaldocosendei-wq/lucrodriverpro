@@ -1,3 +1,5 @@
+import { storageGetSync, storageSetSync, storageRemoveSync } from "@/lib/storage";
+
 /**
  * Returns the API base URL prefix to prepend to all manual fetch calls.
  *
@@ -15,11 +17,10 @@ export function getApiBase(): string {
 
 /**
  * Drop-in replacement for fetch() that always injects the JWT Bearer token
- * from localStorage alongside session cookies. Use instead of raw fetch()
- * for every authenticated endpoint so both cookie and JWT auth paths work.
+ * from the storage cache alongside session cookies.
  */
 export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem("auth_token");
+  const token = storageGetSync("auth_token");
   const headers = new Headers(init?.headers);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -27,23 +28,20 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
   return fetch(input, { credentials: "include", ...init, headers });
 }
 
-// ─── Cached user object ────────────────────────────────────────────────────────
-// Stored in localStorage so plan checks survive page reloads even if
-// GET /api/auth/me is slow, cached by a browser/CDN, or temporarily unreachable.
-
-const USER_STORAGE_KEY = "auth_user";
+// ─── Cached user helpers ───────────────────────────────────────────────────────
+// These are now thin wrappers around the storage adapter.
+// The auth-context is the primary owner of user persistence;
+// these helpers remain for compatibility with other parts of the app.
 
 export function storeAuthUser(user: Record<string, unknown>): void {
   try {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  } catch {
-    // Ignore storage errors (private mode, storage full, etc.)
-  }
+    storageSetSync("auth_user", JSON.stringify(user));
+  } catch {}
 }
 
 export function loadAuthUser(): Record<string, unknown> | null {
   try {
-    const s = localStorage.getItem(USER_STORAGE_KEY);
+    const s = storageGetSync("auth_user");
     return s ? (JSON.parse(s) as Record<string, unknown>) : null;
   } catch {
     return null;
@@ -51,5 +49,5 @@ export function loadAuthUser(): Record<string, unknown> | null {
 }
 
 export function clearAuthUser(): void {
-  localStorage.removeItem(USER_STORAGE_KEY);
+  storageRemoveSync("auth_user");
 }

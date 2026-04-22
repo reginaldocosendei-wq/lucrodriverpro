@@ -12,6 +12,7 @@ import { analyzeScreenshot, confirmImport, type ExtractedData } from "@/services
 import { formatBRL } from "@/lib/utils";
 import { DEV_DISABLE_AUTH_FETCH } from "@/lib/dev-flags";
 import { ExtraEarningsSection } from "@/components/ExtraEarningsSection";
+import { Capacitor } from "@capacitor/core";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const PLATFORMS = ["Uber", "99", "InDrive", "Outro"];
@@ -139,6 +140,37 @@ export default function ImportPage() {
       });
   }, []);
 
+  // On Android native we use @capacitor/camera for reliable gallery access.
+  // On web we fall back to the hidden <input type="file">.
+  const pickImage = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Camera: CapCamera, CameraResultType, CameraSource } =
+          await import("@capacitor/camera");
+        const photo = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos,
+        });
+        if (photo.dataUrl) {
+          const res  = await fetch(photo.dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], "screenshot.jpg", { type: blob.type || "image/jpeg" });
+          handleFileSelect(file);
+        }
+      } catch (err: any) {
+        const msg = (err?.message ?? "").toLowerCase();
+        if (!msg.includes("cancelled") && !msg.includes("canceled") && !msg.includes("user denied")) {
+          setError("Erro ao abrir galeria. Tente novamente.");
+        }
+      }
+    } else {
+      // Web: trigger hidden file input
+      fileInputRef.current?.click();
+    }
+  }, [handleFileSelect]);
+
   const handleConfirm = async () => {
     setStep("confirm");
     setError(null);
@@ -259,7 +291,7 @@ export default function ImportPage() {
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); }}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={pickImage}
                   style={{
                     borderRadius: 28, padding: "52px 24px",
                     textAlign: "center", cursor: "pointer",
@@ -320,7 +352,7 @@ export default function ImportPage() {
                 {/* CTA button */}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={pickImage}
                   style={{
                     width: "100%", height: 58, marginTop: 16, borderRadius: 18, border: "none",
                     background: "#00ff88", color: "#000",

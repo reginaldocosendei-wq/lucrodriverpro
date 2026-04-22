@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLogin, useRegister } from "@workspace/api-client-react";
 import { storeAuthUser } from "@/lib/api";
+import { storageSetSync } from "@/lib/storage";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,8 +50,8 @@ function AuthForm({
     onSuccess: (data) => {
       console.log("[GOOGLE_AUTH_RESPONSE] token exists:", !!data.token, "user:", !!data.user);
       if (data.token) {
-        localStorage.setItem("auth_token", data.token);
-        localStorage.setItem("user_logged", "true");
+        storageSetSync("auth_token",  data.token);
+        storageSetSync("user_logged", "true");
       }
       if (data.user) storeAuthUser(data.user as Record<string, unknown>);
       if (data.token && data.user && onSuccess) {
@@ -90,8 +91,8 @@ function AuthForm({
       onSuccess: (res) => {
         console.log("[LOGIN_RESPONSE] token exists:", !!res?.token, "user:", !!res?.user);
         if (res?.token) {
-          localStorage.setItem("auth_token", res.token);
-          localStorage.setItem("user_logged", "true");
+          storageSetSync("auth_token",  res.token);
+          storageSetSync("user_logged", "true");
         }
         if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
         if (res?.token && res?.user && onSuccess) {
@@ -115,8 +116,8 @@ function AuthForm({
       onSuccess: (res) => {
         console.log("[REGISTER_RESPONSE] token exists:", !!res?.token, "user:", !!res?.user);
         if (res?.token) {
-          localStorage.setItem("auth_token", res.token);
-          localStorage.setItem("user_logged", "true");
+          storageSetSync("auth_token",  res.token);
+          storageSetSync("user_logged", "true");
         }
         if (res?.user) storeAuthUser(res.user as unknown as Record<string, unknown>);
         if (res?.token && res?.user && onSuccess) {
