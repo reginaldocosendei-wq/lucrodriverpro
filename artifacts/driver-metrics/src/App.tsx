@@ -207,9 +207,9 @@ function HomeRoute() {
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen
-        onSuccess={(token, user) => {
+        onSuccess={async (token, user) => {
           console.log("[HomeRoute] onSuccess — logging in and navigating to /");
-          login(token, user);
+          await login(token, user);
           navigate("/");
         }}
       />
@@ -237,9 +237,9 @@ function LoginRoute() {
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen
         startWithForm
-        onSuccess={(token, user) => {
+        onSuccess={async (token, user) => {
           console.log("[LoginRoute] onSuccess — logging in and navigating to /");
-          login(token, user);
+          await login(token, user);
           navigate("/");
         }}
       />

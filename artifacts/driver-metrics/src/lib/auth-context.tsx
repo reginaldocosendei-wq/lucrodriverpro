@@ -109,11 +109,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(newToken);
       setUser(newUser);
       queryClient.setQueryData(getGetMeQueryKey(), newUser);
-      // Persist to native storage in background
-      storageSet(KEY_TOKEN,  newToken).catch(() => {});
-      storageSet(KEY_LOGGED, "true").catch(() => {});
-      saveUser(newUser).catch(() => {});
-      console.log("[AUTH] login() — state updated, isAuthenticated: true");
+      // Await storage writes — ensures the token is on disk before the caller
+      // navigates away. On Android this is critical: if the app is killed before
+      // Preferences.set() completes the token is lost and the user is logged out
+      // on next launch. (~5–20 ms on device, imperceptible to the user.)
+      await Promise.all([
+        storageSet(KEY_TOKEN,  newToken),
+        storageSet(KEY_LOGGED, "true"),
+        saveUser(newUser),
+      ]);
+      console.log("[AUTH] login() — state updated + storage written, isAuthenticated: true");
     },
     [queryClient],
   );
