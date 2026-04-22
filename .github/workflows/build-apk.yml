@@ -37,17 +37,23 @@ jobs:
         run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Init Capacitor
-        run: npx cap init app com.lucrodriverpro.app --web-dir=dist || true
+        run: npx cap init app com.lucrodriverpro.app --web-dir=dist --force || true
 
-      - name: Add Android
-        run: npx cap add android || true
+      - name: Recreate Android platform
+        run: |
+          rm -rf android
+          npx cap add android
 
       - name: Copy build
-        run: npx cap copy
+        run: npx cap copy android
+
+      - name: Sync Android
+        run: npx cap sync android
 
       - name: Build APK
         run: |
           cd android
+          ls -la
           chmod +x gradlew
           ./gradlew assembleDebug
 
