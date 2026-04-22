@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -10,10 +10,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -21,15 +21,10 @@ jobs:
         run: npm install
 
       - name: Build app
-        run: npm run build || echo "sem build"
-
-      - name: Zip APK (simulação)
-        run: |
-          mkdir -p artefatos
-          echo "APK GERADO" > artefatos/app.apk
+        run: npm run build || echo "No build script"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: app-apk
-          path: artefatos/app.apk
+          name: app-build
+          path: .
