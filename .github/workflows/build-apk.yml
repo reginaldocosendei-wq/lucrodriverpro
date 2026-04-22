@@ -28,7 +28,7 @@ jobs:
         run: pnpm build || npm run build || echo "No build step"
 
       - name: Install Capacitor
-        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
+        run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Init Capacitor (force clean)
         run: |
