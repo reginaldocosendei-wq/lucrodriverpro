@@ -18,6 +18,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
       - name: Install pnpm
         run: npm install -g pnpm
 
@@ -30,13 +36,11 @@ jobs:
       - name: Install Capacitor
         run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Init Capacitor (force clean)
-        run: |
-          rm -rf android
-          npx cap init app com.lucrodriverpro.app --web-dir=dist || true
+      - name: Init Capacitor
+        run: npx cap init app com.lucrodriverpro.app --web-dir=dist || true
 
-      - name: Add Android (clean)
-        run: npx cap add android
+      - name: Add Android
+        run: npx cap add android || true
 
       - name: Copy build
         run: npx cap copy
