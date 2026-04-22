@@ -1,16 +1,29 @@
 import { storageGetSync, storageSetSync, storageRemoveSync } from "@/lib/storage";
+import { Capacitor } from "@capacitor/core";
+
+// Production API domain — used as hard fallback when VITE_API_BASE_URL is not
+// baked in at build time (e.g. CI didn't pass the env var).
+const PRODUCTION_DOMAIN = "https://lucrodriverpro.com";
 
 /**
  * Returns the API base URL prefix to prepend to all manual fetch calls.
  *
- * - In browser (Replit dev/prod): uses Vite's BASE_URL (e.g. "/driver-metrics")
- * - In Android (Capacitor): uses VITE_API_BASE_URL pointing at the deployed server
- *   e.g. "https://your-app.replit.app"
+ * Priority:
+ * 1. VITE_API_BASE_URL (baked in at build time by `build:android`)
+ * 2. On native Android with no override → production domain (safety fallback)
+ * 3. Browser (Replit dev/prod) → Vite BASE_URL (e.g. "/driver-metrics")
  */
 export function getApiBase(): string {
   const override = import.meta.env.VITE_API_BASE_URL as string | undefined;
   if (override) {
     return override.replace(/\/+$/, "");
+  }
+  // On native (Android APK), relative URLs hit the Capacitor local WebView
+  // server (https://localhost) instead of the real backend — always use the
+  // absolute production domain.
+  if (Capacitor.isNativePlatform()) {
+    console.warn("[API_BASE] VITE_API_BASE_URL not set — using production fallback:", PRODUCTION_DOMAIN);
+    return PRODUCTION_DOMAIN;
   }
   return import.meta.env.BASE_URL.replace(/\/+$/, "");
 }

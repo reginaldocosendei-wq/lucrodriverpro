@@ -8,7 +8,7 @@
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:android": "BASE_PATH=/ VITE_API_BASE_URL=${VITE_API_BASE_URL} vite build --config vite.config.ts",
+    "build:android": "BASE_PATH=/ VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://lucrodriverpro.com} vite build --config vite.config.ts",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
