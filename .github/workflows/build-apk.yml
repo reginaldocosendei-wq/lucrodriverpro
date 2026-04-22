@@ -25,16 +25,18 @@ jobs:
         run: pnpm install
 
       - name: Build web app
-        run: pnpm run build || echo "No build step"
+        run: pnpm build || npm run build || echo "No build step"
 
       - name: Install Capacitor
-        run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
+        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Init Capacitor
-        run: npx cap init app com.lucrodriver.app --web-dir=dist || true
+      - name: Init Capacitor (force clean)
+        run: |
+          rm -rf android
+          npx cap init app com.lucrodriverpro.app --web-dir=dist || true
 
-      - name: Add Android
-        run: npx cap add android || true
+      - name: Add Android (clean)
+        run: npx cap add android
 
       - name: Copy build
         run: npx cap copy
@@ -42,7 +44,7 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          chmod +x ./gradlew
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
