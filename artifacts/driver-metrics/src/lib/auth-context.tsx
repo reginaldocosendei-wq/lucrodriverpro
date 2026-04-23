@@ -169,66 +169,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (booted.current) return;
     booted.current = true;
 
+    // Safety escape hatch — no matter what goes wrong, loading must resolve
+    // within 12 seconds so the user never sees a permanent black screen.
+    const safetyTimer = setTimeout(() => {
+      console.error("[AUTH_BOOT] ⚠️  safety escape — isLoading stuck, forcing false after 12s");
+      setIsLoading(false);
+    }, 12_000);
+
     (async () => {
-      // 1. Load all auth keys from native Preferences (or localStorage on web)
-      await storageInit(BOOT_KEYS);
-      const storedToken = storageGetSync(KEY_TOKEN);
-      console.log("[AUTH_BOOT] storage loaded — token exists:", !!storedToken);
-
-      if (!storedToken) {
-        console.log("[AUTH_BOOT] no token — unauthenticated");
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Pre-seed UI from cached user (instant, no flicker)
-      const cached = loadCachedUser();
-      if (cached) {
-        setUser(cached);
-        queryClient.setQueryData(getGetMeQueryKey(), cached);
-        console.log("[AUTH_BOOT] pre-seeded from cache — plan:", (cached as any).plan);
-      }
-
-      // 3. Verify token with server
-      const base    = getApiBase();
-      const headers = new Headers({ Authorization: `Bearer ${storedToken}` });
-
       try {
-        const r = await fetch(`${base}/api/auth/me`, {
-          credentials: "include",
-          headers,
-          cache: "no-store",
-        });
+        // 1. Load all auth keys from native Preferences (or localStorage on web)
+        //    Wrapped in try/catch — if the Preferences plugin isn't ready on some
+        //    Android versions, we still continue rather than hanging forever.
+        try {
+          await storageInit(BOOT_KEYS);
+        } catch (storageErr) {
+          console.error("[AUTH_BOOT] storageInit failed — continuing with empty cache:", storageErr);
+        }
 
-        if (r.status === 401) {
-          // Server explicitly rejected the token → force logout
-          console.log("[AUTH_BOOT] 401 — token invalid, clearing auth");
-          await clearAllAuth();
-          setToken(null);
-          setUser(null);
-          queryClient.setQueryData(getGetMeQueryKey(), null);
+        const storedToken = storageGetSync(KEY_TOKEN);
+        console.log("[AUTH_BOOT] storage loaded — token exists:", !!storedToken);
+
+        if (!storedToken) {
+          console.log("[AUTH_BOOT] no token — unauthenticated");
           setIsLoading(false);
           return;
         }
 
-        if (!r.ok) throw new Error(`server-error:${r.status}`);
-
-        const u = (await r.json()) as AuthUser;
-        console.log("[AUTH_BOOT] server verified — plan:", (u as any).plan);
-        setToken(storedToken);
-        await applyUser(u);
-
-      } catch (err) {
-        // Network error / CORS / offline — KEEP the token, never force-logout
-        console.warn("[AUTH_BOOT] network error — keeping token:", (err as Error).message);
-        setToken(storedToken);
+        // 2. Pre-seed UI from cached user (instant, no flicker)
+        const cached = loadCachedUser();
         if (cached) {
           setUser(cached);
+          queryClient.setQueryData(getGetMeQueryKey(), cached);
+          console.log("[AUTH_BOOT] pre-seeded from cache — plan:", (cached as any).plan);
         }
-        // If no cached user, stay authenticated — user data will reload on next action
+
+        // 3. Verify token with server — 8-second timeout so the app never
+        //    hangs if the network is unavailable, flaky, or the server is slow.
+        const base       = getApiBase();
+        const headers    = new Headers({ Authorization: `Bearer ${storedToken}` });
+        const controller = new AbortController();
+        const fetchTimer = setTimeout(() => {
+          controller.abort();
+          console.warn("[AUTH_BOOT] fetch timed out after 8s — keeping stored credentials");
+        }, 8_000);
+
+        try {
+          const r = await fetch(`${base}/api/auth/me`, {
+            credentials: "include",
+            headers,
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          clearTimeout(fetchTimer);
+
+          if (r.status === 401) {
+            // Server explicitly rejected the token → force logout
+            console.log("[AUTH_BOOT] 401 — token invalid, clearing auth");
+            await clearAllAuth();
+            setToken(null);
+            setUser(null);
+            queryClient.setQueryData(getGetMeQueryKey(), null);
+            setIsLoading(false);
+            return;
+          }
+
+          if (!r.ok) throw new Error(`server-error:${r.status}`);
+
+          const ct = r.headers.get("content-type") ?? "";
+          if (!ct.includes("application/json")) {
+            throw new Error(`unexpected content-type: ${ct}`);
+          }
+
+          const u = (await r.json()) as AuthUser;
+          console.log("[AUTH_BOOT] server verified — plan:", (u as any).plan);
+          setToken(storedToken);
+          await applyUser(u);
+
+        } catch (fetchErr) {
+          clearTimeout(fetchTimer);
+          const msg = (fetchErr as Error).message;
+          // AbortError = our 8s timeout fired; other errors = network/offline
+          // In ALL cases: keep the stored token and use cached user data.
+          // Never force-logout due to a network failure — that would be terrible UX.
+          console.warn("[AUTH_BOOT] server check skipped — keeping stored credentials:", msg);
+          setToken(storedToken);
+          if (cached) setUser(cached);
+          // If no cached user, token alone is enough — profile loads on first API call
+        }
+
+      } catch (outerErr) {
+        // Catch-all: something completely unexpected happened during boot.
+        // Still render the app — better to show the landing page than a black screen.
+        console.error("[AUTH_BOOT] unexpected error during boot:", outerErr);
       }
 
       setIsLoading(false);
+      clearTimeout(safetyTimer);
       console.log("[AUTH_BOOT] complete");
     })();
   }, [applyUser, queryClient]);

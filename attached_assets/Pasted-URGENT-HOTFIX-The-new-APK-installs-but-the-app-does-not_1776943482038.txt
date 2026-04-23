@@ -1,0 +1,71 @@
+URGENT HOTFIX.
+
+The new APK installs but the app does not open correctly.
+It stays on a black screen with the splash logo/spinner and never reaches the app.
+
+This is now a startup/runtime issue, not a build issue.
+
+Fix the ROOT CAUSE immediately.
+
+GOALS:
+1. App must open past splash screen.
+2. App must render the first real screen.
+3. If API/auth/config fails, the app must still open and show a fallback UI instead of freezing on black screen.
+4. No infinite loading.
+5. No silent startup crash.
+
+MANDATORY TASKS:
+
+A) FIND STARTUP FAILURE
+- Inspect app bootstrap/startup flow.
+- Inspect:
+  - main entry file
+  - router bootstrap
+  - auth/session bootstrap
+  - config/env loading
+  - splash/loading logic
+  - any startup API requests
+- Add logs to identify exactly where startup stops.
+
+B) FIX SPLASH / LOADER LOCK
+- Ensure splash screen is always dismissed.
+- If Capacitor SplashScreen plugin is used, hide it explicitly after app mount.
+- Remove any infinite loading state that blocks render.
+- If initialization fails, still continue to a safe fallback screen.
+
+C) ADD SAFE FALLBACK STARTUP
+- Wrap app startup with defensive try/catch.
+- If auth restore fails, config fails, or API ping fails:
+  - app must still render
+  - send user to login or home safely
+  - never stay on black screen
+
+D) CHECK ENV / API CONFIG
+- Confirm production APK is using the correct API base URL.
+- Confirm no startup request is hanging forever.
+- Add timeout to startup requests.
+
+E) CHECK ROUTER
+- Ensure router mounts correctly in Capacitor Android.
+- Ensure no redirect loop or blank route on first load.
+
+F) ADD VISIBLE STARTUP ERROR SCREEN
+- If a fatal initialization error happens, show a visible error screen with:
+  - “App initialization failed”
+  - short reason
+  - retry button
+- Never leave a black screen.
+
+G) VALIDATE AND REBUILD
+- Apply the fix directly in code
+- Rebuild web assets
+- Sync Capacitor Android
+- Prepare a fresh APK build
+- List the exact files changed
+- Explain exactly what caused the black screen
+
+IMPORTANT:
+- Do not give me theories only.
+- Fix the startup freeze in code.
+- Do not stop at partial diagnosis.
+- Make the APK open reliably.

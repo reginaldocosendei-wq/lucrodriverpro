@@ -34,11 +34,13 @@ export async function storageInit(keys: string[]): Promise<void> {
     console.log("[storage] init (web/localStorage) — keys:", keys.join(", "));
     return;
   }
+  // Read all keys in parallel — avoids 3× serial IPC round-trips over the
+  // JNI bridge, which can be slow (50–300 ms each) on some Android versions.
   const P = await prefs();
-  for (const key of keys) {
-    const { value } = await P.get({ key });
-    memCache[key] = value;
-  }
+  const results = await Promise.all(keys.map((key) => P.get({ key })));
+  keys.forEach((key, i) => {
+    memCache[key] = results[i].value;
+  });
   console.log("[storage] init (native/Preferences) — keys:", keys.join(", "));
 }
 
