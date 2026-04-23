@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl, setDefaultCredentials } from "@workspace/api-client-react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import "./index.css";
@@ -33,7 +33,11 @@ console.log("APP START: main.tsx loaded", {
 if (Capacitor.isNativePlatform()) {
   const base = apiBaseOverride || PRODUCTION_API;
   setBaseUrl(base);
-  console.log("[NATIVE] setBaseUrl →", base);
+  // Use JWT-only auth on Android — avoids CORS preflight issues with credentials.
+  // Cross-origin requests from https://localhost don't need session cookies;
+  // the Bearer token in Authorization header is the sole auth mechanism.
+  setDefaultCredentials("same-origin");
+  console.log("[NATIVE] setBaseUrl →", base, "| credentials → same-origin");
 } else if (apiBaseOverride) {
   // Web / PWA: only override if env var is explicitly set
   setBaseUrl(apiBaseOverride);

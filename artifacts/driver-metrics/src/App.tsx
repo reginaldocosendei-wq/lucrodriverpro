@@ -184,7 +184,7 @@ function AuthLoadingScreen() {
 // Shows dashboard if authenticated; landing/auth page if not.
 // Waits for auth to finish loading before deciding.
 function HomeRoute() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [, navigate] = useLocation();
 
   if (isLoading) {
@@ -207,9 +207,10 @@ function HomeRoute() {
   return (
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen
-        onSuccess={async (token, user) => {
-          console.log("[HomeRoute] onSuccess — logging in and navigating to /");
-          await login(token, user);
+        onSuccess={(token, user) => {
+          // authLogin() was already called synchronously inside AuthForm (setToken fired).
+          // isAuthenticated is now true — just navigate.
+          console.log("[HomeRoute] onSuccess — navigating to /");
           navigate("/");
         }}
       />
@@ -220,7 +221,7 @@ function HomeRoute() {
 // ─── LOGIN ROUTE ──────────────────────────────────────────────────────────────
 // Public route — redirects to dashboard if already authenticated.
 function LoginRoute() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -237,9 +238,10 @@ function LoginRoute() {
     <div style={{ width: "100%", height: "100dvh", overflowY: "auto", overflowX: "hidden" }}>
       <AuthScreen
         startWithForm
-        onSuccess={async (token, user) => {
-          console.log("[LoginRoute] onSuccess — logging in and navigating to /");
-          await login(token, user);
+        onSuccess={(token, user) => {
+          // authLogin() was already called synchronously inside AuthForm (setToken fired).
+          // isAuthenticated is now true — just navigate.
+          console.log("[LoginRoute] onSuccess — navigating to /");
           navigate("/");
         }}
       />

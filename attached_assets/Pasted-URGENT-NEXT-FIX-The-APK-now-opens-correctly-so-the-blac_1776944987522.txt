@@ -1,0 +1,80 @@
+URGENT NEXT FIX.
+
+The APK now opens correctly, so the black screen/startup freeze is fixed.
+
+NEW PROBLEM:
+The app only shows:
+1. Landing page
+2. Login / create account page
+
+It does NOT proceed into the real app/dashboard.
+It appears the authenticated/user navigation flow is broken or incomplete in Android production.
+
+Fix this now in code.
+
+GOALS:
+1. After successful login, user must enter the real dashboard/panel.
+2. After successful account creation, user must also enter the real dashboard/panel.
+3. If user is already authenticated, app must skip landing/login and go directly to the dashboard.
+4. No loop between landing and auth screens.
+5. No fake success without navigation.
+6. Android APK flow must behave like a real production app.
+
+MANDATORY TASKS
+
+A) AUDIT THE FULL AUTH FLOW
+- Inspect landing page CTA actions
+- Inspect login form submit
+- Inspect create-account form submit
+- Inspect auth state persistence
+- Inspect post-login redirect
+- Inspect protected routes / route guards
+- Inspect dashboard route mounting
+
+B) FIX POST-LOGIN NAVIGATION
+- Ensure successful login redirects to the correct in-app route.
+- Ensure successful signup redirects to the correct in-app route.
+- Ensure navigation uses Capacitor-safe routing on Android.
+
+C) FIX AUTH PERSISTENCE
+- If token/session/user exists, app must restore session and open dashboard automatically.
+- Ensure session restore works on Android with Preferences/storage.
+- Ensure auth context updates immediately after login/signup.
+
+D) FIX ROUTE GUARDS
+- Protected routes must allow authenticated users into the app.
+- Unauthenticated users should only see landing/auth.
+- Prevent redirect loops and false unauthenticated state.
+
+E) VERIFY REAL DASHBOARD ENTRY
+- Confirm the app has a real dashboard/home/panel route and that it renders on Android.
+- If dashboard route is broken, fix it.
+- If some required data fails, still render dashboard shell with fallback state.
+
+F) ADD DEBUG VISIBILITY
+- Add clear console logs for:
+  - login success/failure
+  - signup success/failure
+  - auth restore result
+  - current route
+  - redirect target
+- Make failures visible instead of silent.
+
+G) TEST THE FULL FLOW
+- Landing -> login -> dashboard
+- Landing -> create account -> dashboard
+- Close app and reopen -> restore session -> dashboard
+- Logout -> back to landing/login
+
+H) REBUILD
+- Rebuild web assets
+- Sync Android
+- Prepare fresh APK build
+- Increment versionCode/versionName
+- List exact files changed
+- State the exact root cause found
+
+IMPORTANT
+- Do not stop at explanation.
+- Fix the login/signup-to-dashboard flow in code.
+- Make the APK open the real app, not just the landing/auth screens.

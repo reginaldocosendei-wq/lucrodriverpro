@@ -17,6 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _defaultCredentials: RequestCredentials = "include";
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -39,6 +40,23 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Override the default `credentials` mode used on every fetch request.
+ *
+ * Default: "include" — sends/receives cookies (works for same-origin and
+ * properly-configured CORS servers).
+ *
+ * Set to "same-origin" for native Capacitor Android builds where all API
+ * calls are cross-origin (https://localhost → https://api.example.com).
+ * In that environment, cookie credentials are not needed — the JWT Bearer
+ * token in the Authorization header is the sole auth mechanism — and using
+ * "same-origin" removes the CORS preflight requirement for
+ * Access-Control-Allow-Credentials, making the request more reliable.
+ */
+export function setDefaultCredentials(mode: RequestCredentials): void {
+  _defaultCredentials = mode;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -358,10 +376,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  // Always include credentials so session cookies are sent on both same-origin
-  // and cross-origin (Replit proxy) requests. Callers can override by passing
-  // credentials: "omit" explicitly in their options.
-  const response = await fetch(input, { credentials: "include", ...init, method, headers });
+  // Use the configured credentials mode (default: "include").
+  // On native Android, this is overridden to "same-origin" by setDefaultCredentials()
+  // so that cross-origin requests from https://localhost don't require the stricter
+  // Access-Control-Allow-Credentials CORS header. JWT Bearer tokens handle auth instead.
+  // Callers can also override per-request by passing credentials in their options.
+  const response = await fetch(input, { credentials: _defaultCredentials, ...init, method, headers });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
