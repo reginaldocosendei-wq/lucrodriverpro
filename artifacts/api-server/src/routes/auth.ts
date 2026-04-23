@@ -99,7 +99,14 @@ router.post("/register", async (req, res) => {
     console.log(`[auth/register] user created — userId: ${user.id} email: ${email}`);
     await regenerateAndSave(req, user.id);
     const token = signToken(user.id);
-    console.log(`[auth/register] session regenerated — userId: ${user.id} newSessionId: ${req.sessionID} token=issued`);
+
+    if (!token || typeof token !== "string") {
+      console.error(`[auth/register] CRITICAL: signToken returned invalid value for userId: ${user.id}`);
+      res.status(500).json({ error: "Erro interno: falha ao gerar token. Tente novamente." });
+      return;
+    }
+
+    console.log(`[auth/register] success — userId: ${user.id} token=issued (${token.slice(0, 20)}...) sessionId: ${req.sessionID}`);
     res.status(201).json({ user: userResponse(user), token, message: "Cadastro realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/register] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
@@ -163,7 +170,18 @@ router.post("/login", async (req, res) => {
 
     await regenerateAndSave(req, user.id);
     const token = signToken(user.id);
-    console.log(`[auth/login] success — userId: ${user.id} newSessionId: ${req.sessionID} token=issued`);
+
+    // Hard guard — token must be a non-empty string before we send the response.
+    // signToken uses jsonwebtoken.sign() which always returns a string, but this
+    // makes the contract explicit and ensures the mobile app never gets a response
+    // without a token.
+    if (!token || typeof token !== "string") {
+      console.error(`[auth/login] CRITICAL: signToken returned invalid value for userId: ${user.id}`);
+      res.status(500).json({ error: "Erro interno: falha ao gerar token. Tente novamente." });
+      return;
+    }
+
+    console.log(`[auth/login] success — userId: ${user.id} token=issued (${token.slice(0, 20)}...) sessionId: ${req.sessionID}`);
     res.json({ user: userResponse(user), token, message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/login] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
@@ -265,7 +283,14 @@ router.post("/google", async (req, res) => {
     user = await syncStripeStatusForUser(user);
     await regenerateAndSave(req, user.id);
     const token = signToken(user.id);
-    console.log(`[auth/google] session regenerated — userId=${user.id} newSessionId=${req.sessionID} token=issued`);
+
+    if (!token || typeof token !== "string") {
+      console.error(`[auth/google] CRITICAL: signToken returned invalid value for userId: ${user.id}`);
+      res.status(500).json({ error: "Erro interno: falha ao gerar token. Tente novamente." });
+      return;
+    }
+
+    console.log(`[auth/google] success — userId=${user.id} token=issued (${token.slice(0, 20)}...) sessionId=${req.sessionID}`);
     res.json({ user: userResponse(user), token, message: "Login realizado com sucesso" });
   } catch (err: any) {
     console.error("[auth/google] ERROR:", err.message);

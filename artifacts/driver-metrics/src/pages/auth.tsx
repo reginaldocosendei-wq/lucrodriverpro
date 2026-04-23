@@ -120,9 +120,11 @@ function AuthForm({
     loginMutation.mutate({ data: formData }, {
       onSuccess: async (res) => {
         const dump = JSON.stringify(res)?.slice(0, 300) ?? "null";
+        const resKeys = res && typeof res === "object" ? Object.keys(res as object).join(",") : "n/a";
+        const tokenSnip = res?.token ? res.token.slice(0, 12) + "..." : "MISSING";
         console.log("[LOGIN_RESPONSE] status:ok | token:", !!res?.token, "user:", !!res?.user);
         console.log("[LOGIN_RESPONSE] body:", dump);
-        if (isAndroid) setDebugBanner(`Resp ok | token:${!!res?.token} user:${!!res?.user}`);
+        if (isAndroid) setDebugBanner(`Resp ok | keys:[${resKeys}] | tok:${tokenSnip}`);
 
         if (!res?.token || !res?.user) {
           const errMsg = `Resposta inválida do servidor. Sem token. Resposta: ${dump}`;
