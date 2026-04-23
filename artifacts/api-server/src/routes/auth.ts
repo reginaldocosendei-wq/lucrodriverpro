@@ -176,13 +176,13 @@ router.post("/login", async (req, res) => {
     // makes the contract explicit and ensures the mobile app never gets a response
     // without a token.
     if (!token || typeof token !== "string") {
-      console.error(`[auth/login] CRITICAL: signToken returned invalid value for userId: ${user.id}`);
+      console.error(`LOGIN_ERROR token_issued=false user_id=${user.id}`);
       res.status(500).json({ error: "Erro interno: falha ao gerar token. Tente novamente." });
       return;
     }
 
-    console.log(`[auth/login] success — userId: ${user.id} token=issued (${token.slice(0, 20)}...) sessionId: ${req.sessionID}`);
-    res.json({ user: userResponse(user), token, message: "Login realizado com sucesso" });
+    console.log(`LOGIN_SUCCESS token_issued=true user_id=${user.id}`);
+    res.json({ token, user: userResponse(user) });
   } catch (err: any) {
     console.error("[auth/login] ERROR:", err.message, err.stack?.split("\n")[1] ?? "");
     res.status(500).json({ error: "Erro interno ao fazer login. Tente novamente." });

@@ -253,6 +253,11 @@ async function parseJsonBody(
   requestInfo: { method: string; url: string },
 ): Promise<unknown> {
   const raw = await response.text();
+  // Log the raw response body for auth endpoints so we can see exactly what
+  // the server sent before any JSON transformation.
+  if (requestInfo.url.includes("/auth/")) {
+    console.log(`[parseJsonBody] raw response for ${requestInfo.url}:`, raw.slice(0, 400));
+  }
   const normalized = stripBom(raw);
 
   if (normalized.trim() === "") {
@@ -260,7 +265,11 @@ async function parseJsonBody(
   }
 
   try {
-    return JSON.parse(normalized);
+    const parsed = JSON.parse(normalized);
+    if (requestInfo.url.includes("/auth/")) {
+      console.log(`[parseJsonBody] parsed keys:`, typeof parsed === "object" && parsed ? Object.keys(parsed as object).join(",") : typeof parsed);
+    }
+    return parsed;
   } catch (cause) {
     throw new ResponseParseError(response, raw, cause, requestInfo);
   }

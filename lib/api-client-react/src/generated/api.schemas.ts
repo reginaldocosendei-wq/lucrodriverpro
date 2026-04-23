@@ -44,9 +44,8 @@ export interface User {
 }
 
 export interface AuthResponse {
+  token: string;
   user: User;
-  message: string;
-  token?: string;
 }
 
 export type RidePlatform = (typeof RidePlatform)[keyof typeof RidePlatform];

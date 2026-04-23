@@ -124,7 +124,9 @@ function AuthForm({
         const tokenSnip = res?.token ? res.token.slice(0, 12) + "..." : "MISSING";
         console.log("[LOGIN_RESPONSE] status:ok | token:", !!res?.token, "user:", !!res?.user);
         console.log("[LOGIN_RESPONSE] body:", dump);
-        if (isAndroid) setDebugBanner(`Resp ok | keys:[${resKeys}] | tok:${tokenSnip}`);
+        // Show raw dump on-screen so we can read it without logcat.
+        // Format: keys:[user,token,message] | tok:eyJhbGci... | raw:{...}
+        if (isAndroid) setDebugBanner(`keys:[${resKeys}] tok:${tokenSnip} | raw:${dump.slice(0, 120)}`);
 
         if (!res?.token || !res?.user) {
           const errMsg = `Resposta inválida do servidor. Sem token. Resposta: ${dump}`;
