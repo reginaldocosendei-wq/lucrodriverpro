@@ -2,6 +2,9 @@
 
 # compiled output
 dist
+# Track the API server compiled bundle so production deployments always have
+# a working binary even when the build step fails (e.g. esbuild unavailable).
+!artifacts/api-server/dist/
 tmp
 out-tsc
 *.tsbuildinfo
