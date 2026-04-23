@@ -25,8 +25,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Install Capacitor Android
-        run: pnpm add @capacitor/android
+      - name: Install Capacitor Android (fix PNPM)
+        run: pnpm add -w @capacitor/android
 
       - name: Build web (ignorar erro)
         run: pnpm run build || echo "Build ignorado"
