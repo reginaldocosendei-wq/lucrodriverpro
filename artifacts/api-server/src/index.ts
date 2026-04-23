@@ -15,6 +15,12 @@ const _bundleDir = path.dirname(new URL(import.meta.url).pathname);
 const FRONTEND_DIST = path.resolve(_bundleDir, "../../driver-metrics/dist/public");
 console.log("[startup] FRONTEND_DIST:", FRONTEND_DIST);
 
+// ─── Build version header — lets us confirm which binary is serving ───────────
+app.use((_req, res, next) => {
+  res.setHeader("X-Build-Version", "2026-04-23-JWT-v2");
+  next();
+});
+
 // ─── APK DOWNLOAD — redirects to the latest GitHub Release APK ───────────────
 // GitHub Actions builds the APK on every push to main and publishes it under
 // the "latest-apk" release tag. Both /download and /api/download redirect there.
@@ -202,6 +208,7 @@ if (fs.existsSync(FRONTEND_DIST)) {
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, "0.0.0.0", () => {
   console.log("SERVER STARTED ON PORT:", port);
+  console.log("[startup] BUILD_VERSION: 2026-04-23-JWT-v2");
   console.log("[startup] NODE_ENV:", process.env.NODE_ENV ?? "undefined");
   console.log("[startup] DATABASE_URL:          ", process.env.DATABASE_URL       ? "SET" : "MISSING ⚠️");
   console.log("[startup] SESSION_SECRET:         ", process.env.SESSION_SECRET     ? "SET" : "MISSING ⚠️ (using dev fallback)");
