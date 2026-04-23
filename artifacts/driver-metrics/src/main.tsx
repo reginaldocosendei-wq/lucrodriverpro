@@ -36,8 +36,8 @@ if (Capacitor.isNativePlatform()) {
   // Use JWT-only auth on Android — avoids CORS preflight issues with credentials.
   // Cross-origin requests from https://localhost don't need session cookies;
   // the Bearer token in Authorization header is the sole auth mechanism.
-  setDefaultCredentials("same-origin");
-  console.log("[NATIVE] setBaseUrl →", base, "| credentials → same-origin");
+  setDefaultCredentials("omit");
+  console.log("[NATIVE] setBaseUrl →", base, "| credentials → omit");
 } else if (apiBaseOverride) {
   // Web / PWA: only override if env var is explicitly set
   setBaseUrl(apiBaseOverride);

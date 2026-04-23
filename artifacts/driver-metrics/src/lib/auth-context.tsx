@@ -7,6 +7,7 @@ import React, {
   useRef,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { getApiBase } from "@/lib/api";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import {
@@ -26,6 +27,13 @@ const KEY_TOKEN  = "auth_token";
 const KEY_LOGGED = "user_logged";
 const KEY_USER   = "auth_user";
 const BOOT_KEYS  = [KEY_TOKEN, KEY_LOGGED, KEY_USER];
+
+// On Android the WebView origin is https://localhost — all API calls are
+// cross-origin. Using credentials:"include" on cross-origin requests triggers
+// a CORS preflight that may fail. We use "omit" instead: the Bearer token in
+// Authorization header is the sole auth mechanism on native.
+const FETCH_CREDENTIALS: RequestCredentials =
+  Capacitor.isNativePlatform() ? "omit" : "include";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function loadCachedUser(): AuthUser | null {
@@ -104,21 +112,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── login: called after successful email/password/google auth ──────────────
   const login = useCallback(
     async (newToken: string, newUser: AuthUser): Promise<void> => {
-      console.log("[AUTH] login() — token length:", newToken.length);
-      // Update React state immediately so the UI responds without waiting for storage
+      console.log("[AUTH] login() called — token length:", newToken.length, "native:", Capacitor.isNativePlatform());
+      // 1. Update React state synchronously so the UI responds on next render
       setToken(newToken);
       setUser(newUser);
       queryClient.setQueryData(getGetMeQueryKey(), newUser);
-      // Await storage writes — ensures the token is on disk before the caller
-      // navigates away. On Android this is critical: if the app is killed before
-      // Preferences.set() completes the token is lost and the user is logged out
-      // on next launch. (~5–20 ms on device, imperceptible to the user.)
+      // 2. Await storage writes — critical on Android: Preferences.set() must
+      //    complete before navigate fires so the token survives a cold restart.
       await Promise.all([
         storageSet(KEY_TOKEN,  newToken),
         storageSet(KEY_LOGGED, "true"),
         saveUser(newUser),
       ]);
-      console.log("[AUTH] login() — state updated + storage written, isAuthenticated: true");
+      console.log("[AUTH] login() complete — token persisted to Preferences ✓");
+      console.log("[AUTH] IS AUTH: true | USER:", JSON.stringify(newUser).slice(0, 80));
     },
     [queryClient],
   );
@@ -147,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const headers = new Headers({ Authorization: `Bearer ${newToken}` });
       try {
         const r = await fetch(`${base}/api/auth/me`, {
-          credentials: "include",
+          credentials: FETCH_CREDENTIALS,
           headers,
           cache: "no-store",
         });
@@ -188,7 +195,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const storedToken = storageGetSync(KEY_TOKEN);
-        console.log("[AUTH_BOOT] storage loaded — token exists:", !!storedToken);
+        console.log("[AUTH_BOOT] storage loaded — token exists:", !!storedToken, "native:", Capacitor.isNativePlatform(), "credentials-mode:", Capacitor.isNativePlatform() ? "omit" : "include");
+        console.log("TOKEN:", storedToken ? storedToken.slice(0, 20) + "..." : "null");
+        console.log("IS AUTH:", !!storedToken);
 
         if (!storedToken) {
           console.log("[AUTH_BOOT] no token — unauthenticated");
@@ -216,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           const r = await fetch(`${base}/api/auth/me`, {
-            credentials: "include",
+            credentials: FETCH_CREDENTIALS,
             headers,
             cache: "no-store",
             signal: controller.signal,

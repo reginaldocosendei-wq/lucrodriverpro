@@ -6,6 +6,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Capacitor } from "@capacitor/core";
 import { GoogleLogin } from "@react-oauth/google";
 import { Input, Label } from "@/components/ui";
 import { Mail, Lock, User, ArrowRight, ChevronLeft, Zap, Check, TrendingDown, BarChart3, Clock, Fuel, Target } from "lucide-react";
@@ -15,6 +16,9 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 
 const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+// Same as auth-context.tsx: omit credentials on native to avoid CORS preflight issues
+const FETCH_CREDENTIALS: RequestCredentials =
+  Capacitor.isNativePlatform() ? "omit" : "include";
 
 // ─── AUTH FORM ────────────────────────────────────────────────────────────────
 function AuthForm({
@@ -44,7 +48,7 @@ function AuthForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),
-        credentials: "include",
+        credentials: FETCH_CREDENTIALS,
       });
       const ct = res.headers.get("content-type") ?? "";
       if (!res.ok || !ct.includes("application/json")) {
@@ -55,7 +59,7 @@ function AuthForm({
       }
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("[GOOGLE_AUTH_RESPONSE] token:", !!data.token, "user:", !!data.user);
       if (!data.token || !data.user) {
         console.error("[GOOGLE_AUTH] missing token or user in response");
@@ -63,14 +67,17 @@ function AuthForm({
         return;
       }
       const user = data.user as Record<string, unknown>;
-      // 1. Write token to in-memory cache + localStorage + Preferences immediately.
+      // Write token synchronously to cache/localStorage/Preferences
       storageSetSync("auth_token",  data.token);
       storageSetSync("user_logged", "true");
       storeAuthUser(user);
-      // 2. Update React auth context synchronously (setToken is called before first await).
-      //    This flips isAuthenticated = true so HomeRoute/LoginRoute re-renders to dashboard.
-      authLogin(data.token, user).catch(() => {});
-      // 3. Notify the parent (HomeRoute/LoginRoute) so it can navigate.
+      // AWAIT authLogin — ensures setToken is committed to React state and
+      // storage writes complete before navigate fires. Fixes the race condition
+      // where HomeRoute would re-render with isAuthenticated=false.
+      await authLogin(data.token, user);
+      console.log("TOKEN:", data.token.slice(0, 20) + "...");
+      console.log("USER:", JSON.stringify(user).slice(0, 100));
+      console.log("IS AUTH: true (token set)");
       if (onSuccess) {
         console.log("[GOOGLE_AUTH] calling onSuccess prop for navigation");
         onSuccess(data.token, user);
@@ -104,20 +111,20 @@ function AuthForm({
   const onLogin = loginForm.handleSubmit((data) => {
     setErrorMsg("");
     loginMutation.mutate({ data }, {
-      onSuccess: (res) => {
-        console.log("[LOGIN_RESPONSE] token:", !!res?.token, "user:", !!res?.user);
+      onSuccess: async (res) => {
+        console.log("[LOGIN_RESPONSE] token:", !!res?.token, "user:", !!res?.user, "full:", JSON.stringify(res)?.slice(0, 300));
         if (!res?.token || !res?.user) {
-          console.error("[LOGIN] missing token or user in response — res:", JSON.stringify(res)?.slice(0, 200));
-          navigate("/");
+          console.error("[LOGIN] missing token or user — dumping response:", JSON.stringify(res)?.slice(0, 300));
           return;
         }
         const user = res.user as unknown as Record<string, unknown>;
         storageSetSync("auth_token",  res.token);
         storageSetSync("user_logged", "true");
         storeAuthUser(user);
-        // Update React auth context directly — setToken fires synchronously.
-        // isAuthenticated flips to true before navigate fires.
-        authLogin(res.token, user).catch(() => {});
+        await authLogin(res.token, user);
+        console.log("TOKEN:", res.token.slice(0, 20) + "...");
+        console.log("USER:", JSON.stringify(user).slice(0, 100));
+        console.log("IS AUTH: true (token set)");
         if (onSuccess) {
           console.log("[LOGIN] calling onSuccess prop for navigation");
           onSuccess(res.token, user);
@@ -135,18 +142,20 @@ function AuthForm({
   const onRegister = registerForm.handleSubmit((data) => {
     setErrorMsg("");
     registerMutation.mutate({ data }, {
-      onSuccess: (res) => {
-        console.log("[REGISTER_RESPONSE] token:", !!res?.token, "user:", !!res?.user);
+      onSuccess: async (res) => {
+        console.log("[REGISTER_RESPONSE] token:", !!res?.token, "user:", !!res?.user, "full:", JSON.stringify(res)?.slice(0, 300));
         if (!res?.token || !res?.user) {
-          console.error("[REGISTER] missing token or user in response — res:", JSON.stringify(res)?.slice(0, 200));
-          navigate("/");
+          console.error("[REGISTER] missing token or user — dumping response:", JSON.stringify(res)?.slice(0, 300));
           return;
         }
         const user = res.user as unknown as Record<string, unknown>;
         storageSetSync("auth_token",  res.token);
         storageSetSync("user_logged", "true");
         storeAuthUser(user);
-        authLogin(res.token, user).catch(() => {});
+        await authLogin(res.token, user);
+        console.log("TOKEN:", res.token.slice(0, 20) + "...");
+        console.log("USER:", JSON.stringify(user).slice(0, 100));
+        console.log("IS AUTH: true (token set)");
         if (onSuccess) {
           console.log("[REGISTER] calling onSuccess prop for navigation");
           onSuccess(res.token, user);
