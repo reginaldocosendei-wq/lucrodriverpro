@@ -1,0 +1,153 @@
+Fix the Lucro Driver Android/PWA app at the ROOT CAUSE level.
+
+CURRENT CRITICAL ISSUES:
+
+1) In the installed APK:
+- Any navigation sends the user back to the landing page.
+
+2) On "Import my day" screen:
+- Error: Unexpected token '<', "<!DOCTYPE..." is not valid JSON
+- This clearly means the frontend is calling an endpoint that returns HTML instead of JSON.
+
+3) The web version partially works, but the APK breaks routing and API behavior.
+
+---
+
+OBJECTIVE:
+
+- The installed APK must behave like a real app (no unwanted redirects to landing).
+- All API calls must return valid JSON.
+- Screenshot upload flow must work end-to-end.
+- Authenticated users must stay inside the app.
+- No silent failures, no fake fixes.
+
+---
+
+MANDATORY TASKS:
+
+A) FIX ALL FRONTEND API CALLS (CRITICAL)
+
+- Find ALL fetch/axios/api client calls.
+- Replace any relative URL that may hit the frontend router instead of backend.
+- Create a centralized API layer:
+
+  Example:
+  - getApiBaseUrl()
+  - apiFetch(path, options)
+
+Rules:
+- In web: allow same-origin if API is served there.
+- In APK (Capacitor): ALWAYS use absolute backend URL (production API).
+- NEVER allow `/api/...` to accidentally return index.html.
+
+---
+
+B) FORCE JSON RESPONSES FROM BACKEND
+
+- Locate the endpoint used by "Import my day".
+- Ensure ALL responses are JSON:
+  Content-Type: application/json
+
+Success:
+  { "success": true, ... }
+
+Error:
+  { "success": false, "error": "message" }
+
+- NEVER return HTML from API routes.
+- If route is missing, implement it correctly.
+
+---
+
+C) BLOCK HTML BEING PARSED AS JSON
+
+In apiFetch:
+
+- Before calling response.json():
+  - Check:
+    response.headers.get("content-type")
+
+- If NOT JSON:
+  - Read response.text()
+  - Throw:
+    "API returned non-JSON response"
+  - Log:
+    URL
+    status
+    first 200 chars of response
+
+---
+
+D) FIX AUTH + ROUTING (CRITICAL)
+
+- Inspect route guards / auth logic.
+- Current behavior is WRONG (looping to landing).
+
+Fix rules:
+- Logged user → stays inside app (dashboard)
+- Not logged → only then go to landing
+- Internal routes MUST NOT redirect unless session is invalid
+
+Also:
+- Fix token persistence (localStorage / Capacitor storage)
+- Ensure session survives app navigation
+
+---
+
+E) FIX "IMPORT MY DAY" SCREEN (CORE FEATURE)
+
+- Validate image selection
+- Ensure upload works (multipart or base64 as expected)
+- Ensure correct API endpoint is called
+- Ensure JSON response is received and processed
+
+Add logs:
+- endpoint URL
+- HTTP method
+- response status
+- content-type
+
+---
+
+F) ADD DEBUG MODE (TEMPORARY)
+
+Log clearly:
+- API_BASE_URL
+- Called endpoint
+- Response status
+- Response content-type
+
+If HTML is returned:
+- Log first 200 chars
+
+---
+
+G) VALIDATE BUILD
+
+- Ensure final build works for:
+  ✔ Web
+  ✔ APK (Capacitor)
+
+- Ensure frontend points to correct backend in production
+- No broken navigation
+
+---
+
+DELIVERABLE (MANDATORY):
+
+1) Apply fixes directly in the code
+2) Show:
+   - files modified
+   - which endpoint was returning HTML
+   - final API base URL used in APK
+3) Generate a new working build
+
+---
+
+IMPORTANT:
+
+- Do NOT give explanations only.
+- Do NOT apply superficial fixes.
+- Fix the ROOT CAUSE.
+- Do NOT hide errors.
+- Make the app production-ready.

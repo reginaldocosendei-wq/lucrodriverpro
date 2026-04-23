@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLogin, useRegister } from "@workspace/api-client-react";
-import { storeAuthUser } from "@/lib/api";
+import { storeAuthUser, getApiBase } from "@/lib/api";
 import { storageSetSync } from "@/lib/storage";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -14,7 +14,6 @@ import { useT } from "@/lib/i18n";
 import { useLocation } from "wouter";
 
 const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-const VITE_API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
 // ─── AUTH FORM ────────────────────────────────────────────────────────────────
 function AuthForm({
@@ -32,18 +31,25 @@ function AuthForm({
   const queryClient = useQueryClient();
   const loginMutation    = useLogin();
   const registerMutation = useRegister();
+  const [, navigate]     = useLocation();
 
   const googleMutation = useMutation({
     mutationFn: async (credential: string) => {
-      const res = await fetch(`${VITE_API_BASE}/api/auth/google`, {
+      const API_BASE = getApiBase();
+      const url = `${API_BASE}/api/auth/google`;
+      console.log("[GOOGLE_AUTH] POST", url);
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),
         credentials: "include",
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? t("auth.googleError"));
+      const ct = res.headers.get("content-type") ?? "";
+      if (!res.ok || !ct.includes("application/json")) {
+        const text = await res.text();
+        console.error("[GOOGLE_AUTH] non-JSON or error response:", res.status, ct, text.slice(0, 200));
+        const parsed = ct.includes("application/json") ? JSON.parse(text) : {};
+        throw new Error(parsed.error ?? `${t("auth.googleError")} (status ${res.status})`);
       }
       return res.json() as Promise<{ user: unknown; token: string; message: string }>;
     },
@@ -58,8 +64,8 @@ function AuthForm({
         console.log("[GOOGLE_AUTH] calling onSuccess callback");
         onSuccess(data.token, data.user as Record<string, unknown>);
       } else {
-        console.warn("[GOOGLE_AUTH] missing token or user — fallback redirect");
-        window.location.href = "/";
+        console.warn("[GOOGLE_AUTH] missing token or user — soft navigate to /");
+        navigate("/");
       }
     },
     onError: (err: any) => {
@@ -99,8 +105,8 @@ function AuthForm({
           console.log("[LOGIN] calling onSuccess callback — navigate to dashboard");
           onSuccess(res.token, res.user as unknown as Record<string, unknown>);
         } else {
-          console.warn("[LOGIN] missing token/user or no onSuccess — fallback redirect");
-          window.location.href = "/";
+          console.warn("[LOGIN] missing token/user or no onSuccess — soft navigate to /");
+          navigate("/");
         }
       },
       onError: (err: any) => {
@@ -124,8 +130,8 @@ function AuthForm({
           console.log("[REGISTER] calling onSuccess callback — navigate to dashboard");
           onSuccess(res.token, res.user as unknown as Record<string, unknown>);
         } else {
-          console.warn("[REGISTER] missing token/user or no onSuccess — fallback redirect");
-          window.location.href = "/";
+          console.warn("[REGISTER] missing token/user or no onSuccess — soft navigate to /");
+          navigate("/");
         }
       },
       onError: (err: any) => {
