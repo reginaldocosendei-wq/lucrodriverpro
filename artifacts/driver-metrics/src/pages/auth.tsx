@@ -180,8 +180,8 @@ function AuthForm({
   return (
     <div style={{ width: "100%" }}>
 
-      {/* Google login button — only shown when VITE_GOOGLE_CLIENT_ID is configured */}
-      {VITE_GOOGLE_CLIENT_ID && (
+      {/* Google login — hidden on Android (WebView OAuth does not work in Capacitor) */}
+      {VITE_GOOGLE_CLIENT_ID && Capacitor.getPlatform() !== "android" && (
         <>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
             <GoogleLogin
@@ -210,6 +210,16 @@ function AuthForm({
             <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
           </div>
         </>
+      )}
+
+      {/* Android fallback: explain Google login is web-only */}
+      {Capacitor.getPlatform() === "android" && (
+        <p style={{
+          textAlign: "center", fontSize: 12,
+          color: "rgba(255,255,255,0.3)", marginBottom: 20, lineHeight: 1.5,
+        }}>
+          Login com Google disponível apenas na versão web
+        </p>
       )}
 
       {/* Tab switcher */}
