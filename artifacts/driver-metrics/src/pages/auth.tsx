@@ -33,11 +33,13 @@ function AuthForm({
   const { t } = useT();
   const [mode, setMode] = useState<"login" | "register">(defaultMode);
   const [errorMsg, setErrorMsg] = useState("");
+  const [debugBanner, setDebugBanner] = useState("");
   const queryClient = useQueryClient();
   const loginMutation    = useLogin();
   const registerMutation = useRegister();
   const [, navigate]     = useLocation();
   const { login: authLogin } = useAuth();
+  const isAndroid = Capacitor.getPlatform() === "android";
 
   const googleMutation = useMutation({
     mutationFn: async (credential: string) => {
@@ -108,33 +110,58 @@ function AuthForm({
     defaultValues: { name: "", email: "", password: "" },
   });
 
-  const onLogin = loginForm.handleSubmit((data) => {
+  const onLogin = loginForm.handleSubmit((formData) => {
     setErrorMsg("");
-    loginMutation.mutate({ data }, {
+    setDebugBanner("");
+    const API_URL = getApiBase();
+    console.log("[LOGIN] submit — URL:", `${API_URL}/api/auth/login`, "email:", formData.email);
+    if (isAndroid) setDebugBanner(`Req → ${API_URL}/api/auth/login`);
+
+    loginMutation.mutate({ data: formData }, {
       onSuccess: async (res) => {
-        console.log("[LOGIN_RESPONSE] token:", !!res?.token, "user:", !!res?.user, "full:", JSON.stringify(res)?.slice(0, 300));
+        const dump = JSON.stringify(res)?.slice(0, 300) ?? "null";
+        console.log("[LOGIN_RESPONSE] status:ok | token:", !!res?.token, "user:", !!res?.user);
+        console.log("[LOGIN_RESPONSE] body:", dump);
+        if (isAndroid) setDebugBanner(`Resp ok | token:${!!res?.token} user:${!!res?.user}`);
+
         if (!res?.token || !res?.user) {
-          console.error("[LOGIN] missing token or user — dumping response:", JSON.stringify(res)?.slice(0, 300));
+          const errMsg = `Resposta inválida do servidor. Sem token. Resposta: ${dump}`;
+          console.error("[LOGIN] missing token or user:", errMsg);
+          setErrorMsg(errMsg);
           return;
         }
         const user = res.user as unknown as Record<string, unknown>;
+
+        // Write immediately to cache + localStorage + Preferences (background)
         storageSetSync("auth_token",  res.token);
         storageSetSync("user_logged", "true");
         storeAuthUser(user);
+
+        // Await full auth context update (setToken + Preferences.set) before navigate
         await authLogin(res.token, user);
+
+        // Verify storage saved correctly
+        const { Preferences } = await import("@capacitor/preferences");
+        const { value: savedToken } = await Preferences.get({ key: "auth_token" });
         console.log("TOKEN:", res.token.slice(0, 20) + "...");
         console.log("USER:", JSON.stringify(user).slice(0, 100));
-        console.log("IS AUTH: true (token set)");
+        console.log("IS AUTH: true — Preferences token saved:", !!savedToken);
+        if (isAndroid) setDebugBanner(`Auth ok! Token saved:${!!savedToken} → navigate /`);
+
         if (onSuccess) {
-          console.log("[LOGIN] calling onSuccess prop for navigation");
+          console.log("[LOGIN] calling onSuccess → navigate");
           onSuccess(res.token, user);
         } else {
           navigate("/");
         }
       },
       onError: (err: any) => {
-        const msg = err?.data?.error || err?.response?.data?.error || t("auth.loginError");
-        setErrorMsg(msg);
+        const serverMsg  = err?.data?.error ?? err?.message ?? "";
+        const httpStatus = err?.status ?? "";
+        const msg = serverMsg || `Erro HTTP ${httpStatus || "?"} — verifique conexão`;
+        console.error("[LOGIN] onError:", httpStatus, serverMsg, err);
+        if (isAndroid) setDebugBanner(`ERRO: ${httpStatus} ${serverMsg.slice(0, 80)}`);
+        setErrorMsg(msg || t("auth.loginError"));
       },
     });
   });
@@ -247,12 +274,25 @@ function AuthForm({
         ))}
       </div>
 
+      {/* Android debug banner — shows live request/response status in UI */}
+      {isAndroid && debugBanner && (
+        <div style={{
+          marginBottom: 12, padding: "8px 12px", borderRadius: 10,
+          background: "rgba(0,200,255,0.08)", border: "1px solid rgba(0,200,255,0.2)",
+          fontSize: 11, color: "#7dd3fc", fontWeight: 600, wordBreak: "break-all",
+          fontFamily: "monospace",
+        }}>
+          {debugBanner}
+        </div>
+      )}
+
       {/* Error */}
       {errorMsg && (
         <div style={{
           marginBottom: 18, padding: "12px 14px", borderRadius: 12,
           background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
           fontSize: 13, color: "#fca5a5", fontWeight: 500, textAlign: "center",
+          wordBreak: "break-all",
         }}>
           {errorMsg}
         </div>
@@ -349,6 +389,41 @@ function AuthForm({
       <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 18, lineHeight: 1.6 }}>
         {t("auth.trialNote")}
       </p>
+
+      {/* ── Android test bypass ───────────────────────────────────────────────
+          Bypasses the API entirely to confirm whether the login loop is caused
+          by a network/API issue or by a routing/state issue.
+          REMOVE before production release. */}
+      {isAndroid && (
+        <button
+          type="button"
+          onClick={async () => {
+            const mockToken = "ANDROID_TEST_TOKEN_" + Date.now();
+            const mockUser: Record<string, unknown> = {
+              id: 0, email: "test@lucrodriver.com",
+              name: "Modo Teste", plan: "pro",
+            };
+            console.log("[TEST_MODE] bypassing API — setting mock session");
+            setDebugBanner("Modo teste: definindo sessão mock...");
+            await authLogin(mockToken, mockUser);
+            console.log("[TEST_MODE] authLogin done — navigating to /");
+            setDebugBanner("Modo teste: authLogin ok → navigate /");
+            if (onSuccess) {
+              onSuccess(mockToken, mockUser);
+            } else {
+              navigate("/");
+            }
+          }}
+          style={{
+            marginTop: 12, width: "100%", padding: "12px 0", borderRadius: 12,
+            border: "1px solid rgba(255,200,0,0.18)",
+            background: "rgba(255,200,0,0.08)", cursor: "pointer",
+            color: "rgba(255,200,0,0.7)", fontSize: 12, fontWeight: 700, fontFamily: "inherit",
+          }}
+        >
+          Entrar em modo teste (sem API)
+        </button>
+      )}
 
       {/* Back link */}
       {onBack && (

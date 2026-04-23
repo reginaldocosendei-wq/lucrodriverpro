@@ -376,17 +376,24 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
+  console.log(`[customFetch] ${method} ${requestInfo.url} | credentials:${_defaultCredentials} | baseUrl:${_baseUrl ?? "none"}`);
+
   // Use the configured credentials mode (default: "include").
-  // On native Android, this is overridden to "same-origin" by setDefaultCredentials()
-  // so that cross-origin requests from https://localhost don't require the stricter
-  // Access-Control-Allow-Credentials CORS header. JWT Bearer tokens handle auth instead.
-  // Callers can also override per-request by passing credentials in their options.
+  // On native Android, this is overridden to "omit" via setDefaultCredentials()
+  // so cross-origin requests from https://localhost don't require
+  // Access-Control-Allow-Credentials. JWT Bearer tokens handle auth instead.
   const response = await fetch(input, { credentials: _defaultCredentials, ...init, method, headers });
+
+  const ct = response.headers.get("content-type") ?? "";
+  console.log(`[customFetch] ${method} ${requestInfo.url} → ${response.status} | content-type: ${ct}`);
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
+    console.error(`[customFetch] ERROR ${response.status}:`, JSON.stringify(errorData)?.slice(0, 200));
     throw new ApiError(response, errorData, requestInfo);
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  const result = await parseSuccessBody(response, responseType, requestInfo);
+  console.log(`[customFetch] SUCCESS — parsed body keys:`, result && typeof result === "object" ? Object.keys(result as object).join(", ") : typeof result);
+  return result as T;
 }

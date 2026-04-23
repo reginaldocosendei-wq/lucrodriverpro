@@ -1,0 +1,77 @@
+URGENT ANDROID LOGIN FIX.
+
+Current state:
+- Android APK opens
+- Google login is hidden correctly
+- Email/password login screen appears
+- But pressing "Acessar painel" does NOT enter the app
+- App stays stuck on login screen
+
+This is now a REAL Android email login failure.
+Do NOT give theory only. Fix it in code.
+
+MANDATORY TASKS:
+
+1. INSTRUMENT LOGIN FLOW
+Add visible debug logs and UI error handling for Android login:
+- log request URL
+- log response status
+- log response body
+- log parsed JSON
+- log whether token is saved
+- log whether navigate('/dashboard') runs
+
+2. FIX API REQUEST FOR ANDROID
+Ensure email login uses absolute API URL only:
+https://lucrodriverpro.com
+No relative URLs.
+No browser-only assumptions.
+Force Android-safe fetch behavior.
+
+3. HANDLE NON-JSON RESPONSES
+If backend returns HTML or text instead of JSON:
+- detect it
+- show visible error banner with the exact message
+- do not fail silently
+
+4. SAVE SESSION RELIABLY
+After successful login:
+- save token with Capacitor Preferences
+- save user JSON with Capacitor Preferences
+- immediately verify both were saved by reading them back
+- only then set authenticated state
+
+5. FORCE POST-LOGIN NAVIGATION
+After successful login and confirmed token save:
+- navigate to the REAL in-app dashboard route
+- not just "/"
+- use the actual dashboard route used by the app
+- if current route guard blocks it, fix the route guard
+
+6. SHOW REAL ERROR TO USER
+If login fails:
+- show visible red error banner on the login screen
+- include backend message or HTTP status
+- no silent failure
+
+7. ADD TEMPORARY ANDROID FALLBACK TEST
+Create a temporary test button on the login screen for Android only:
+"Entrar em modo teste"
+This button should bypass API login and directly:
+- set a mock authenticated session
+- navigate to dashboard
+
+Purpose:
+- prove whether the real blocker is API login OR dashboard routing
+
+8. FINAL VALIDATION
+Confirm these two flows work:
+A) Real email login -> dashboard
+B) Android test mode -> dashboard
+
+9. REBUILD
+- rebuild web assets
+- sync android
+- bump versionCode/versionName
+- tell me exact files changed
+- tell me if the blocker was API, storage, or route guard
