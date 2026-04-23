@@ -12,22 +12,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node (versão correta)
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Setup pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Capacitor Android
-        run: pnpm add -w @capacitor/android
+        run: pnpm add @capacitor/android
 
       - name: Build web
-        run: pnpm run build || echo "skip"
+        run: pnpm run build || echo "No build script"
+
+      - name: Add Android platform
+        run: npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -35,8 +40,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -50,5 +55,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
