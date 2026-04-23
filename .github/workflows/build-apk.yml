@@ -2,8 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   build:
@@ -13,32 +12,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Setup pnpm
+        run: npm install -g pnpm
+
+      - name: Install deps
         run: pnpm install --no-frozen-lockfile
 
+      - name: Install Capacitor Android
+        run: pnpm add -w @capacitor/android
+
       - name: Build web
-        run: pnpm run build || echo "Sem build web, seguindo mesmo assim"
+        run: pnpm run build || echo "skip"
 
-      - name: Pack project fallback
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK
         run: |
-          rm -rf /tmp/app-build
-          mkdir -p /tmp/app-build
-          rsync -av --exclude app-build --exclude .git --exclude node_modules ./ /tmp/app-build/
-          mv /tmp/app-build ./app-build
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - name: Upload build
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-build
-          path: app-build
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
