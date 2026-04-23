@@ -2,7 +2,8 @@ name: Build APK
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -15,53 +16,43 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - name: Install pnpm
+        run: npm install -g pnpm
 
-      - name: Install deps
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install
 
-      - name: Instalar Capacitor (CORRETO)
-        run: |
-          pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
+      - name: Install Capacitor
+        run: pnpm add @capacitor/android -w
 
       - name: Build web (ignorar erro)
-        run: pnpm run build || echo "build skip"
+        run: pnpm build || true
 
-      - name: Reset Android (LIMPO)
-        run: rm -rf android
+      - name: Add Android platform
+        run: npx cap add android || true
 
-      - name: Criar projeto Capacitor LIMPO
-        run: |
-          npx cap init "Lucro Driver" com.lucro.driver --web-dir=dist || true
-          npx cap add android
-          npx cap sync android
+      - name: Sync Capacitor
+        run: npx cap sync android
 
-      - name: Corrigir config Android (CRÍTICO)
-        run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-
-      - name: Setup Java
+      - name: Setup Java 17 (CORREÇÃO AQUI)
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build APK (FORÇADO)
+      - name: Build APK
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          chmod +x gradlew || true
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
