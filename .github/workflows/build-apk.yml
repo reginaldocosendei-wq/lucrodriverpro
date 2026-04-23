@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -21,25 +22,25 @@ jobs:
         with:
           version: 9
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Install Capacitor (FIX ROOT)
-        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android -w
+      - name: Install Capacitor Android no workspace root
+        run: pnpm add -w @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Build web (não travar)
+      - name: Build web
         run: pnpm run build || echo "skip build"
 
-      - name: Init Capacitor (FORÇA CRIAÇÃO)
-        run: |
-          npx cap init app com.app.app --web-dir=dist || echo "já existe"
+      - name: Remover android quebrado
+        run: rm -rf android
 
-      - name: Add Android (GARANTE PASTA)
+      - name: Criar Android do zero
         run: |
-          npx cap add android || echo "já existe"
+          npx cap add android
 
-      - name: Sync
-        run: npx cap sync android
+      - name: Sync Capacitor
+        run: |
+          npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -47,19 +48,18 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Build APK
         run: |
-          ls -la
-          ls -la android || echo "android não existe"
           cd android
-          chmod +x gradlew
+          ls -la
+          chmod +x ./gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
+          name: app-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
